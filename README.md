@@ -1,46 +1,75 @@
-# Getting Started with Create React App
+# 体重记录应用
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+一个简单的体重记录 Web 应用，数据存储在本地 JSON 文件中。
 
-## Available Scripts
+## 功能特性
 
-In the project directory, you can run:
+- 📊 体重记录管理（增删查）
+- 📈 体重变化趋势图表
+- 📋 统计信息（当前体重、平均值、BMI、体重范围等）
+- 👤 用户资料设置（身高、目标体重）
+- 💾 数据实时保存到本地 JSON 文件
 
-### `npm start`
+## 技术栈
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+- **前端**: React + TypeScript + Ant Design
+- **后端**: Node.js + Express
+- **数据存储**: 本地 JSON 文件
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+## 启动步骤
 
-### `npm test`
+### 1. 启动后端服务
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+```bash
+cd backend
+npm install
+npm start
+```
 
-### `npm run build`
+后端服务将在 http://localhost:3001 启动
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+### 2. 启动前端应用
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+```bash
+npm install
+npm start
+```
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+前端应用将在 http://localhost:3000 启动
 
-### `npm run eject`
+## API 接口
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+- `GET /records` - 获取所有体重记录
+- `POST /records` - 添加体重记录
+- `DELETE /records/:id` - 删除体重记录
+- `GET /profile` - 获取用户资料
+- `PUT /profile` - 更新用户资料
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+## 数据格式
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+数据存储在 `backend/data.json` 文件中：
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+```json
+{
+  "records": [
+    {
+      "id": "xxx",
+      "date": "2024-01-01T08:00:00.000Z",
+      "weight": 65.5,
+      "note": "运动后",
+      "fasting": "空腹"
+    }
+  ],
+  "profile": {
+    "height": 170,
+    "targetWeight": 65,
+    "theme": "light"
+  }
+}
+```
 
-## Learn More
+## 注意事项
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
+- 确保后端服务先启动，前端才能正常使用
+- 所有数据操作都会实时写入本地 JSON 文件
+- 支持 CORS，前端可以正常访问后端 API
