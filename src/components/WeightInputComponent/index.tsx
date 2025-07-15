@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, Form, message } from 'antd';
 import { WeightRecord, UserProfile, CalendarData } from '../../types';
 import { generateId } from '../../utils/helpers';
-import { addRecord, updateProfile } from '../../utils/api';
+import { addRecord, updateRecord, updateProfile } from '../../utils/api';
 import dayjs, { Dayjs } from 'dayjs';
 
 // 导入子组件
@@ -35,11 +35,13 @@ export const WeightInput: React.FC<WeightInputProps> = ({
   const [loading, setLoading] = useState(false);
   const [currentDate, setCurrentDate] = useState<Dayjs>(dayjs());
   const [calendarView, setCalendarView] = useState<'date' | 'month' | 'year'>('date');
+  const [editingRecord, setEditingRecord] = useState<WeightRecord | null>(null);
 
   // 打开添加记录弹窗
   const handleAddRecord = (date: Dayjs, timeSlot: TimeSlot) => {
     setSelectedDate(date);
     setSelectedTimeSlot(timeSlot);
+    setEditingRecord(null); // 设置为新增模式
     setIsModalVisible(true);
     form.resetFields();
   };
@@ -53,6 +55,7 @@ export const WeightInput: React.FC<WeightInputProps> = ({
     if (record) {
       setSelectedDate(date);
       setSelectedTimeSlot(timeSlot);
+      setEditingRecord(record); // 设置为编辑模式
       setIsModalVisible(true);
       form.setFieldsValue({
         weight: record.weight,
@@ -69,21 +72,38 @@ export const WeightInput: React.FC<WeightInputProps> = ({
       const values = await form.validateFields();
       const date = selectedDate.hour(selectedTimeSlot.hour).minute(selectedTimeSlot.minute).second(0);
       
-      const record: WeightRecord = {
-        id: generateId(),
-        date: date.toISOString(),
-        weight: values.weight,
-        note: values.note?.trim() || undefined,
-        fasting: values.fasting ? '空腹' : '非空腹'
-      };
+      if (editingRecord) {
+        // 编辑现有记录
+        const updatedRecord: WeightRecord = {
+          ...editingRecord,
+          date: date.toISOString(),
+          weight: values.weight,
+          note: values.note?.trim() || undefined,
+          fasting: values.fasting ? '空腹' : '非空腹'
+        };
+        
+        await updateRecord(editingRecord.id, updatedRecord);
+        message.success('记录更新成功！');
+      } else {
+        // 新增记录
+        const record: WeightRecord = {
+          id: generateId(),
+          date: date.toISOString(),
+          weight: values.weight,
+          note: values.note?.trim() || undefined,
+          fasting: values.fasting ? '空腹' : '非空腹'
+        };
+        
+        await addRecord(record);
+        message.success('记录添加成功！');
+      }
       
-      await addRecord(record);
       form.resetFields();
       setIsModalVisible(false);
+      setEditingRecord(null);
       onAdd(); // 通知父组件重新加载数据
-      message.success('记录保存成功！');
     } catch (error) {
-      console.error('添加记录失败:', error);
+      console.error('保存记录失败:', error);
       message.error('保存失败，请重试');
     } finally {
       setLoading(false);
@@ -93,6 +113,7 @@ export const WeightInput: React.FC<WeightInputProps> = ({
   const handleModalCancel = () => {
     form.resetFields();
     setIsModalVisible(false);
+    setEditingRecord(null);
   };
 
   // 设置相关函数
@@ -166,6 +187,7 @@ export const WeightInput: React.FC<WeightInputProps> = ({
         selectedDate={selectedDate}
         selectedTimeSlot={selectedTimeSlot}
         form={form}
+        isEditing={!!editingRecord}
       />
 
       {/* 设置弹窗 */}

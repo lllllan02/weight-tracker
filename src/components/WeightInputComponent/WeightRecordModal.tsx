@@ -11,6 +11,7 @@ interface WeightRecordModalProps {
   selectedDate: Dayjs;
   selectedTimeSlot: TimeSlot;
   form: any;
+  isEditing?: boolean;
 }
 
 export const WeightRecordModal: React.FC<WeightRecordModalProps> = ({
@@ -20,13 +21,14 @@ export const WeightRecordModal: React.FC<WeightRecordModalProps> = ({
   loading,
   selectedDate,
   selectedTimeSlot,
-  form
+  form,
+  isEditing = false
 }) => {
   return (
     <Modal
       title={
         <span style={{fontWeight:800, fontSize:24, color:'#1677ff', letterSpacing:1}}>
-          添加体重记录 - {selectedDate.format('YYYY-MM-DD')} {selectedTimeSlot.label}
+          {isEditing ? '编辑' : '添加'}体重记录 - {selectedDate.format('YYYY-MM-DD')} {selectedTimeSlot.label}
         </span>
       }
       open={isVisible}
