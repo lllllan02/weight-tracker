@@ -37,7 +37,10 @@ export const calculateStats = (records: WeightRecord[], height: number): WeightS
       change: 0,
       totalRecords: 0,
       thisMonth: 0,
-      thisWeek: 0
+      thisWeek: 0,
+      targetProgress: 0,
+      targetRemaining: 0,
+      initialWeight: 0
     };
   }
 
@@ -79,7 +82,10 @@ export const calculateStats = (records: WeightRecord[], height: number): WeightS
     change,
     totalRecords: records.length,
     thisMonth,
-    thisWeek
+    thisWeek,
+    targetProgress: 0,
+    targetRemaining: 0,
+    initialWeight: 0
   };
 };
 

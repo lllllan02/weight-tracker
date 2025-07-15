@@ -26,7 +26,7 @@ code {
   padding: 32px 16px 0 16px;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 8px;
 }
 
 .header {
@@ -42,7 +42,7 @@ code {
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 16px;
+  gap: 8px;
 }
 
 .stats-card {

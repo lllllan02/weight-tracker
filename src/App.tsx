@@ -1,23 +1,29 @@
 import React, { useState, useEffect } from 'react';
 import { Layout, Typography, message } from 'antd';
 import { DashboardOutlined } from '@ant-design/icons';
-import { WeightRecord, UserProfile, WeightStats, CalendarData, ChartData } from './types';
-import { getCalendarData, getStats, getChartData, getProfile, updateProfile } from './utils/api';
+import { WeightRecord, UserProfile, WeightStats, CalendarData, ChartData, Report } from './types';
+import { getCalendarData, getStats, getChartData, getProfile, updateProfile, getWeeklyReport, getMonthlyReport } from './utils/api';
 import { WeightInput } from './components/WeightInput';
 import { StatsCard } from './components/StatsCard';
 import { WeightChart } from './components/WeightChart';
+import { TargetProgress } from './components/TargetProgress';
+import { ReportCard } from './components/ReportCard';
 
 const { Header, Content } = Layout;
 const { Title, Paragraph } = Typography;
 
 function App() {
   const [calendarData, setCalendarData] = useState<CalendarData>({ timeSlots: [], dayRecords: {} });
-  const [stats, setStats] = useState<WeightStats>({ current: 0, average: 0, min: 0, max: 0, bmi: 0, change: 0, totalRecords: 0, thisMonth: 0, thisWeek: 0 });
+  const [stats, setStats] = useState<WeightStats>({ current: 0, average: 0, min: 0, max: 0, bmi: 0, change: 0, totalRecords: 0, thisMonth: 0, thisWeek: 0, targetProgress: 0, targetRemaining: 0, initialWeight: 0 });
   const [chartData, setChartData] = useState<ChartData>({ labels: [], datasets: [] });
   const [profile, setProfile] = useState<UserProfile>({ height: 170, theme: 'light' });
+  const [weeklyReport, setWeeklyReport] = useState<Report | null>(null);
+  const [monthlyReport, setMonthlyReport] = useState<Report | null>(null);
+  const [reportsLoading, setReportsLoading] = useState(false);
 
   useEffect(() => {
     loadData();
+    loadReports();
   }, []);
 
   const loadData = async () => {
@@ -38,10 +44,27 @@ function App() {
     }
   };
 
+  const loadReports = async () => {
+    try {
+      setReportsLoading(true);
+      const [weekly, monthly] = await Promise.all([
+        getWeeklyReport(),
+        getMonthlyReport()
+      ]);
+      setWeeklyReport(weekly);
+      setMonthlyReport(monthly);
+    } catch (error) {
+      console.error('加载报告失败:', error);
+      message.error('加载报告失败');
+    } finally {
+      setReportsLoading(false);
+    }
+  };
+
   const handleAddRecord = async () => {
     try {
       // 重新加载所有数据，因为后端会自动更新所有计算数据
-      await loadData();
+      await Promise.all([loadData(), loadReports()]);
       message.success('体重记录添加成功');
     } catch (error) {
       message.error('添加记录失败');
@@ -52,7 +75,7 @@ function App() {
     try {
       await updateProfile(newProfile);
       // 重新加载所有数据，因为后端会自动更新所有计算数据
-      await loadData();
+      await Promise.all([loadData(), loadReports()]);
       message.success('用户资料更新成功');
     } catch (error) {
       message.error('更新用户资料失败');
@@ -90,10 +113,25 @@ function App() {
             calendarData={calendarData}
           />
 
+          {/* 目标进度 */}
+          {stats.current > 0 && (
+            <TargetProgress stats={stats} targetWeight={profile.targetWeight} />
+          )}
+
           {/* 统计卡片 */}
           {stats.current > 0 && (
             <StatsCard stats={stats} height={profile.height} />
           )}
+
+          {/* 报告卡片 */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 8 }}>
+            {weeklyReport && (
+              <ReportCard report={weeklyReport} loading={reportsLoading} />
+            )}
+            {monthlyReport && (
+              <ReportCard report={monthlyReport} loading={reportsLoading} />
+            )}
+          </div>
 
           {/* 体重图表 */}
           <WeightChart chartData={chartData} />

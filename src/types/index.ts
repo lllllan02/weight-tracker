@@ -22,6 +22,9 @@ export interface WeightStats {
   totalRecords: number;
   thisMonth: number;
   thisWeek: number;
+  targetProgress: number;
+  targetRemaining: number;
+  initialWeight: number;
 }
 
 export interface TimeSlot {
@@ -51,4 +54,23 @@ export interface ChartData {
     tension: number;
     fill: boolean;
   }>;
+}
+
+export interface ReportStats {
+  startWeight: number;
+  endWeight: number;
+  change: number;
+  average: number;
+  min: number;
+  max: number;
+  recordCount: number;
+  weeklyAverages?: number[];
+}
+
+export interface Report {
+  period: string;
+  type: 'weekly' | 'monthly';
+  records: WeightRecord[];
+  stats: ReportStats;
+  insights: string[];
 } 

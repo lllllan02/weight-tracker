@@ -138,4 +138,33 @@ export async function deleteRecord(id: string) {
     console.error('删除体重记录失败:', error);
     throw error;
   }
+}
+
+// ===== 报告 API =====
+// 获取周报
+export async function getWeeklyReport() {
+  try {
+    const res = await fetch(`${API_BASE}/api/reports/weekly`);
+    if (!res.ok) {
+      throw new Error(`HTTP error! status: ${res.status}`);
+    }
+    return await res.json();
+  } catch (error) {
+    console.error('获取周报失败:', error);
+    throw error;
+  }
+}
+
+// 获取月报
+export async function getMonthlyReport() {
+  try {
+    const res = await fetch(`${API_BASE}/api/reports/monthly`);
+    if (!res.ok) {
+      throw new Error(`HTTP error! status: ${res.status}`);
+    }
+    return await res.json();
+  } catch (error) {
+    console.error('获取月报失败:', error);
+    throw error;
+  }
 } 

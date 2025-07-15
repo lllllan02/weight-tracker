@@ -37,7 +37,7 @@ export const StatsCard: React.FC<StatsCardProps> = ({ stats, height }) => {
 
   return (
     <div className="stats-grid">
-      <Card>
+      <Card style={{ marginBottom: 0, padding: 0 }} bodyStyle={{ padding: 16 }}>
         <Statistic
           title="当前体重"
           value={stats.current}
@@ -51,7 +51,7 @@ export const StatsCard: React.FC<StatsCardProps> = ({ stats, height }) => {
         )}
       </Card>
 
-      <Card>
+      <Card style={{ marginBottom: 0, padding: 0 }} bodyStyle={{ padding: 16 }}>
         <Statistic
           title="平均体重"
           value={stats.average}
@@ -63,7 +63,7 @@ export const StatsCard: React.FC<StatsCardProps> = ({ stats, height }) => {
         </div>
       </Card>
 
-      <Card>
+      <Card style={{ marginBottom: 0, padding: 0 }} bodyStyle={{ padding: 16 }}>
         <Statistic
           title="BMI 指数"
           value={stats.bmi}
@@ -74,7 +74,7 @@ export const StatsCard: React.FC<StatsCardProps> = ({ stats, height }) => {
         </div>
       </Card>
 
-      <Card>
+      <Card style={{ marginBottom: 0, padding: 0 }} bodyStyle={{ padding: 16 }}>
         <Statistic
           title="体重范围"
           value={`${stats.min} - ${stats.max}`}
@@ -82,7 +82,7 @@ export const StatsCard: React.FC<StatsCardProps> = ({ stats, height }) => {
           valueStyle={{ color: '#13c2c2' }}
         />
         <div style={{ marginTop: 8, fontSize: 12, color: '#8c8c8c' }}>
-          最高 - 最低
+          最低 - 最高
         </div>
       </Card>
     </div>
