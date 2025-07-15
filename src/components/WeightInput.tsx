@@ -31,7 +31,7 @@ export const WeightInput: React.FC<WeightInputProps> = ({ onAdd }) => {
     setIsModalVisible(true);
     setSelectedDate(dayjs());
     setSelectedTime(COMMON_TIMES[0]);
-    form.setFieldsValue({ fasting: false });
+    form.resetFields();
   };
 
   // 选择常用时间段
@@ -181,9 +181,9 @@ export const WeightInput: React.FC<WeightInputProps> = ({ onAdd }) => {
           </div>
 
           {/* 空腹状态精简美化 */}
-          <Form.Item name="fasting" valuePropName="checked" style={{ marginBottom: 28 }}>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <span style={{ fontWeight: 700, fontSize: 16, marginRight: 24, color: '#222' }}>空腹状态</span>
+          <div style={{ marginBottom: 28, display: 'flex', alignItems: 'center' }}>
+            <span style={{ fontWeight: 700, fontSize: 16, marginRight: 24, color: '#222' }}>空腹状态</span>
+            <Form.Item name="fasting" valuePropName="checked" style={{ marginBottom: 0 }}>
               <Switch
                 checkedChildren={<span style={{ color: '#fff', fontWeight: 600 }}>空腹</span>}
                 unCheckedChildren={<span style={{ color: '#888', fontWeight: 600 }}>非空腹</span>}
@@ -194,8 +194,8 @@ export const WeightInput: React.FC<WeightInputProps> = ({ onAdd }) => {
                   transition: 'all 0.2s'
                 }}
               />
-            </div>
-          </Form.Item>
+            </Form.Item>
+          </div>
 
           <Form.Item
             name="weight"
