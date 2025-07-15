@@ -19,4 +19,36 @@ export interface WeightStats {
   max: number;
   bmi: number;
   change: number;
+  totalRecords: number;
+  thisMonth: number;
+  thisWeek: number;
+}
+
+export interface TimeSlot {
+  key: string;
+  label: string;
+  hour: number;
+  minute: number;
+  color: string;
+}
+
+export interface CalendarData {
+  timeSlots: TimeSlot[];
+  dayRecords: {
+    [dateKey: string]: {
+      [timeSlotKey: string]: WeightRecord;
+    };
+  };
+}
+
+export interface ChartData {
+  labels: string[];
+  datasets: Array<{
+    label: string;
+    data: number[];
+    borderColor: string;
+    backgroundColor: string;
+    tension: number;
+    fill: boolean;
+  }>;
 } 

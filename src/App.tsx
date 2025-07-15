@@ -1,20 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { Layout, Typography, message } from 'antd';
 import { DashboardOutlined } from '@ant-design/icons';
-import { WeightRecord, UserProfile } from './types';
-import { calculateStats } from './utils/helpers';
-import { getRecords, getProfile, updateProfile } from './utils/api';
+import { WeightRecord, UserProfile, WeightStats, CalendarData, ChartData } from './types';
+import { getCalendarData, getStats, getChartData, getProfile, updateProfile } from './utils/api';
 import { WeightInput } from './components/WeightInput';
 import { StatsCard } from './components/StatsCard';
 import { WeightChart } from './components/WeightChart';
-import { WeightList } from './components/WeightList';
-import { Settings } from './components/Settings';
 
 const { Header, Content } = Layout;
 const { Title, Paragraph } = Typography;
 
 function App() {
-  const [records, setRecords] = useState<WeightRecord[]>([]);
+  const [calendarData, setCalendarData] = useState<CalendarData>({ timeSlots: [], dayRecords: {} });
+  const [stats, setStats] = useState<WeightStats>({ current: 0, average: 0, min: 0, max: 0, bmi: 0, change: 0, totalRecords: 0, thisMonth: 0, thisWeek: 0 });
+  const [chartData, setChartData] = useState<ChartData>({ labels: [], datasets: [] });
   const [profile, setProfile] = useState<UserProfile>({ height: 170, theme: 'light' });
 
   useEffect(() => {
@@ -23,12 +22,16 @@ function App() {
 
   const loadData = async () => {
     try {
-      const [savedRecords, savedProfile] = await Promise.all([
-        getRecords(),
+      const [calendar, statsData, chart, profileData] = await Promise.all([
+        getCalendarData(),
+        getStats(),
+        getChartData(),
         getProfile()
       ]);
-      setRecords(savedRecords);
-      setProfile(savedProfile);
+      setCalendarData(calendar);
+      setStats(statsData);
+      setChartData(chart);
+      setProfile(profileData);
     } catch (error) {
       console.error('加载数据失败:', error);
       message.error('连接后端服务失败，请确保后端服务已启动');
@@ -37,35 +40,24 @@ function App() {
 
   const handleAddRecord = async () => {
     try {
-      const newRecords = await getRecords();
-      setRecords(newRecords);
+      // 重新加载所有数据，因为后端会自动更新所有计算数据
+      await loadData();
       message.success('体重记录添加成功');
     } catch (error) {
       message.error('添加记录失败');
     }
   };
 
-  const handleDeleteRecord = async () => {
-    try {
-      const newRecords = await getRecords();
-      setRecords(newRecords);
-      message.success('体重记录删除成功');
-    } catch (error) {
-      message.error('删除记录失败');
-    }
-  };
-
   const handleProfileChange = async (newProfile: UserProfile) => {
     try {
       await updateProfile(newProfile);
-      setProfile(newProfile);
+      // 重新加载所有数据，因为后端会自动更新所有计算数据
+      await loadData();
       message.success('用户资料更新成功');
     } catch (error) {
       message.error('更新用户资料失败');
     }
   };
-
-  const stats = calculateStats(records, profile.height);
 
   return (
     <Layout className="app-container">
@@ -90,22 +82,21 @@ function App() {
       
       <Content style={{ padding: 0, background: '#f5f5f5' }}>
         <div className="main-content">
-          {/* 设置和数据管理 */}
-          <Settings profile={profile} onProfileChange={handleProfileChange} />
-
           {/* 体重输入 */}
-          <WeightInput onAdd={handleAddRecord} />
+          <WeightInput 
+            onAdd={handleAddRecord} 
+            profile={profile} 
+            onProfileChange={handleProfileChange}
+            calendarData={calendarData}
+          />
 
           {/* 统计卡片 */}
-          {records.length > 0 && (
+          {stats.current > 0 && (
             <StatsCard stats={stats} height={profile.height} />
           )}
 
           {/* 体重图表 */}
-          <WeightChart records={records} />
-
-          {/* 体重记录列表 */}
-          <WeightList records={records} onDelete={handleDeleteRecord} />
+          <WeightChart chartData={chartData} />
 
           {/* 页脚 */}
           <div className="footer">

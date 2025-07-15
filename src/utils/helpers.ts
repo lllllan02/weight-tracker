@@ -34,7 +34,10 @@ export const calculateStats = (records: WeightRecord[], height: number): WeightS
       min: 0,
       max: 0,
       bmi: 0,
-      change: 0
+      change: 0,
+      totalRecords: 0,
+      thisMonth: 0,
+      thisWeek: 0
     };
   }
 
@@ -49,13 +52,34 @@ export const calculateStats = (records: WeightRecord[], height: number): WeightS
   const bmi = calculateBMI(current, height);
   const change = Number((current - previous).toFixed(1));
 
+  // 计算本月和本周记录数
+  const now = new Date();
+  const thisMonth = records.filter(r => {
+    const recordDate = new Date(r.date);
+    return recordDate.getMonth() === now.getMonth() && recordDate.getFullYear() === now.getFullYear();
+  }).length;
+
+  const thisWeek = records.filter(r => {
+    const recordDate = new Date(r.date);
+    const weekStart = new Date(now);
+    weekStart.setDate(now.getDate() - now.getDay());
+    weekStart.setHours(0, 0, 0, 0);
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6);
+    weekEnd.setHours(23, 59, 59, 999);
+    return recordDate >= weekStart && recordDate <= weekEnd;
+  }).length;
+
   return {
     current,
     average,
     min,
     max,
     bmi,
-    change
+    change,
+    totalRecords: records.length,
+    thisMonth,
+    thisWeek
   };
 };
 

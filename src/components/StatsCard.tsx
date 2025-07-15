@@ -2,7 +2,6 @@ import React from 'react';
 import { Card, Statistic } from 'antd';
 import { ArrowUpOutlined, ArrowDownOutlined, MinusOutlined } from '@ant-design/icons';
 import { WeightStats } from '../types';
-import { getBMICategory } from '../utils/helpers';
 
 interface StatsCardProps {
   stats: WeightStats;
@@ -27,6 +26,13 @@ export const StatsCard: React.FC<StatsCardProps> = ({ stats, height }) => {
     if (stats.bmi < 24) return '#52c41a';
     if (stats.bmi < 28) return '#faad14';
     return '#ff4d4f';
+  };
+
+  const getBMICategory = (bmi: number): string => {
+    if (bmi < 18.5) return '偏瘦';
+    if (bmi < 24) return '正常';
+    if (bmi < 28) return '偏胖';
+    return '肥胖';
   };
 
   return (

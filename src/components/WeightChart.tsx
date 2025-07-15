@@ -12,8 +12,7 @@ import {
 } from 'chart.js';
 import { Line } from 'react-chartjs-2';
 import { Card, Empty } from 'antd';
-import { WeightRecord } from '../types';
-import { getChartData } from '../utils/helpers';
+import { ChartData } from '../types';
 
 ChartJS.register(
   CategoryScale,
@@ -27,11 +26,11 @@ ChartJS.register(
 );
 
 interface WeightChartProps {
-  records: WeightRecord[];
+  chartData: ChartData;
 }
 
-export const WeightChart: React.FC<WeightChartProps> = ({ records }) => {
-  if (records.length === 0) {
+export const WeightChart: React.FC<WeightChartProps> = ({ chartData }) => {
+  if (!chartData || chartData.labels.length === 0) {
     return (
       <Card className="chart-container">
         <Empty
@@ -91,11 +90,9 @@ export const WeightChart: React.FC<WeightChartProps> = ({ records }) => {
     },
   };
 
-  const data = getChartData(records);
-
   return (
     <Card className="chart-container">
-      <Line options={options} data={data} />
+      <Line options={options} data={chartData} />
     </Card>
   );
 }; 

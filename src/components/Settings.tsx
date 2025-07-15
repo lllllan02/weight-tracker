@@ -33,15 +33,20 @@ export const Settings: React.FC<SettingsProps> = ({ profile, onProfileChange }) 
 
 
   return (
-    <div style={{ marginBottom: 24 }}>
-      <Space>
-        <Button 
-          icon={<SettingOutlined />} 
-          onClick={() => setIsModalVisible(true)}
-        >
-          设置
-        </Button>
-      </Space>
+    <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'flex-end' }}>
+      <Button 
+        icon={<SettingOutlined />} 
+        onClick={() => setIsModalVisible(true)}
+        size="small"
+        style={{
+          borderRadius: 6,
+          background: '#f5f5f5',
+          border: '1px solid #d9d9d9',
+          color: '#666'
+        }}
+      >
+        设置
+      </Button>
 
       <Modal
         title={
