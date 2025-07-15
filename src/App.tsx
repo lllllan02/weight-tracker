@@ -96,10 +96,10 @@ function App() {
         <div className="header">
           <Title level={2} style={{ margin: 0, color: '#1890ff', wordBreak: 'break-all', whiteSpace: 'normal' }}>
             <DashboardOutlined style={{ marginRight: 12 }} />
-            体重记录
+            体重日记
           </Title>
           <Paragraph style={{ margin: 0, color: '#666', fontSize: 16 }}>
-            简单记录，科学管理你的体重变化
+            记录您的健康旅程，陪伴您实现理想体重
           </Paragraph>
         </div>
       </Header>

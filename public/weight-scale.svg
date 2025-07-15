@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- 体重秤主体 -->
+  <rect x="8" y="40" width="48" height="8" rx="2" fill="#4CAF50" stroke="#2E7D32" stroke-width="1"/>
+  
+  <!-- 秤盘 -->
+  <circle cx="32" cy="32" r="16" fill="#81C784" stroke="#4CAF50" stroke-width="2"/>
+  <circle cx="32" cy="32" r="12" fill="#A5D6A7" stroke="none"/>
+  
+  <!-- 指针 -->
+  <line x1="32" y1="32" x2="32" y2="20" stroke="#2E7D32" stroke-width="3" stroke-linecap="round"/>
+  
+  <!-- 刻度 -->
+  <line x1="20" y1="20" x2="44" y2="20" stroke="#2E7D32" stroke-width="1"/>
+  <line x1="20" y1="24" x2="44" y2="24" stroke="#2E7D32" stroke-width="1"/>
+  <line x1="20" y1="28" x2="44" y2="28" stroke="#2E7D32" stroke-width="1"/>
+  
+  <!-- 数字标签 -->
+  <text x="16" y="18" font-family="Arial, sans-serif" font-size="8" fill="#2E7D32" text-anchor="middle">0</text>
+  <text x="32" y="18" font-family="Arial, sans-serif" font-size="8" fill="#2E7D32" text-anchor="middle">50</text>
+  <text x="48" y="18" font-family="Arial, sans-serif" font-size="8" fill="#2E7D32" text-anchor="middle">100</text>
+</svg> 
