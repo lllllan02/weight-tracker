@@ -36,7 +36,7 @@ export const WeightRecordModal: React.FC<WeightRecordModalProps> = ({
       onCancel={onCancel}
       okText={<span style={{fontSize:18, fontWeight:600}}>保存</span>}
       cancelText={<span style={{fontSize:16}}>取消</span>}
-      bodyStyle={{ padding: 32, paddingTop: 24, borderRadius: 20, background: '#f8fafc' }}
+              styles={{ body: { padding: 32, paddingTop: 24, borderRadius: 20, background: '#f8fafc' } }}
       style={{ borderRadius: 20, boxShadow: '0 8px 32px rgba(22,119,255,0.10)' }}
       okButtonProps={{ 
         style: { height: 44, fontSize: 18, borderRadius: 12, background: '#1677ff', border: 'none' },

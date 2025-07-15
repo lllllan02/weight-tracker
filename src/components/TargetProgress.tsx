@@ -69,7 +69,7 @@ export const TargetProgress: React.FC<TargetProgressProps> = ({ stats, targetWei
         </div>
       }
       style={{ marginBottom: 0, padding: 0 }}
-      bodyStyle={{ padding: 16 }}
+              styles={{ body: { padding: 16 } }}
     >
       <div>
         {/* 进度条 */}

@@ -126,7 +126,7 @@ export const DateView: React.FC<DateViewProps> = ({
       fullscreen={false}
       value={currentDate}
       onPanelChange={(date) => setCurrentDate(date)}
-      dateFullCellRender={dateFullCellRender}
+              fullCellRender={dateFullCellRender}
       onSelect={(date) => onDateSelect(date)}
       headerRender={() => null}
       style={{ 

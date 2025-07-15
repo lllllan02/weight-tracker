@@ -167,4 +167,64 @@ export async function getMonthlyReport() {
     console.error('获取月报失败:', error);
     throw error;
   }
+}
+
+// ===== 数据备份 API =====
+// 导出数据
+export async function exportData() {
+  try {
+    const res = await fetch(`${API_BASE}/api/export`);
+    if (!res.ok) {
+      throw new Error(`HTTP error! status: ${res.status}`);
+    }
+    
+    // 获取文件名
+    const contentDisposition = res.headers.get('Content-Disposition');
+    let filename = 'weight-tracker-backup.json';
+    if (contentDisposition) {
+      const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+      if (filenameMatch) {
+        filename = filenameMatch[1];
+      }
+    }
+    
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+    
+    return { success: true, filename };
+  } catch (error) {
+    console.error('导出数据失败:', error);
+    throw error;
+  }
+}
+
+// 导入数据
+export async function importData(file: File) {
+  try {
+    const fileContent = await file.text();
+    const importData = JSON.parse(fileContent);
+    
+    const res = await fetch(`${API_BASE}/api/import`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(importData),
+    });
+    
+    if (!res.ok) {
+      const errorData = await res.json();
+      throw new Error(errorData.error || `HTTP error! status: ${res.status}`);
+    }
+    
+    return await res.json();
+  } catch (error) {
+    console.error('导入数据失败:', error);
+    throw error;
+  }
 } 

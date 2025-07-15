@@ -8,6 +8,7 @@ import { StatsCard } from './components/StatsCard';
 import { WeightChart } from './components/WeightChart';
 import { TargetProgress } from './components/TargetProgress';
 import { ReportCard } from './components/ReportCard';
+import { DataBackup } from './components/DataBackup';
 
 const { Header, Content } = Layout;
 const { Title, Paragraph } = Typography;
@@ -135,6 +136,11 @@ function App() {
 
           {/* 体重图表 */}
           <WeightChart chartData={chartData} />
+
+          {/* 数据备份 */}
+          <DataBackup onDataChange={async () => {
+            await Promise.all([loadData(), loadReports()]);
+          }} />
 
           {/* 页脚 */}
           <div className="footer">

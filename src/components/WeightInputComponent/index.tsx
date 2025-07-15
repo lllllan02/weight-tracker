@@ -154,7 +154,7 @@ export const WeightInput: React.FC<WeightInputProps> = ({
               />
             }
             style={{ borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}
-            bodyStyle={{ padding: 0, border: 'none' }}
+            styles={{ body: { padding: 0, border: 'none' } }}
           >
             <CalendarView
               currentDate={currentDate}

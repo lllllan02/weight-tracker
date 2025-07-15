@@ -50,7 +50,7 @@ export const ReportCard: React.FC<ReportCardProps> = ({ report, loading = false 
           </Button>
         }
         style={{ marginBottom: 0, padding: 0 }}
-        bodyStyle={{ padding: 16 }}
+        styles={{ body: { padding: 16 } }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>

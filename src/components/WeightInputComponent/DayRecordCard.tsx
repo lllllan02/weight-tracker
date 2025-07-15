@@ -71,7 +71,7 @@ export const DayRecordCard: React.FC<DayRecordCardProps> = ({
         border: selectedDate.isSame(dayjs(), 'day') ? '2px solid #1677ff' : '1px solid #f0f0f0',
         background: '#fff'
       }}
-      bodyStyle={{ padding: '16px 12px' }}
+              styles={{ body: { padding: '16px 12px' } }}
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         {TIME_SLOTS.map(slot => {

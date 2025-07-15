@@ -609,6 +609,92 @@ app.get('/api/health', (req, res) => {
   }
 });
 
+// ===== 数据备份接口 =====
+// 导出数据
+app.get('/api/export', (req, res) => {
+  try {
+    const data = readData();
+    const exportData = {
+      ...data,
+      exportInfo: {
+        timestamp: new Date().toISOString(),
+        version: '1.0',
+        recordCount: data.records ? data.records.length : 0
+      }
+    };
+    
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="weight-tracker-backup-${new Date().toISOString().split('T')[0]}.json"`);
+    res.json(exportData);
+  } catch (error) {
+    console.error('导出数据失败:', error.message);
+    res.status(500).json({ error: '导出数据失败' });
+  }
+});
+
+// 导入数据
+app.post('/api/import', (req, res) => {
+  try {
+    const importData = req.body;
+    
+    // 验证导入数据的结构
+    if (!importData || typeof importData !== 'object') {
+      return res.status(400).json({ error: '无效的数据格式' });
+    }
+    
+    // 验证记录数据
+    if (importData.records && Array.isArray(importData.records)) {
+      for (const record of importData.records) {
+        if (!validateRecord(record)) {
+          return res.status(400).json({ error: '记录数据格式无效' });
+        }
+      }
+    }
+    
+    // 验证用户资料
+    if (importData.profile && !validateProfile(importData.profile)) {
+      return res.status(400).json({ error: '用户资料格式无效' });
+    }
+    
+    // 备份当前数据
+    const currentData = readData();
+    const backupData = {
+      ...currentData,
+      backupInfo: {
+        timestamp: new Date().toISOString(),
+        reason: 'import_backup'
+      }
+    };
+    
+    // 确保备份目录存在
+    const backupDir = path.join(__dirname, 'data');
+    if (!fs.existsSync(backupDir)) {
+      fs.mkdirSync(backupDir, { recursive: true });
+    }
+    
+    // 保存备份
+    const backupPath = path.join(backupDir, `backup-${new Date().toISOString().replace(/[:.]/g, '-')}.json`);
+    fs.writeFileSync(backupPath, JSON.stringify(backupData, null, 2));
+    
+    // 写入新数据
+    const newData = {
+      records: importData.records || [],
+      profile: importData.profile || {}
+    };
+    writeData(newData);
+    
+    res.json({ 
+      success: true, 
+      message: '数据导入成功',
+      backupPath: backupPath,
+      importedRecords: newData.records.length
+    });
+  } catch (error) {
+    console.error('导入数据失败:', error.message);
+    res.status(500).json({ error: '导入数据失败' });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
   console.log('Available APIs:');
@@ -624,4 +710,6 @@ app.listen(PORT, () => {
   console.log('- POST /api/records  - 添加记录');
   console.log('- PUT  /api/records/:id - 更新记录');
   console.log('- DELETE /api/records/:id - 删除记录');
+  console.log('- GET  /api/export   - 导出数据备份');
+  console.log('- POST /api/import   - 导入数据备份');
 }); 
