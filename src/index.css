@@ -82,3 +82,33 @@ code {
     padding: 16px 4px 0 4px;
   }
 }
+
+/* 移除日历组件的分割线 */
+.custom-calendar .ant-picker-calendar {
+  border: none !important;
+}
+
+.custom-calendar .ant-picker-calendar-header {
+  border: none !important;
+  padding: 0 !important;
+}
+
+.custom-calendar .ant-picker-calendar-body {
+  border: none !important;
+}
+
+.custom-calendar .ant-picker-calendar-date {
+  border: none !important;
+}
+
+.custom-calendar .ant-picker-calendar-date-today {
+  border: none !important;
+}
+
+.custom-calendar .ant-picker-calendar-date-selected {
+  border: none !important;
+}
+
+.custom-calendar .ant-picker-calendar-date:hover {
+  border: none !important;
+}

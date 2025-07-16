@@ -42,6 +42,146 @@ export const DateView: React.FC<DateViewProps> = ({
     return exerciseRecords[dateKey] || false;
   };
 
+  // 切换到上个月
+  const goToPreviousMonth = () => {
+    setCurrentDate(currentDate.subtract(1, "month"));
+  };
+
+  // 切换到下个月
+  const goToNextMonth = () => {
+    setCurrentDate(currentDate.add(1, "month"));
+  };
+
+  // 回到今天
+  const goToToday = () => {
+    console.log("回到今天按钮被点击");
+    const today = dayjs();
+    console.log("目标日期:", today.format("YYYY-MM-DD"));
+    console.log("当前日历日期:", currentDate.format("YYYY-MM-DD"));
+    setCurrentDate(today);
+    // 同时更新选中的日期，这样右侧面板也会更新
+    onDateSelect(today);
+  };
+
+  // 自定义头部渲染
+  const customHeaderRender = () => {
+    return (
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "8px 12px",
+          marginBottom: 8,
+        }}
+      >
+        {/* 左箭头 */}
+        <button
+          onClick={goToPreviousMonth}
+          style={{
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            padding: "4px 8px",
+            borderRadius: 4,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: 16,
+            color: "#666",
+            transition: "all 0.2s ease",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = "#f5f5f5";
+            e.currentTarget.style.color = "#333";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = "transparent";
+            e.currentTarget.style.color = "#666";
+          }}
+        >
+          ←
+        </button>
+
+        {/* 中间区域：月份和回到今天按钮 */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "12px",
+          }}
+        >
+          {/* 当前月份和年份 */}
+          <div
+            style={{
+              fontSize: 16,
+              fontWeight: 600,
+              color: "#333",
+              textAlign: "center",
+            }}
+          >
+            {currentDate.format("YYYY年M月")}
+          </div>
+
+          {/* 回到今天按钮 */}
+          <button
+            onClick={goToToday}
+            style={{
+              background: "#1890ff",
+              border: "none",
+              cursor: "pointer",
+              padding: "4px 8px",
+              borderRadius: 4,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 12,
+              color: "#fff",
+              transition: "all 0.2s ease",
+              fontWeight: 500,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = "#40a9ff";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "#1890ff";
+            }}
+          >
+            今天
+          </button>
+        </div>
+
+        {/* 右箭头 */}
+        <button
+          onClick={goToNextMonth}
+          style={{
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            padding: "4px 8px",
+            borderRadius: 4,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: 16,
+            color: "#666",
+            transition: "all 0.2s ease",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = "#f5f5f5";
+            e.currentTarget.style.color = "#333";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = "transparent";
+            e.currentTarget.style.color = "#666";
+          }}
+        >
+          →
+        </button>
+      </div>
+    );
+  };
+
   // 渲染整个日期单元格
   const dateFullCellRender = (date: Dayjs) => {
     const dayWeights = getDayWeights(date);
@@ -176,12 +316,14 @@ export const DateView: React.FC<DateViewProps> = ({
       onPanelChange={(date) => setCurrentDate(date)}
       fullCellRender={dateFullCellRender}
       onSelect={(date) => onDateSelect(date)}
-      headerRender={() => null}
+      headerRender={customHeaderRender}
       style={{
         background: "#fff",
         borderRadius: 8,
         padding: 8,
+        border: "none",
       }}
+      className="custom-calendar"
     />
   );
 };

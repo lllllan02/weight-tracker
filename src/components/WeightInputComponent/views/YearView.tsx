@@ -1,5 +1,4 @@
 import React from "react";
-import { Button } from "antd";
 import { Dayjs } from "dayjs";
 import dayjs from "dayjs";
 import { CalendarData } from "../../../types";
@@ -19,64 +18,152 @@ export const YearView: React.FC<YearViewProps> = ({
 }) => {
   const { dayRecords = {} } = calendarData;
 
+  // 切换到前10年
+  const goToPreviousDecade = () => {
+    const newYear = currentDate.year() - 10;
+    setCurrentDate(currentDate.year(newYear));
+  };
+
+  // 切换到后10年
+  const goToNextDecade = () => {
+    const newYear = currentDate.year() + 10;
+    setCurrentDate(currentDate.year(newYear));
+  };
+
+  // 回到今年
+  const goToCurrentYear = () => {
+    setCurrentDate(dayjs());
+  };
+
   return (
-    <div style={{ padding: "16px" }}>
-      {/* 年份导航 */}
+    <div
+      style={{
+        background: "#fff",
+        borderRadius: 8,
+        padding: 8,
+        border: "none",
+      }}
+    >
+      {/* 头部导航 */}
       <div
         style={{
           display: "flex",
-          justifyContent: "space-between",
           alignItems: "center",
-          marginBottom: "16px",
-          padding: "0 8px",
+          justifyContent: "space-between",
+          padding: "8px 12px",
+          marginBottom: 8,
+          borderBottom: "1px solid #f0f0f0",
         }}
       >
-        <Button
-          type="text"
-          size="small"
-          onClick={() => {
-            const newYear = currentDate.year() - 10;
-            setCurrentDate(currentDate.year(newYear));
-          }}
+        {/* 左箭头 */}
+        <button
+          onClick={goToPreviousDecade}
           style={{
-            fontSize: 12,
-            color: "#666",
+            background: "none",
+            border: "none",
+            cursor: "pointer",
             padding: "4px 8px",
-          }}
-        >
-          ← 前10年
-        </Button>
-        <span
-          style={{
-            fontSize: 14,
-            fontWeight: 600,
-            color: "#333",
-            minWidth: "80px",
-            textAlign: "center",
-          }}
-        >
-          {currentDate.year() - 5} - {currentDate.year() + 4}
-        </span>
-        <Button
-          type="text"
-          size="small"
-          onClick={() => {
-            const newYear = currentDate.year() + 10;
-            setCurrentDate(currentDate.year(newYear));
-          }}
-          style={{
-            fontSize: 12,
+            borderRadius: 4,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: 16,
             color: "#666",
-            padding: "4px 8px",
+            transition: "all 0.2s ease",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = "#f5f5f5";
+            e.currentTarget.style.color = "#333";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = "transparent";
+            e.currentTarget.style.color = "#666";
           }}
         >
-          后10年 →
-        </Button>
+          ←
+        </button>
+
+        {/* 中间区域：年份范围和回到今年按钮 */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "12px",
+          }}
+        >
+          {/* 当前年份范围 */}
+          <div
+            style={{
+              fontSize: 16,
+              fontWeight: 600,
+              color: "#333",
+              textAlign: "center",
+            }}
+          >
+            {currentDate.year() - 5} - {currentDate.year() + 4}
+          </div>
+
+          {/* 回到今年按钮 */}
+          <button
+            onClick={goToCurrentYear}
+            style={{
+              background: "#1890ff",
+              border: "none",
+              cursor: "pointer",
+              padding: "4px 8px",
+              borderRadius: 4,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 12,
+              color: "#fff",
+              transition: "all 0.2s ease",
+              fontWeight: 500,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = "#40a9ff";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "#1890ff";
+            }}
+          >
+            今年
+          </button>
+        </div>
+
+        {/* 右箭头 */}
+        <button
+          onClick={goToNextDecade}
+          style={{
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            padding: "4px 8px",
+            borderRadius: 4,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: 16,
+            color: "#666",
+            transition: "all 0.2s ease",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = "#f5f5f5";
+            e.currentTarget.style.color = "#333";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = "transparent";
+            e.currentTarget.style.color = "#666";
+          }}
+        >
+          →
+        </button>
       </div>
 
       {/* 年份网格 */}
       <div
         style={{
+          padding: "8px",
           display: "grid",
           gridTemplateColumns: "repeat(3, 1fr)",
           gap: "12px",
@@ -151,34 +238,6 @@ export const YearView: React.FC<YearViewProps> = ({
             </div>
           );
         })}
-      </div>
-
-      {/* 快速跳转到今年 */}
-      <div
-        style={{
-          marginTop: "16px",
-          textAlign: "center",
-        }}
-      >
-        <Button
-          type="text"
-          size="small"
-          onClick={() => {
-            setCurrentDate(dayjs());
-          }}
-          style={{
-            fontSize: 12,
-            padding: "6px 16px",
-            borderRadius: 20,
-            background: "#f0f8ff",
-            color: "#1677ff",
-            border: "1px solid #91d5ff",
-            fontWeight: 500,
-            transition: "all 0.2s ease",
-          }}
-        >
-          回到今年
-        </Button>
       </div>
     </div>
   );
