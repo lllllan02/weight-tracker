@@ -109,6 +109,15 @@ function App() {
     }
   };
 
+  const handleExerciseChange = async () => {
+    try {
+      // 只重新加载数据，不显示成功提示
+      await Promise.all([loadData(), loadReports()]);
+    } catch (error) {
+      console.error("重新加载数据失败:", error);
+    }
+  };
+
   const handleProfileChange = async (newProfile: UserProfile) => {
     try {
       await updateProfile(newProfile);
@@ -156,6 +165,7 @@ function App() {
           {/* 体重输入 */}
           <WeightInput
             onAdd={handleAddRecord}
+            onExerciseChange={handleExerciseChange}
             profile={profile}
             onProfileChange={handleProfileChange}
             calendarData={calendarData}

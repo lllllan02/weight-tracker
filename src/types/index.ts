@@ -4,7 +4,12 @@ export interface WeightRecord {
   weight: number;
   note?: string;
   fasting: "空腹" | "非空腹";
-  exercise?: boolean;
+}
+
+export interface ExerciseRecord {
+  id: string;
+  date: string;
+  exercise: boolean;
 }
 
 export interface UserProfile {

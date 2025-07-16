@@ -112,3 +112,11 @@ code {
 .custom-calendar .ant-picker-calendar-date:hover {
   border: none !important;
 }
+
+/* 体重输入框数字垂直居中 */
+.weight-input-number .ant-input-number-input {
+  height: 44px !important;
+  line-height: 44px !important;
+  padding: 0 12px !important;
+  box-sizing: border-box !important;
+}

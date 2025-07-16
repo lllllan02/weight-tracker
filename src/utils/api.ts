@@ -140,6 +140,73 @@ export async function deleteRecord(id: string) {
   }
 }
 
+// ===== 运动记录 API =====
+// 获取所有运动记录
+export async function getExerciseRecords() {
+  try {
+    const res = await fetch(`${API_BASE}/api/exercise`);
+    if (!res.ok) {
+      throw new Error(`HTTP error! status: ${res.status}`);
+    }
+    return await res.json();
+  } catch (error) {
+    console.error("获取运动记录失败:", error);
+    throw error;
+  }
+}
+
+// 添加运动记录
+export async function addExerciseRecord(record: any) {
+  try {
+    const res = await fetch(`${API_BASE}/api/exercise`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(record),
+    });
+    if (!res.ok) {
+      throw new Error(`HTTP error! status: ${res.status}`);
+    }
+    return await res.json();
+  } catch (error) {
+    console.error("添加运动记录失败:", error);
+    throw error;
+  }
+}
+
+// 更新运动记录
+export async function updateExerciseRecord(id: string, record: any) {
+  try {
+    const res = await fetch(`${API_BASE}/api/exercise/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(record),
+    });
+    if (!res.ok) {
+      throw new Error(`HTTP error! status: ${res.status}`);
+    }
+    return await res.json();
+  } catch (error) {
+    console.error("更新运动记录失败:", error);
+    throw error;
+  }
+}
+
+// 删除运动记录
+export async function deleteExerciseRecord(id: string) {
+  try {
+    const res = await fetch(`${API_BASE}/api/exercise/${id}`, {
+      method: "DELETE",
+    });
+    if (!res.ok) {
+      throw new Error(`HTTP error! status: ${res.status}`);
+    }
+    return await res.json();
+  } catch (error) {
+    console.error("删除运动记录失败:", error);
+    throw error;
+  }
+}
+
 // ===== 报告 API =====
 // 获取周报
 export async function getWeeklyReport() {

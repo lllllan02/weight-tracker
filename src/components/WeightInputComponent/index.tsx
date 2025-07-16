@@ -1,20 +1,20 @@
 import React, { useState } from "react";
 import { Card, Form, message } from "antd";
-import { WeightRecord, UserProfile, CalendarData } from "../../types";
+import { WeightRecord, UserProfile, CalendarData, ExerciseRecord } from "../../types";
 import { generateId } from "../../utils/helpers";
-import { addRecord, updateRecord, updateProfile } from "../../utils/api";
+import { addRecord, updateRecord, updateProfile, deleteRecord, addExerciseRecord, updateExerciseRecord, getExerciseRecords } from "../../utils/api";
 import dayjs, { Dayjs } from "dayjs";
 
 // 导入子组件
 import { CalendarView } from "./CalendarView";
 import { DayRecordCard } from "./DayRecordCard";
-import { WeightRecordModal } from "./WeightRecordModal";
 import { SettingsModal } from "./SettingsModal";
 import { CalendarHeader } from "./CalendarHeader";
 import { TIME_SLOTS, TimeSlot } from "./constants";
 
 interface WeightInputProps {
   onAdd: () => void;
+  onExerciseChange: () => void; // 专门用于运动状态变化的回调
   profile: UserProfile;
   onProfileChange: (profile: UserProfile) => void;
   calendarData: CalendarData;
@@ -22,93 +22,60 @@ interface WeightInputProps {
 
 export const WeightInput: React.FC<WeightInputProps> = ({
   onAdd,
+  onExerciseChange,
   profile,
   onProfileChange,
   calendarData,
 }) => {
-  const [form] = Form.useForm();
   const [settingsForm] = Form.useForm();
-  const [isModalVisible, setIsModalVisible] = useState(false);
   const [isSettingsModalVisible, setIsSettingsModalVisible] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Dayjs>(dayjs());
-  const [selectedTimeSlot, setSelectedTimeSlot] = useState<TimeSlot>(
-    TIME_SLOTS[0]
-  );
   const [loading, setLoading] = useState(false);
   const [currentDate, setCurrentDate] = useState<Dayjs>(dayjs());
   const [calendarView, setCalendarView] = useState<"date" | "month" | "year">(
     "date"
   );
-  const [editingRecord, setEditingRecord] = useState<WeightRecord | null>(null);
 
-  // 打开添加记录弹窗
+  // 打开添加记录弹窗（现在直接在卡片上编辑，这个函数保留用于新增）
   const handleAddRecord = (date: Dayjs, timeSlot: TimeSlot) => {
     setSelectedDate(date);
-    setSelectedTimeSlot(timeSlot);
-    setEditingRecord(null); // 设置为新增模式
-    setIsModalVisible(true);
-    form.resetFields();
   };
 
-  // 编辑记录
+  // 编辑记录（现在直接在卡片上编辑，这个函数保留用于兼容）
   const handleEditRecord = (date: Dayjs, timeSlot: TimeSlot) => {
-    const { dayRecords = {} } = calendarData;
-    const dateKey = date.format("YYYY-MM-DD");
-    const record = dayRecords[dateKey]?.[timeSlot.key] as
-      | WeightRecord
-      | undefined;
-
-    if (record) {
-      setSelectedDate(date);
-      setSelectedTimeSlot(timeSlot);
-      setEditingRecord(record); // 设置为编辑模式
-      setIsModalVisible(true);
-      form.setFieldsValue({
-        weight: record.weight,
-        note: record.note,
-        fasting: record.fasting === "空腹",
-        exercise: record.exercise || false,
-      });
-    }
+    setSelectedDate(date);
   };
 
   // 处理运动状态变化
   const handleExerciseChange = async (date: Dayjs, exercise: boolean) => {
     try {
       setLoading(true);
-      const { dayRecords = {} } = calendarData;
+      
+      // 获取所有运动记录
+      const exerciseRecords = await getExerciseRecords();
       const dateKey = date.format("YYYY-MM-DD");
-      const dayData = dayRecords[dateKey];
-
-      if (dayData && Object.keys(dayData).length > 0) {
-        // 如果当天有体重记录，更新第一个记录的运动状态
-        const firstTimeSlot = Object.keys(dayData)[0];
-        const record = dayData[firstTimeSlot];
-
-        if (record) {
-          const updatedRecord: WeightRecord = {
-            ...record,
-            exercise: exercise,
-          };
-
-          await updateRecord(record.id, updatedRecord);
-          message.success(exercise ? "已标记为运动日" : "已取消运动标记");
-        }
-      } else {
-        // 如果当天没有体重记录，创建一个虚拟记录来保存运动状态
-        const virtualRecord: WeightRecord = {
-          id: generateId(),
+      
+      // 查找是否已有该日期的运动记录
+      const existingRecord = exerciseRecords.find((record: ExerciseRecord) => 
+        new Date(record.date).toISOString().split('T')[0] === dateKey
+      );
+      
+      if (existingRecord) {
+        // 更新现有运动记录
+        await updateExerciseRecord(existingRecord.id, {
           date: date.hour(8).minute(0).second(0).toISOString(),
-          weight: 0, // 虚拟体重，不会显示
-          fasting: "空腹",
           exercise: exercise,
-        };
-
-        await addRecord(virtualRecord);
-        message.success(exercise ? "已标记为运动日" : "已取消运动标记");
+        });
+      } else {
+        // 创建新的运动记录
+        await addExerciseRecord({
+          date: date.hour(8).minute(0).second(0).toISOString(),
+          exercise: exercise,
+        });
       }
 
-      onAdd(); // 通知父组件重新加载数据
+      message.success(exercise ? "已标记为运动日" : "已取消运动标记");
+      onExerciseChange(); // 通知父组件重新加载数据
     } catch (error) {
       console.error("更新运动状态失败:", error);
       message.error("更新运动状态失败，请重试");
@@ -117,47 +84,41 @@ export const WeightInput: React.FC<WeightInputProps> = ({
     }
   };
 
-  // 保存记录
-  const handleModalOk = async () => {
+  // 保存记录（直接在卡片上编辑）
+  const handleSaveRecord = async (date: Dayjs, timeSlot: TimeSlot, weight: number, fasting: boolean) => {
     try {
       setLoading(true);
-      const values = await form.validateFields();
-      const date = selectedDate
-        .hour(selectedTimeSlot.hour)
-        .minute(selectedTimeSlot.minute)
-        .second(0);
+      const recordDate = date.hour(timeSlot.hour).minute(timeSlot.minute).second(0);
+      
+      // 检查是否已有记录
+      const { dayRecords = {} } = calendarData;
+      const dateKey = date.format("YYYY-MM-DD");
+      const existingRecord = dayRecords[dateKey]?.[timeSlot.key];
 
-      if (editingRecord) {
-        // 编辑现有记录
+      if (existingRecord) {
+        // 更新现有记录
         const updatedRecord: WeightRecord = {
-          ...editingRecord,
-          date: date.toISOString(),
-          weight: values.weight,
-          note: values.note?.trim() || undefined,
-          fasting: values.fasting ? "空腹" : "非空腹",
-          exercise: values.exercise || false,
+          ...existingRecord,
+          date: recordDate.toISOString(),
+          weight: weight,
+          fasting: fasting ? "空腹" : "非空腹",
         };
 
-        await updateRecord(editingRecord.id, updatedRecord);
+        await updateRecord(existingRecord.id, updatedRecord);
         message.success("记录更新成功！");
       } else {
         // 新增记录
         const record: WeightRecord = {
           id: generateId(),
-          date: date.toISOString(),
-          weight: values.weight,
-          note: values.note?.trim() || undefined,
-          fasting: values.fasting ? "空腹" : "非空腹",
-          exercise: values.exercise || false,
+          date: recordDate.toISOString(),
+          weight: weight,
+          fasting: fasting ? "空腹" : "非空腹",
         };
 
         await addRecord(record);
         message.success("记录添加成功！");
       }
 
-      form.resetFields();
-      setIsModalVisible(false);
-      setEditingRecord(null);
       onAdd(); // 通知父组件重新加载数据
     } catch (error) {
       console.error("保存记录失败:", error);
@@ -167,11 +128,32 @@ export const WeightInput: React.FC<WeightInputProps> = ({
     }
   };
 
-  const handleModalCancel = () => {
-    form.resetFields();
-    setIsModalVisible(false);
-    setEditingRecord(null);
+  const handleCancelEdit = () => {
+    // 取消编辑，不需要特殊处理
   };
+
+  // 删除记录
+  const handleDeleteRecord = async (date: Dayjs, timeSlot: TimeSlot) => {
+    try {
+      setLoading(true);
+      const { dayRecords = {} } = calendarData;
+      const dateKey = date.format("YYYY-MM-DD");
+      const existingRecord = dayRecords[dateKey]?.[timeSlot.key];
+
+      if (existingRecord) {
+        await deleteRecord(existingRecord.id);
+        message.success("记录删除成功！");
+        onAdd(); // 通知父组件重新加载数据
+      }
+    } catch (error) {
+      console.error("删除记录失败:", error);
+      message.error("删除失败，请重试");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
 
   // 设置相关函数
   const handleSettingsSave = async () => {
@@ -231,22 +213,15 @@ export const WeightInput: React.FC<WeightInputProps> = ({
             calendarData={calendarData}
             onAddRecord={handleAddRecord}
             onEditRecord={handleEditRecord}
+            onSaveRecord={handleSaveRecord}
+            onCancelEdit={handleCancelEdit}
             onExerciseChange={handleExerciseChange}
+            onDeleteRecord={handleDeleteRecord}
           />
         </div>
       </div>
 
-      {/* 体重记录弹窗 */}
-      <WeightRecordModal
-        isVisible={isModalVisible}
-        onOk={handleModalOk}
-        onCancel={handleModalCancel}
-        loading={loading}
-        selectedDate={selectedDate}
-        selectedTimeSlot={selectedTimeSlot}
-        form={form}
-        isEditing={!!editingRecord}
-      />
+
 
       {/* 设置弹窗 */}
       <SettingsModal

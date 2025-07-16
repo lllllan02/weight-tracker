@@ -9,6 +9,7 @@ function readData() {
     if (!fs.existsSync(DATA_FILE)) {
       return { 
         records: [], 
+        exerciseRecords: [],
         profile: { height: 170, targetWeight: 65, theme: 'light' }
       };
     }
@@ -18,12 +19,14 @@ function readData() {
     // 确保数据结构完整
     return {
       records: data.records || [],
+      exerciseRecords: data.exerciseRecords || [],
       profile: data.profile || { height: 170, targetWeight: 65, theme: 'light' }
     };
   } catch (error) {
     console.error('读取数据文件失败，使用默认数据:', error.message);
     return { 
       records: [], 
+      exerciseRecords: [],
       profile: { height: 170, targetWeight: 65, theme: 'light' }
     };
   }
@@ -35,6 +38,7 @@ function writeData(data) {
     // 确保只写入核心数据
     const coreData = {
       records: data.records || [],
+      exerciseRecords: data.exerciseRecords || [],
       profile: data.profile || { height: 170, targetWeight: 65, theme: 'light' }
     };
     
@@ -63,8 +67,16 @@ function validateRecord(record) {
     return false;
   }
   
-  // 运动字段是可选的布尔值
-  if (record.exercise !== undefined && typeof record.exercise !== 'boolean') {
+  return true;
+}
+
+// 验证运动记录
+function validateExerciseRecord(record) {
+  if (!record || typeof record !== 'object') {
+    return false;
+  }
+  
+  if (!record.id || !record.date || typeof record.exercise !== 'boolean') {
     return false;
   }
   
@@ -88,6 +100,7 @@ module.exports = {
   readData,
   writeData,
   validateRecord,
+  validateExerciseRecord,
   validateProfile,
   DATA_FILE
 }; 

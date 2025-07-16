@@ -11,7 +11,10 @@ interface DayRecordCardProps {
   calendarData: CalendarData;
   onAddRecord: (date: Dayjs, timeSlot: TimeSlot) => void;
   onEditRecord: (date: Dayjs, timeSlot: TimeSlot) => void;
+  onSaveRecord: (date: Dayjs, timeSlot: TimeSlot, weight: number, fasting: boolean) => void;
+  onCancelEdit: () => void;
   onExerciseChange: (date: Dayjs, exercise: boolean) => void;
+  onDeleteRecord: (date: Dayjs, timeSlot: TimeSlot) => void;
 }
 
 export const DayRecordCard: React.FC<DayRecordCardProps> = ({
@@ -19,7 +22,10 @@ export const DayRecordCard: React.FC<DayRecordCardProps> = ({
   calendarData,
   onAddRecord,
   onEditRecord,
+  onSaveRecord,
+  onCancelEdit,
   onExerciseChange,
+  onDeleteRecord,
 }) => {
   const { dayRecords = {}, exerciseRecords = {} } = calendarData;
 
@@ -102,6 +108,9 @@ export const DayRecordCard: React.FC<DayRecordCardProps> = ({
               record={record}
               onAddRecord={onAddRecord}
               onEditRecord={onEditRecord}
+              onSaveRecord={onSaveRecord}
+              onCancelEdit={onCancelEdit}
+              onDeleteRecord={onDeleteRecord}
             />
           );
         })}

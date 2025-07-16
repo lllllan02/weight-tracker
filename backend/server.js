@@ -8,6 +8,7 @@ const chartRoutes = require('./routes/chart');
 const reportsRoutes = require('./routes/reports');
 const profileRoutes = require('./routes/profile');
 const recordsRoutes = require('./routes/records');
+const exerciseRoutes = require('./routes/exercise');
 const backupRoutes = require('./routes/backup');
 const healthRoutes = require('./routes/health');
 
@@ -25,6 +26,7 @@ app.use('/api/chart', chartRoutes);
 app.use('/api/reports', reportsRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/records', recordsRoutes);
+app.use('/api/exercise', exerciseRoutes);
 app.use('/api/backup', backupRoutes);
 app.use('/api/health', healthRoutes);
 
@@ -44,6 +46,10 @@ app.listen(PORT, () => {
   console.log('- POST /api/records  - 添加记录');
   console.log('- PUT  /api/records/:id - 更新记录');
   console.log('- DELETE /api/records/:id - 删除记录');
+  console.log('- GET  /api/exercise  - 获取所有运动记录');
+  console.log('- POST /api/exercise  - 添加运动记录');
+  console.log('- PUT  /api/exercise/:id - 更新运动记录');
+  console.log('- DELETE /api/exercise/:id - 删除运动记录');
   console.log('- POST /api/backup   - 创建数据备份');
   console.log('- GET  /api/backup/export   - 导出数据备份');
   console.log('- POST /api/backup/import   - 导入数据备份');

@@ -1,6 +1,6 @@
-import React from "react";
-import { Button } from "antd";
-import { PlusOutlined, EditOutlined } from "@ant-design/icons";
+import React, { useState } from "react";
+import { Button, InputNumber, Switch, message } from "antd";
+import { PlusOutlined, EditOutlined, CheckOutlined, CloseOutlined, DeleteOutlined } from "@ant-design/icons";
 import { Dayjs } from "dayjs";
 import dayjs from "dayjs";
 import { WeightRecord, TimeSlot } from "../../types";
@@ -12,6 +12,9 @@ interface TimeSlotCardProps {
   record?: WeightRecord;
   onAddRecord: (date: Dayjs, slot: TimeSlot) => void;
   onEditRecord: (date: Dayjs, slot: TimeSlot) => void;
+  onSaveRecord: (date: Dayjs, slot: TimeSlot, weight: number, fasting: boolean) => void;
+  onCancelEdit: () => void;
+  onDeleteRecord: (date: Dayjs, slot: TimeSlot) => void;
 }
 
 export const TimeSlotCard: React.FC<TimeSlotCardProps> = ({
@@ -21,9 +24,50 @@ export const TimeSlotCard: React.FC<TimeSlotCardProps> = ({
   record,
   onAddRecord,
   onEditRecord,
+  onSaveRecord,
+  onCancelEdit,
+  onDeleteRecord,
 }) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editWeight, setEditWeight] = useState(record?.weight || 0);
+  const [editFasting, setEditFasting] = useState(record?.fasting === "空腹" || false);
+  
   const isToday = selectedDate.isSame(dayjs(), "day");
   const isPast = selectedDate.isBefore(dayjs(), "day");
+
+  const handleEdit = () => {
+    setIsEditing(true);
+    // 如果是新增记录，设置默认值
+    if (hasRecord && record) {
+      setEditWeight(record.weight);
+      setEditFasting(record.fasting === "空腹");
+    } else {
+      // 新增记录时设置默认值
+      setEditWeight(0);
+      setEditFasting(false);
+    }
+  };
+
+  const handleSave = () => {
+    if (editWeight > 0) {
+      onSaveRecord(selectedDate, slot, editWeight, editFasting);
+      setIsEditing(false);
+    } else {
+      // 提示用户输入有效的体重
+      message.error("请输入有效的体重数值");
+    }
+  };
+
+  const handleCancel = () => {
+    setIsEditing(false);
+    onCancelEdit();
+  };
+
+  const handleDelete = () => {
+    if (hasRecord && record) {
+      onDeleteRecord(selectedDate, slot);
+    }
+  };
 
   return (
     <div
@@ -60,7 +104,35 @@ export const TimeSlotCard: React.FC<TimeSlotCardProps> = ({
           {slot.label}
         </div>
 
-        {hasRecord ? (
+        {isEditing ? (
+          <div>
+            <div style={{ marginBottom: 12 }}>
+              <InputNumber
+                value={editWeight}
+                onChange={(value) => setEditWeight(value || 0)}
+                placeholder="体重"
+                style={{
+                  width: "100%",
+                  borderRadius: 8,
+                  height: 36,
+                  fontSize: 16,
+                }}
+                precision={1}
+                min={20}
+                max={300}
+              />
+            </div>
+            <div style={{ marginBottom: 12, textAlign: "center" }}>
+              <Switch
+                checked={editFasting}
+                onChange={setEditFasting}
+                checkedChildren="空腹"
+                unCheckedChildren="非空腹"
+                style={{ fontSize: 12 }}
+              />
+            </div>
+          </div>
+        ) : hasRecord ? (
           <div>
             <div
               style={{
@@ -87,22 +159,6 @@ export const TimeSlotCard: React.FC<TimeSlotCardProps> = ({
             >
               {record?.fasting}
             </div>
-            {record?.note && (
-              <div
-                style={{
-                  fontSize: 10,
-                  color: "#888",
-                  fontStyle: "italic",
-                  marginBottom: 6,
-                  padding: "4px 8px",
-                  background: "rgba(255,255,255,0.9)",
-                  borderRadius: 6,
-                  border: "1px solid #f0f0f0",
-                }}
-              >
-                {record.note}
-              </div>
-            )}
           </div>
         ) : (
           <div
@@ -119,30 +175,92 @@ export const TimeSlotCard: React.FC<TimeSlotCardProps> = ({
         )}
       </div>
 
-      <Button
-        type={hasRecord ? "primary" : "dashed"}
-        size="small"
-        icon={hasRecord ? <EditOutlined /> : <PlusOutlined />}
-        onClick={() =>
-          hasRecord
-            ? onEditRecord(selectedDate, slot)
-            : onAddRecord(selectedDate, slot)
-        }
-        disabled={!isPast && !isToday}
-        style={{
-          borderRadius: 8,
-          borderColor: slot.color,
-          background: hasRecord ? slot.color : "transparent",
-          color: hasRecord ? "#fff" : slot.color,
-          fontWeight: 600,
-          height: 32,
-          fontSize: 12,
-          boxShadow: hasRecord ? `0 2px 8px ${slot.color}25` : "none",
-          borderWidth: hasRecord ? 0 : 1.5,
-        }}
-      >
-        {hasRecord ? "编辑" : "添加"}
-      </Button>
+      {isEditing ? (
+        <div style={{ display: "flex", gap: 8 }}>
+          <Button
+            type="primary"
+            size="small"
+            icon={<CheckOutlined />}
+            onClick={handleSave}
+            style={{
+              borderRadius: 8,
+              background: "#52c41a",
+              border: "none",
+              color: "#fff",
+              fontWeight: 600,
+              height: 32,
+              fontSize: 12,
+              flex: 1,
+            }}
+          >
+            保存
+          </Button>
+          <Button
+            size="small"
+            icon={<CloseOutlined />}
+            onClick={handleCancel}
+            style={{
+              borderRadius: 8,
+              borderColor: "#d9d9d9",
+              color: "#666",
+              fontWeight: 600,
+              height: 32,
+              fontSize: 12,
+              flex: 1,
+            }}
+          >
+            取消
+          </Button>
+        </div>
+      ) : (
+        <div style={{ display: "flex", gap: 8 }}>
+          <Button
+            type={hasRecord ? "primary" : "dashed"}
+            size="small"
+            icon={hasRecord ? <EditOutlined /> : <PlusOutlined />}
+            onClick={() =>
+              hasRecord
+                ? handleEdit()
+                : handleEdit() // 新增记录也直接进入编辑模式
+            }
+            disabled={!isPast && !isToday}
+            style={{
+              borderRadius: 8,
+              borderColor: slot.color,
+              background: hasRecord ? slot.color : "transparent",
+              color: hasRecord ? "#fff" : slot.color,
+              fontWeight: 600,
+              height: 32,
+              fontSize: 12,
+              boxShadow: hasRecord ? `0 2px 8px ${slot.color}25` : "none",
+              borderWidth: hasRecord ? 0 : 1.5,
+              flex: 1,
+            }}
+          >
+            {hasRecord ? "编辑" : "添加"}
+          </Button>
+          {hasRecord && (
+            <Button
+              type="text"
+              size="small"
+              icon={<DeleteOutlined />}
+              onClick={handleDelete}
+              disabled={!isPast && !isToday}
+              style={{
+                borderRadius: 8,
+                borderColor: "#ff4d4f",
+                color: "#ff4d4f",
+                fontWeight: 600,
+                height: 32,
+                fontSize: 12,
+                borderWidth: 1.5,
+                minWidth: 32,
+              }}
+              danger
+            />
+          )}
+        </div>
+      )}
     </div>
   );
 };

@@ -74,7 +74,7 @@ export const WeightRecordModal: React.FC<WeightRecordModalProps> = ({
       <Form
         form={form}
         layout="vertical"
-        initialValues={{ fasting: false, exercise: false }}
+        initialValues={{ fasting: false }}
       >
         {/* 空腹状态精简美化 */}
         <div
@@ -112,36 +112,7 @@ export const WeightRecordModal: React.FC<WeightRecordModalProps> = ({
           </Form.Item>
         </div>
 
-        {/* 运动状态 */}
-        <div
-          style={{ marginBottom: 28, display: "flex", alignItems: "center" }}
-        >
-          <span
-            style={{
-              fontWeight: 700,
-              fontSize: 16,
-              marginRight: 24,
-              color: "#222",
-            }}
-          >
-            运动状态
-          </span>
-          <Form.Item
-            name="exercise"
-            valuePropName="checked"
-            style={{ marginBottom: 0 }}
-          >
-            <Checkbox
-              style={{
-                fontWeight: 600,
-                fontSize: 15,
-                color: "#1890ff",
-              }}
-            >
-              🏃‍♂️ 今天有运动
-            </Checkbox>
-          </Form.Item>
-        </div>
+
 
         <Form.Item
           name="weight"
@@ -166,6 +137,7 @@ export const WeightRecordModal: React.FC<WeightRecordModalProps> = ({
               height: 44,
               fontSize: 16,
             }}
+            className="weight-input-number"
             precision={1}
             min={20}
             max={300}

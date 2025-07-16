@@ -169,15 +169,16 @@ function calculateChartData(records, profile) {
 }
 
 // 计算日历数据
-function calculateCalendarData(records) {
+function calculateCalendarData(records, exerciseRecords = []) {
   const timeSlots = [
     { key: 'morning', label: '早上', hour: 8, minute: 0, color: '#52c41a' },
     { key: 'night', label: '睡前', hour: 23, minute: 0, color: '#722ed1' }
   ];
 
   const dayRecords = {};
-  const exerciseRecords = {};
+  const exerciseRecordsMap = {};
   
+  // 处理体重记录
   records.forEach(record => {
     const date = new Date(record.date);
     const hour = date.getHours();
@@ -189,18 +190,21 @@ function calculateCalendarData(records) {
         dayRecords[dateKey] = {};
       }
       dayRecords[dateKey][timeSlot.key] = record;
-      
-      // 如果记录中有运动标记，保存到运动记录中
-      if (record.exercise) {
-        exerciseRecords[dateKey] = true;
-      }
+    }
+  });
+
+  // 处理运动记录
+  exerciseRecords.forEach(record => {
+    if (record.exercise) {
+      const dateKey = new Date(record.date).toISOString().split('T')[0];
+      exerciseRecordsMap[dateKey] = true;
     }
   });
 
   return {
     timeSlots,
     dayRecords,
-    exerciseRecords
+    exerciseRecords: exerciseRecordsMap
   };
 }
 
