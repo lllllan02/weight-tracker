@@ -2,15 +2,55 @@ const fs = require('fs');
 const path = require('path');
 const { readData, writeData, validateRecord, validateProfile } = require('./dataManager');
 
+// 获取北京时间
+function getBeijingTime() {
+  const now = new Date();
+  // 北京时间是 UTC+8
+  const beijingTime = new Date(now.getTime() + 8 * 60 * 60 * 1000);
+  return beijingTime;
+}
+
+// 格式化北京时间为文件名友好的格式
+function formatBeijingTimeForFilename() {
+  const beijingTime = getBeijingTime();
+  return beijingTime.toISOString().replace(/[:.]/g, '-');
+}
+
+// 获取北京时间的ISO字符串
+function getBeijingTimeISO() {
+  const beijingTime = getBeijingTime();
+  return beijingTime.toISOString();
+}
+
+// 导出数据
+function exportData() {
+  try {
+    const data = readData();
+    const exportData = {
+      ...data,
+      exportInfo: {
+        timestamp: getBeijingTimeISO(),
+        version: '1.0',
+        recordCount: data.records ? data.records.length : 0
+      }
+    };
+    
+    return exportData;
+  } catch (error) {
+    console.error('导出数据失败:', error.message);
+    throw new Error('导出数据失败');
+  }
+}
+
 // 创建备份
-function createBackup() {
+function createBackup(reason = 'manual_backup') {
   try {
     const currentData = readData();
     const backupData = {
       ...currentData,
       backupInfo: {
-        timestamp: new Date().toISOString(),
-        reason: 'manual_backup'
+        timestamp: getBeijingTimeISO(),
+        reason: reason
       }
     };
     
@@ -21,38 +61,18 @@ function createBackup() {
     }
     
     // 保存备份
-    const backupPath = path.join(backupDir, `backup-${new Date().toISOString().replace(/[:.]/g, '-')}.json`);
+    const backupPath = path.join(backupDir, `backup-${formatBeijingTimeForFilename()}.json`);
     fs.writeFileSync(backupPath, JSON.stringify(backupData, null, 2));
     
     return { 
       success: true, 
       message: '备份创建成功',
-      timestamp: new Date().toISOString(),
+      timestamp: getBeijingTimeISO(),
       backupPath: backupPath
     };
   } catch (error) {
     console.error('创建备份失败:', error.message);
     throw new Error('创建备份失败');
-  }
-}
-
-// 导出数据
-function exportData() {
-  try {
-    const data = readData();
-    const exportData = {
-      ...data,
-      exportInfo: {
-        timestamp: new Date().toISOString(),
-        version: '1.0',
-        recordCount: data.records ? data.records.length : 0
-      }
-    };
-    
-    return exportData;
-  } catch (error) {
-    console.error('导出数据失败:', error.message);
-    throw new Error('导出数据失败');
   }
 }
 
@@ -79,24 +99,7 @@ function importData(importData) {
     }
     
     // 备份当前数据
-    const currentData = readData();
-    const backupData = {
-      ...currentData,
-      backupInfo: {
-        timestamp: new Date().toISOString(),
-        reason: 'import_backup'
-      }
-    };
-    
-    // 确保备份目录存在
-    const backupDir = path.join(__dirname, '..', 'data');
-    if (!fs.existsSync(backupDir)) {
-      fs.mkdirSync(backupDir, { recursive: true });
-    }
-    
-    // 保存备份
-    const backupPath = path.join(backupDir, `backup-${new Date().toISOString().replace(/[:.]/g, '-')}.json`);
-    fs.writeFileSync(backupPath, JSON.stringify(backupData, null, 2));
+    const backupResult = createBackup('import_backup');
     
     // 写入新数据
     const newData = {
@@ -108,7 +111,7 @@ function importData(importData) {
     return { 
       success: true, 
       message: '数据导入成功',
-      backupPath: backupPath,
+      backupPath: backupResult.backupPath,
       importedRecords: newData.records.length
     };
   } catch (error) {
