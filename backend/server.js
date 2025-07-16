@@ -199,23 +199,60 @@ function calculateStats(records, profile) {
 }
 
 // 计算图表数据
-function calculateChartData(records) {
+function calculateChartData(records, profile) {
   if (records.length === 0) {
     return { labels: [], datasets: [] };
   }
 
   const sortedRecords = [...records].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   
+  // 计算BMI数据
+  const bmiData = sortedRecords.map(r => calculateBMI(r.weight, profile.height));
+  
+  // 计算体重变化速度 (kg/天)
+  const weightChangeRate = sortedRecords.map((record, index) => {
+    if (index === 0) return 0; // 第一条记录没有变化速度
+    const currentWeight = record.weight;
+    const previousWeight = sortedRecords[index - 1].weight;
+    const currentDate = new Date(record.date);
+    const previousDate = new Date(sortedRecords[index - 1].date);
+    const daysDiff = (currentDate.getTime() - previousDate.getTime()) / (1000 * 60 * 60 * 24);
+    
+    if (daysDiff === 0) return 0;
+    return Number(((currentWeight - previousWeight) / daysDiff).toFixed(2));
+  });
+  
   return {
     labels: sortedRecords.map(r => formatDate(r.date)),
-    datasets: [{
-      label: '体重 (kg)',
-      data: sortedRecords.map(r => r.weight),
-      borderColor: '#0ea5e9',
-      backgroundColor: 'rgba(14, 165, 233, 0.1)',
-      tension: 0.1,
-      fill: true
-    }]
+    datasets: [
+      {
+        label: '体重 (kg)',
+        data: sortedRecords.map(r => r.weight),
+        borderColor: '#0ea5e9',
+        backgroundColor: 'rgba(14, 165, 233, 0.1)',
+        tension: 0.1,
+        fill: true,
+        yAxisID: 'y'
+      },
+      {
+        label: 'BMI',
+        data: bmiData,
+        borderColor: '#10b981',
+        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+        tension: 0.1,
+        fill: false,
+        yAxisID: 'y1'
+      },
+      {
+        label: '变化速度 (kg/天)',
+        data: weightChangeRate,
+        borderColor: '#f59e0b',
+        backgroundColor: 'rgba(245, 158, 11, 0.1)',
+        tension: 0.1,
+        fill: false,
+        yAxisID: 'y2'
+      }
+    ]
   };
 }
 
@@ -476,7 +513,7 @@ app.get('/api/stats', (req, res) => {
 // 获取图表数据（包含标签和数据集）
 app.get('/api/chart', (req, res) => {
   const data = readData();
-  const chartData = calculateChartData(data.records);
+  const chartData = calculateChartData(data.records, data.profile);
   res.json(chartData);
 });
 

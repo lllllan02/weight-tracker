@@ -19,26 +19,28 @@ export const DateView: React.FC<DateViewProps> = ({
 }) => {
   const { dayRecords = {} } = calendarData;
 
-  // 获取当天的体重范围
-  const getDayWeightRange = (date: Dayjs) => {
+  // 获取当天的早上和睡前体重
+  const getDayWeights = (date: Dayjs) => {
     const dateKey = date.format('YYYY-MM-DD');
     const dayData = dayRecords[dateKey];
-    if (!dayData || Object.keys(dayData).length === 0) return null;
+    if (!dayData) return null;
 
-    const weights = Object.values(dayData).map((record: any) => record.weight);
-    if (weights.length === 0) return null;
-
-    const minWeight = Math.min(...weights);
-    const maxWeight = Math.max(...weights);
+    // 获取早上和睡前的记录
+    const morningRecord = dayData.morning;
+    const nightRecord = dayData.night;
     
-    return { min: minWeight, max: maxWeight, count: weights.length };
+    return {
+      morning: morningRecord?.weight || null,
+      night: nightRecord?.weight || null,
+      hasAnyRecord: !!(morningRecord || nightRecord)
+    };
   };
 
   // 渲染整个日期单元格
   const dateFullCellRender = (date: Dayjs) => {
-    const weightRange = getDayWeightRange(date);
+    const dayWeights = getDayWeights(date);
     const isToday = date.isSame(dayjs(), 'day');
-    const hasRecord = !!weightRange;
+    const hasRecord = dayWeights?.hasAnyRecord || false;
     const isCurrentMonth = date.month() === currentDate.month();
     
     // 根据状态确定样式
@@ -92,7 +94,7 @@ export const DateView: React.FC<DateViewProps> = ({
             fontSize: 14,
             fontWeight: fontWeight,
             color: textColor,
-            marginBottom: weightRange ? 2 : 0,
+            marginBottom: dayWeights?.hasAnyRecord ? 2 : 0,
             lineHeight: 1.1,
             whiteSpace: 'nowrap',
             textAlign: 'center',
@@ -100,7 +102,7 @@ export const DateView: React.FC<DateViewProps> = ({
         >
           {date.date()}
         </div>
-        {weightRange ? (
+        {dayWeights?.hasAnyRecord ? (
           <div
             style={{
               fontSize: 11,
@@ -114,7 +116,7 @@ export const DateView: React.FC<DateViewProps> = ({
               opacity: 0.9,
             }}
           >
-            {weightRange.min}/{weightRange.max}
+            {dayWeights.morning ? dayWeights.morning.toFixed(1) : '—'}/{dayWeights.night ? dayWeights.night.toFixed(1) : '—'}
           </div>
         ) : null}
       </div>

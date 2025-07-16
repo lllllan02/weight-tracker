@@ -46,11 +46,12 @@ export const WeightChart: React.FC<WeightChartProps> = ({ chartData }) => {
     responsive: true,
     plugins: {
       legend: {
-        display: false,
+        display: true,
+        position: 'top' as const,
       },
       title: {
         display: true,
-        text: '体重变化趋势',
+        text: '体重、BMI和变化速度趋势',
         font: {
           size: 16,
           weight: 'bold' as const,
@@ -61,7 +62,15 @@ export const WeightChart: React.FC<WeightChartProps> = ({ chartData }) => {
         intersect: false,
         callbacks: {
           label: function(context: any) {
-            return `体重: ${context.parsed.y} kg`;
+            const dataset = context.dataset;
+            if (dataset.label === '体重 (kg)') {
+              return `体重: ${context.parsed.y} kg`;
+            } else if (dataset.label === 'BMI') {
+              return `BMI: ${context.parsed.y}`;
+            } else if (dataset.label === '变化速度 (kg/天)') {
+              return `变化速度: ${context.parsed.y} kg/天`;
+            }
+            return `${dataset.label}: ${context.parsed.y}`;
           }
         }
       },
@@ -80,12 +89,45 @@ export const WeightChart: React.FC<WeightChartProps> = ({ chartData }) => {
         },
       },
       y: {
+        type: 'linear' as const,
         display: true,
+        position: 'left' as const,
         title: {
           display: true,
           text: '体重 (kg)',
         },
         beginAtZero: false,
+      },
+      y1: {
+        type: 'linear' as const,
+        display: true,
+        position: 'right' as const,
+        title: {
+          display: true,
+          text: 'BMI',
+        },
+        beginAtZero: false,
+        grid: {
+          drawOnChartArea: false,
+        },
+      },
+      y2: {
+        type: 'linear' as const,
+        display: true,
+        position: 'right' as const,
+        title: {
+          display: true,
+          text: '变化速度 (kg/天)',
+        },
+        beginAtZero: true,
+        grid: {
+          drawOnChartArea: false,
+        },
+        ticks: {
+          callback: function(value: any) {
+            return value + ' kg/天';
+          }
+        }
       },
     },
   };
