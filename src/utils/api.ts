@@ -190,7 +190,7 @@ export async function createBackup() {
 // 导出数据
 export async function exportData() {
   try {
-    const res = await fetch(`${API_BASE}/api/export`);
+    const res = await fetch(`${API_BASE}/api/backup/export`);
     if (!res.ok) {
       throw new Error(`HTTP error! status: ${res.status}`);
     }
@@ -228,7 +228,7 @@ export async function importData(file: File) {
     const fileContent = await file.text();
     const importData = JSON.parse(fileContent);
 
-    const res = await fetch(`${API_BASE}/api/import`, {
+    const res = await fetch(`${API_BASE}/api/backup/import`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(importData),
