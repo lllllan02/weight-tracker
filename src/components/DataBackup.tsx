@@ -4,8 +4,9 @@ import {
   DownloadOutlined,
   UploadOutlined,
   ExclamationCircleOutlined,
+  SaveOutlined,
 } from "@ant-design/icons";
-import { exportData, importData } from "../utils/api";
+import { exportData, importData, createBackup } from "../utils/api";
 
 const { Text } = Typography;
 
@@ -17,8 +18,22 @@ export const DataBackup: React.FC<DataBackupProps> = ({ onDataChange }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importing, setImporting] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [backingUp, setBackingUp] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
+  const handleBackup = async () => {
+    try {
+      setBackingUp(true);
+      await createBackup();
+      message.success("数据备份成功！");
+    } catch (error) {
+      message.error("数据备份失败，请重试");
+      console.error("备份失败:", error);
+    } finally {
+      setBackingUp(false);
+    }
+  };
 
   const handleExport = async () => {
     try {
@@ -107,6 +122,14 @@ export const DataBackup: React.FC<DataBackupProps> = ({ onDataChange }) => {
       <Space size="middle">
         <Button
           type="primary"
+          icon={<SaveOutlined />}
+          onClick={handleBackup}
+          loading={backingUp}
+        >
+          备份数据
+        </Button>
+
+        <Button
           icon={<DownloadOutlined />}
           onClick={handleExport}
           loading={exporting}
@@ -132,6 +155,10 @@ export const DataBackup: React.FC<DataBackupProps> = ({ onDataChange }) => {
       </Space>
 
       <div style={{ marginTop: 12 }}>
+        <Text type="secondary" style={{ fontSize: 12 }}>
+          备份：在服务器本地创建数据备份文件
+        </Text>
+        <br />
         <Text type="secondary" style={{ fontSize: 12 }}>
           导出：下载包含所有记录和设置的 JSON 文件
         </Text>

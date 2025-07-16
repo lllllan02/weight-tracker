@@ -659,6 +659,40 @@ app.get('/api/health', (req, res) => {
 });
 
 // ===== 数据备份接口 =====
+// 创建备份
+app.post('/api/backup', (req, res) => {
+  try {
+    const currentData = readData();
+    const backupData = {
+      ...currentData,
+      backupInfo: {
+        timestamp: new Date().toISOString(),
+        reason: 'manual_backup'
+      }
+    };
+    
+    // 确保备份目录存在
+    const backupDir = path.join(__dirname, 'data');
+    if (!fs.existsSync(backupDir)) {
+      fs.mkdirSync(backupDir, { recursive: true });
+    }
+    
+    // 保存备份
+    const backupPath = path.join(backupDir, `backup-${new Date().toISOString().replace(/[:.]/g, '-')}.json`);
+    fs.writeFileSync(backupPath, JSON.stringify(backupData, null, 2));
+    
+    res.json({ 
+      success: true, 
+      message: '备份创建成功',
+      timestamp: new Date().toISOString(),
+      backupPath: backupPath
+    });
+  } catch (error) {
+    console.error('创建备份失败:', error.message);
+    res.status(500).json({ error: '创建备份失败' });
+  }
+});
+
 // 导出数据
 app.get('/api/export', (req, res) => {
   try {
@@ -759,6 +793,7 @@ app.listen(PORT, () => {
   console.log('- POST /api/records  - 添加记录');
   console.log('- PUT  /api/records/:id - 更新记录');
   console.log('- DELETE /api/records/:id - 删除记录');
+  console.log('- POST /api/backup   - 创建数据备份');
   console.log('- GET  /api/export   - 导出数据备份');
   console.log('- POST /api/import   - 导入数据备份');
 }); 

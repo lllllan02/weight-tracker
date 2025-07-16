@@ -170,6 +170,23 @@ export async function getMonthlyReport() {
 }
 
 // ===== 数据备份 API =====
+// 创建备份
+export async function createBackup() {
+  try {
+    const res = await fetch(`${API_BASE}/api/backup`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    });
+    if (!res.ok) {
+      throw new Error(`HTTP error! status: ${res.status}`);
+    }
+    return await res.json();
+  } catch (error) {
+    console.error("创建备份失败:", error);
+    throw error;
+  }
+}
+
 // 导出数据
 export async function exportData() {
   try {
