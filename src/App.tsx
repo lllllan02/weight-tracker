@@ -14,7 +14,7 @@ const { Header, Content } = Layout;
 const { Title, Paragraph } = Typography;
 
 function App() {
-  const [calendarData, setCalendarData] = useState<CalendarData>({ timeSlots: [], dayRecords: {} });
+  const [calendarData, setCalendarData] = useState<CalendarData>({ timeSlots: [], dayRecords: {}, exerciseRecords: {} });
   const [stats, setStats] = useState<WeightStats>({ current: 0, average: 0, min: 0, max: 0, bmi: 0, change: 0, totalRecords: 0, thisMonth: 0, thisWeek: 0, targetProgress: 0, targetRemaining: 0, initialWeight: 0 });
   const [chartData, setChartData] = useState<ChartData>({ labels: [], datasets: [] });
   const [profile, setProfile] = useState<UserProfile>({ height: 170, theme: 'light' });

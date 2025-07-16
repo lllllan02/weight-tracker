@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, Tag } from 'antd';
+import { Card, Tag, Checkbox } from 'antd';
 import { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
 import { WeightRecord, CalendarData } from '../../types';
@@ -11,15 +11,17 @@ interface DayRecordCardProps {
   calendarData: CalendarData;
   onAddRecord: (date: Dayjs, timeSlot: TimeSlot) => void;
   onEditRecord: (date: Dayjs, timeSlot: TimeSlot) => void;
+  onExerciseChange: (date: Dayjs, exercise: boolean) => void;
 }
 
 export const DayRecordCard: React.FC<DayRecordCardProps> = ({
   selectedDate,
   calendarData,
   onAddRecord,
-  onEditRecord
+  onEditRecord,
+  onExerciseChange
 }) => {
-  const { dayRecords = {} } = calendarData;
+  const { dayRecords = {}, exerciseRecords = {} } = calendarData;
 
   // 检查某个时间段是否已有记录
   const hasRecord = (date: Dayjs, timeSlot: TimeSlot): boolean => {
@@ -31,6 +33,12 @@ export const DayRecordCard: React.FC<DayRecordCardProps> = ({
   const getRecord = (date: Dayjs, timeSlot: TimeSlot) => {
     const dateKey = date.format('YYYY-MM-DD');
     return dayRecords[dateKey]?.[timeSlot.key] as WeightRecord | undefined;
+  };
+
+  // 获取当天的运动状态
+  const getExerciseStatus = (date: Dayjs) => {
+    const dateKey = date.format('YYYY-MM-DD');
+    return exerciseRecords[dateKey] || false;
   };
 
   return (
@@ -90,6 +98,35 @@ export const DayRecordCard: React.FC<DayRecordCardProps> = ({
             />
           );
         })}
+        
+        {/* 运动选项 */}
+        <div style={{
+          border: '1px solid #d9d9d9',
+          borderRadius: 12,
+          background: '#fafbfc',
+          padding: '16px',
+          textAlign: 'center',
+          position: 'relative',
+          minHeight: 60,
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+          transition: 'all 0.3s ease',
+          borderStyle: 'dashed'
+        }}>
+          <Checkbox
+            checked={getExerciseStatus(selectedDate)}
+            onChange={(e) => onExerciseChange(selectedDate, e.target.checked)}
+            style={{
+              fontSize: 16,
+              fontWeight: 600,
+              color: '#1890ff'
+            }}
+          >
+            🏃‍♂️ 今天有运动
+          </Checkbox>
+        </div>
       </div>
     </Card>
   );

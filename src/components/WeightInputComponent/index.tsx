@@ -60,8 +60,54 @@ export const WeightInput: React.FC<WeightInputProps> = ({
       form.setFieldsValue({
         weight: record.weight,
         note: record.note,
-        fasting: record.fasting === '空腹'
+        fasting: record.fasting === '空腹',
+        exercise: record.exercise || false
       });
+    }
+  };
+
+  // 处理运动状态变化
+  const handleExerciseChange = async (date: Dayjs, exercise: boolean) => {
+    try {
+      setLoading(true);
+      const { dayRecords = {} } = calendarData;
+      const dateKey = date.format('YYYY-MM-DD');
+      const dayData = dayRecords[dateKey];
+      
+      if (dayData && Object.keys(dayData).length > 0) {
+        // 如果当天有体重记录，更新第一个记录的运动状态
+        const firstTimeSlot = Object.keys(dayData)[0];
+        const record = dayData[firstTimeSlot];
+        
+        if (record) {
+          const updatedRecord: WeightRecord = {
+            ...record,
+            exercise: exercise
+          };
+          
+          await updateRecord(record.id, updatedRecord);
+          message.success(exercise ? '已标记为运动日' : '已取消运动标记');
+        }
+      } else {
+        // 如果当天没有体重记录，创建一个虚拟记录来保存运动状态
+        const virtualRecord: WeightRecord = {
+          id: generateId(),
+          date: date.hour(8).minute(0).second(0).toISOString(),
+          weight: 0, // 虚拟体重，不会显示
+          fasting: '空腹',
+          exercise: exercise
+        };
+        
+        await addRecord(virtualRecord);
+        message.success(exercise ? '已标记为运动日' : '已取消运动标记');
+      }
+      
+      onAdd(); // 通知父组件重新加载数据
+    } catch (error) {
+      console.error('更新运动状态失败:', error);
+      message.error('更新运动状态失败，请重试');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -79,7 +125,8 @@ export const WeightInput: React.FC<WeightInputProps> = ({
           date: date.toISOString(),
           weight: values.weight,
           note: values.note?.trim() || undefined,
-          fasting: values.fasting ? '空腹' : '非空腹'
+          fasting: values.fasting ? '空腹' : '非空腹',
+          exercise: values.exercise || false
         };
         
         await updateRecord(editingRecord.id, updatedRecord);
@@ -91,7 +138,8 @@ export const WeightInput: React.FC<WeightInputProps> = ({
           date: date.toISOString(),
           weight: values.weight,
           note: values.note?.trim() || undefined,
-          fasting: values.fasting ? '空腹' : '非空腹'
+          fasting: values.fasting ? '空腹' : '非空腹',
+          exercise: values.exercise || false
         };
         
         await addRecord(record);
@@ -174,6 +222,7 @@ export const WeightInput: React.FC<WeightInputProps> = ({
             calendarData={calendarData}
             onAddRecord={handleAddRecord}
             onEditRecord={handleEditRecord}
+            onExerciseChange={handleExerciseChange}
           />
         </div>
       </div>

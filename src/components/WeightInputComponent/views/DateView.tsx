@@ -4,6 +4,10 @@ import { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
 import { CalendarData } from '../../../types';
 
+
+
+
+
 interface DateViewProps {
   currentDate: Dayjs;
   setCurrentDate: (date: Dayjs) => void;
@@ -17,7 +21,7 @@ export const DateView: React.FC<DateViewProps> = ({
   calendarData,
   onDateSelect
 }) => {
-  const { dayRecords = {} } = calendarData;
+  const { dayRecords = {}, exerciseRecords = {} } = calendarData;
 
   // 获取当天的早上和睡前体重
   const getDayWeights = (date: Dayjs) => {
@@ -36,11 +40,18 @@ export const DateView: React.FC<DateViewProps> = ({
     };
   };
 
+  // 获取当天的运动状态
+  const getExerciseStatus = (date: Dayjs) => {
+    const dateKey = date.format('YYYY-MM-DD');
+    return exerciseRecords[dateKey] || false;
+  };
+
   // 渲染整个日期单元格
   const dateFullCellRender = (date: Dayjs) => {
     const dayWeights = getDayWeights(date);
     const isToday = date.isSame(dayjs(), 'day');
     const hasRecord = dayWeights?.hasAnyRecord || false;
+    const hasExercise = getExerciseStatus(date);
     const isCurrentMonth = date.month() === currentDate.month();
     
     // 根据状态确定样式
@@ -58,6 +69,11 @@ export const DateView: React.FC<DateViewProps> = ({
       backgroundColor = '#f6ffed';
       borderColor = '#52c41a';
       textColor = '#389e0d';
+      fontWeight = 600;
+    } else if (hasExercise && isCurrentMonth) {
+      backgroundColor = '#fff7e6';
+      borderColor = '#fa8c16';
+      textColor = '#d46b08';
       fontWeight = 600;
     } else if (isCurrentMonth) {
       textColor = '#333';
@@ -89,6 +105,23 @@ export const DateView: React.FC<DateViewProps> = ({
         }}
         onClick={() => onDateSelect(date)}
       >
+        {/* 运动符号 - 显示在右上角 */}
+        {hasExercise && (
+          <div
+            style={{
+              position: 'absolute',
+              top: 2,
+              right: 4,
+              fontSize: 14,
+              color: '#52c41a',
+              fontWeight: 'bold',
+              textShadow: '0 1px 2px rgba(255,255,255,0.8)',
+              zIndex: 1,
+            }}
+          >
+            🏃‍♂️
+          </div>
+        )}
         <div
           style={{
             fontSize: 14,
@@ -117,6 +150,22 @@ export const DateView: React.FC<DateViewProps> = ({
             }}
           >
             {dayWeights.morning ? dayWeights.morning.toFixed(1) : '—'}/{dayWeights.night ? dayWeights.night.toFixed(1) : '—'}
+          </div>
+        ) : hasExercise ? (
+          <div
+            style={{
+              fontSize: 11,
+              fontWeight: 600,
+              color: textColor,
+              lineHeight: 1.05,
+              marginBottom: 0,
+              letterSpacing: 0.1,
+              whiteSpace: 'nowrap',
+              textAlign: 'center',
+              opacity: 0.9,
+            }}
+          >
+            🏃‍♂️ 运动
           </div>
         ) : null}
       </div>

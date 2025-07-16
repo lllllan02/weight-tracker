@@ -70,6 +70,11 @@ function validateRecord(record) {
     return false;
   }
   
+  // 运动字段是可选的布尔值
+  if (record.exercise !== undefined && typeof record.exercise !== 'boolean') {
+    return false;
+  }
+  
   return true;
 }
 
@@ -264,6 +269,7 @@ function calculateCalendarData(records) {
   ];
 
   const dayRecords = {};
+  const exerciseRecords = {};
   
   records.forEach(record => {
     const date = new Date(record.date);
@@ -276,12 +282,18 @@ function calculateCalendarData(records) {
         dayRecords[dateKey] = {};
       }
       dayRecords[dateKey][timeSlot.key] = record;
+      
+      // 如果记录中有运动标记，保存到运动记录中
+      if (record.exercise) {
+        exerciseRecords[dateKey] = true;
+      }
     }
   });
 
   return {
     timeSlots,
-    dayRecords
+    dayRecords,
+    exerciseRecords
   };
 }
 

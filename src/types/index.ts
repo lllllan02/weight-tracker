@@ -4,6 +4,7 @@ export interface WeightRecord {
   weight: number;
   note?: string;
   fasting: '空腹' | '非空腹';
+  exercise?: boolean;
 }
 
 export interface UserProfile {
@@ -41,6 +42,9 @@ export interface CalendarData {
     [dateKey: string]: {
       [timeSlotKey: string]: WeightRecord;
     };
+  };
+  exerciseRecords: {
+    [dateKey: string]: boolean;
   };
 }
 

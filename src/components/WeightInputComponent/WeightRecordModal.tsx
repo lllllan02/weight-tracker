@@ -1,5 +1,5 @@
 import React from 'react';
-import { Modal, Form, InputNumber, Input, Switch } from 'antd';
+import { Modal, Form, InputNumber, Input, Switch, Checkbox } from 'antd';
 import { Dayjs } from 'dayjs';
 import { TimeSlot } from './constants';
 
@@ -45,7 +45,7 @@ export const WeightRecordModal: React.FC<WeightRecordModalProps> = ({
       cancelButtonProps={{ style: { height: 44, fontSize: 16, borderRadius: 12 } }}
       width={440}
     >
-      <Form form={form} layout="vertical" initialValues={{ fasting: false }}>
+      <Form form={form} layout="vertical" initialValues={{ fasting: false, exercise: false }}>
         {/* 空腹状态精简美化 */}
         <div style={{ marginBottom: 28, display: 'flex', alignItems: 'center' }}>
           <span style={{ fontWeight: 700, fontSize: 16, marginRight: 24, color: '#222' }}>空腹状态</span>
@@ -60,6 +60,22 @@ export const WeightRecordModal: React.FC<WeightRecordModalProps> = ({
                 transition: 'all 0.2s'
               }}
             />
+          </Form.Item>
+        </div>
+
+        {/* 运动状态 */}
+        <div style={{ marginBottom: 28, display: 'flex', alignItems: 'center' }}>
+          <span style={{ fontWeight: 700, fontSize: 16, marginRight: 24, color: '#222' }}>运动状态</span>
+          <Form.Item name="exercise" valuePropName="checked" style={{ marginBottom: 0 }}>
+            <Checkbox
+              style={{
+                fontWeight: 600,
+                fontSize: 15,
+                color: '#1890ff'
+              }}
+            >
+              🏃‍♂️ 今天有运动
+            </Checkbox>
           </Form.Item>
         </div>
 
