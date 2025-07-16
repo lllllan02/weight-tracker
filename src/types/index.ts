@@ -3,14 +3,14 @@ export interface WeightRecord {
   date: string;
   weight: number;
   note?: string;
-  fasting: '空腹' | '非空腹';
+  fasting: "空腹" | "非空腹";
   exercise?: boolean;
 }
 
 export interface UserProfile {
   height: number;
   targetWeight?: number;
-  theme: 'light' | 'dark';
+  theme: "light" | "dark";
 }
 
 export interface WeightStats {
@@ -73,8 +73,8 @@ export interface ReportStats {
 
 export interface Report {
   period: string;
-  type: 'weekly' | 'monthly';
+  type: "weekly" | "monthly";
   records: WeightRecord[];
   stats: ReportStats;
   insights: string[];
-} 
+}

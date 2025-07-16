@@ -1,15 +1,15 @@
-import React from 'react';
-import { Dayjs } from 'dayjs';
-import { CalendarData } from '../../types';
-import { DateView } from './views/DateView';
-import { MonthView } from './views/MonthView';
-import { YearView } from './views/YearView';
+import React from "react";
+import { Dayjs } from "dayjs";
+import { CalendarData } from "../../types";
+import { DateView } from "./views/DateView";
+import { MonthView } from "./views/MonthView";
+import { YearView } from "./views/YearView";
 
 interface CalendarViewProps {
   currentDate: Dayjs;
   setCurrentDate: (date: Dayjs) => void;
-  calendarView: 'date' | 'month' | 'year';
-  setCalendarView: (view: 'date' | 'month' | 'year') => void;
+  calendarView: "date" | "month" | "year";
+  setCalendarView: (view: "date" | "month" | "year") => void;
   calendarData: CalendarData;
   onDateSelect: (date: Dayjs) => void;
 }
@@ -20,18 +20,18 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   calendarView,
   setCalendarView,
   calendarData,
-  onDateSelect
+  onDateSelect,
 }) => {
   return (
     <>
-      {calendarView === 'date' ? (
+      {calendarView === "date" ? (
         <DateView
           currentDate={currentDate}
           setCurrentDate={setCurrentDate}
           calendarData={calendarData}
           onDateSelect={onDateSelect}
         />
-      ) : calendarView === 'month' ? (
+      ) : calendarView === "month" ? (
         <MonthView
           currentDate={currentDate}
           setCurrentDate={setCurrentDate}
@@ -48,4 +48,4 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
       )}
     </>
   );
-}; 
+};

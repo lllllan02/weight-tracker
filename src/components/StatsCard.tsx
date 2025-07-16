@@ -1,7 +1,11 @@
-import React from 'react';
-import { Card, Statistic } from 'antd';
-import { ArrowUpOutlined, ArrowDownOutlined, MinusOutlined } from '@ant-design/icons';
-import { WeightStats } from '../types';
+import React from "react";
+import { Card, Statistic } from "antd";
+import {
+  ArrowUpOutlined,
+  ArrowDownOutlined,
+  MinusOutlined,
+} from "@ant-design/icons";
+import { WeightStats } from "../types";
 
 interface StatsCardProps {
   stats: WeightStats;
@@ -10,60 +14,72 @@ interface StatsCardProps {
 
 export const StatsCard: React.FC<StatsCardProps> = ({ stats, height }) => {
   const getChangeIcon = () => {
-    if (stats.change > 0) return <ArrowUpOutlined style={{ color: '#ff4d4f' }} />;
-    if (stats.change < 0) return <ArrowDownOutlined style={{ color: '#52c41a' }} />;
-    return <MinusOutlined style={{ color: '#8c8c8c' }} />;
+    if (stats.change > 0)
+      return <ArrowUpOutlined style={{ color: "#ff4d4f" }} />;
+    if (stats.change < 0)
+      return <ArrowDownOutlined style={{ color: "#52c41a" }} />;
+    return <MinusOutlined style={{ color: "#8c8c8c" }} />;
   };
 
   const getChangeColor = () => {
-    if (stats.change > 0) return '#ff4d4f';
-    if (stats.change < 0) return '#52c41a';
-    return '#8c8c8c';
+    if (stats.change > 0) return "#ff4d4f";
+    if (stats.change < 0) return "#52c41a";
+    return "#8c8c8c";
   };
 
   const getBMIColor = () => {
-    if (stats.bmi < 18.5) return '#1890ff';
-    if (stats.bmi < 24) return '#52c41a';
-    if (stats.bmi < 28) return '#faad14';
-    return '#ff4d4f';
+    if (stats.bmi < 18.5) return "#1890ff";
+    if (stats.bmi < 24) return "#52c41a";
+    if (stats.bmi < 28) return "#faad14";
+    return "#ff4d4f";
   };
 
   const getBMICategory = (bmi: number): string => {
-    if (bmi < 18.5) return '偏瘦';
-    if (bmi < 24) return '正常';
-    if (bmi < 28) return '偏胖';
-    return '肥胖';
+    if (bmi < 18.5) return "偏瘦";
+    if (bmi < 24) return "正常";
+    if (bmi < 28) return "偏胖";
+    return "肥胖";
   };
 
   return (
     <div className="stats-grid">
-      <Card style={{ marginBottom: 0, padding: 0 }} styles={{ body: { padding: 16 } }}>
+      <Card
+        style={{ marginBottom: 0, padding: 0 }}
+        styles={{ body: { padding: 16 } }}
+      >
         <Statistic
           title="当前体重"
           value={stats.current}
           suffix="kg"
-          valueStyle={{ color: '#1890ff' }}
+          valueStyle={{ color: "#1890ff" }}
         />
         {stats.change !== 0 && (
           <div style={{ marginTop: 8, fontSize: 14, color: getChangeColor() }}>
-            {getChangeIcon()} {stats.change > 0 ? '+' : ''}{stats.change} kg
+            {getChangeIcon()} {stats.change > 0 ? "+" : ""}
+            {stats.change} kg
           </div>
         )}
       </Card>
 
-      <Card style={{ marginBottom: 0, padding: 0 }} styles={{ body: { padding: 16 } }}>
+      <Card
+        style={{ marginBottom: 0, padding: 0 }}
+        styles={{ body: { padding: 16 } }}
+      >
         <Statistic
           title="平均体重"
           value={stats.average}
           suffix="kg"
-          valueStyle={{ color: '#722ed1' }}
+          valueStyle={{ color: "#722ed1" }}
         />
-        <div style={{ marginTop: 8, fontSize: 12, color: '#8c8c8c' }}>
+        <div style={{ marginTop: 8, fontSize: 12, color: "#8c8c8c" }}>
           历史平均
         </div>
       </Card>
 
-      <Card style={{ marginBottom: 0, padding: 0 }} styles={{ body: { padding: 16 } }}>
+      <Card
+        style={{ marginBottom: 0, padding: 0 }}
+        styles={{ body: { padding: 16 } }}
+      >
         <Statistic
           title="BMI 指数"
           value={stats.bmi}
@@ -74,17 +90,20 @@ export const StatsCard: React.FC<StatsCardProps> = ({ stats, height }) => {
         </div>
       </Card>
 
-      <Card style={{ marginBottom: 0, padding: 0 }} styles={{ body: { padding: 16 } }}>
+      <Card
+        style={{ marginBottom: 0, padding: 0 }}
+        styles={{ body: { padding: 16 } }}
+      >
         <Statistic
           title="体重范围"
           value={`${stats.min} - ${stats.max}`}
           suffix="kg"
-          valueStyle={{ color: '#13c2c2' }}
+          valueStyle={{ color: "#13c2c2" }}
         />
-        <div style={{ marginTop: 8, fontSize: 12, color: '#8c8c8c' }}>
+        <div style={{ marginTop: 8, fontSize: 12, color: "#8c8c8c" }}>
           最低 - 最高
         </div>
       </Card>
     </div>
   );
-}; 
+};

@@ -1,4 +1,4 @@
-const API_BASE = 'http://localhost:3001';
+const API_BASE = "http://localhost:3001";
 
 // ===== 日历面板 API =====
 // 获取日历数据（包含时间段配置和按日期组织的记录）
@@ -10,7 +10,7 @@ export async function getCalendarData() {
     }
     return await res.json();
   } catch (error) {
-    console.error('获取日历数据失败:', error);
+    console.error("获取日历数据失败:", error);
     throw error;
   }
 }
@@ -25,7 +25,7 @@ export async function getStats() {
     }
     return await res.json();
   } catch (error) {
-    console.error('获取统计数据失败:', error);
+    console.error("获取统计数据失败:", error);
     throw error;
   }
 }
@@ -40,7 +40,7 @@ export async function getChartData() {
     }
     return await res.json();
   } catch (error) {
-    console.error('获取图表数据失败:', error);
+    console.error("获取图表数据失败:", error);
     throw error;
   }
 }
@@ -54,7 +54,7 @@ export async function getProfile() {
     }
     return await res.json();
   } catch (error) {
-    console.error('获取用户资料失败:', error);
+    console.error("获取用户资料失败:", error);
     throw error;
   }
 }
@@ -62,8 +62,8 @@ export async function getProfile() {
 export async function updateProfile(profile: any) {
   try {
     const res = await fetch(`${API_BASE}/api/profile`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(profile),
     });
     if (!res.ok) {
@@ -71,7 +71,7 @@ export async function updateProfile(profile: any) {
     }
     return await res.json();
   } catch (error) {
-    console.error('更新用户资料失败:', error);
+    console.error("更新用户资料失败:", error);
     throw error;
   }
 }
@@ -86,7 +86,7 @@ export async function getRecords() {
     }
     return await res.json();
   } catch (error) {
-    console.error('获取体重记录失败:', error);
+    console.error("获取体重记录失败:", error);
     throw error;
   }
 }
@@ -94,8 +94,8 @@ export async function getRecords() {
 export async function addRecord(record: any) {
   try {
     const res = await fetch(`${API_BASE}/api/records`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(record),
     });
     if (!res.ok) {
@@ -103,7 +103,7 @@ export async function addRecord(record: any) {
     }
     return await res.json();
   } catch (error) {
-    console.error('添加体重记录失败:', error);
+    console.error("添加体重记录失败:", error);
     throw error;
   }
 }
@@ -111,8 +111,8 @@ export async function addRecord(record: any) {
 export async function updateRecord(id: string, record: any) {
   try {
     const res = await fetch(`${API_BASE}/api/records/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(record),
     });
     if (!res.ok) {
@@ -120,22 +120,22 @@ export async function updateRecord(id: string, record: any) {
     }
     return await res.json();
   } catch (error) {
-    console.error('更新体重记录失败:', error);
+    console.error("更新体重记录失败:", error);
     throw error;
   }
 }
 
 export async function deleteRecord(id: string) {
   try {
-    const res = await fetch(`${API_BASE}/api/records/${id}`, { 
-      method: 'DELETE' 
+    const res = await fetch(`${API_BASE}/api/records/${id}`, {
+      method: "DELETE",
     });
     if (!res.ok) {
       throw new Error(`HTTP error! status: ${res.status}`);
     }
     return await res.json();
   } catch (error) {
-    console.error('删除体重记录失败:', error);
+    console.error("删除体重记录失败:", error);
     throw error;
   }
 }
@@ -150,7 +150,7 @@ export async function getWeeklyReport() {
     }
     return await res.json();
   } catch (error) {
-    console.error('获取周报失败:', error);
+    console.error("获取周报失败:", error);
     throw error;
   }
 }
@@ -164,7 +164,7 @@ export async function getMonthlyReport() {
     }
     return await res.json();
   } catch (error) {
-    console.error('获取月报失败:', error);
+    console.error("获取月报失败:", error);
     throw error;
   }
 }
@@ -177,30 +177,30 @@ export async function exportData() {
     if (!res.ok) {
       throw new Error(`HTTP error! status: ${res.status}`);
     }
-    
+
     // 获取文件名
-    const contentDisposition = res.headers.get('Content-Disposition');
-    let filename = 'weight-tracker-backup.json';
+    const contentDisposition = res.headers.get("Content-Disposition");
+    let filename = "weight-tracker-backup.json";
     if (contentDisposition) {
       const filenameMatch = contentDisposition.match(/filename="(.+)"/);
       if (filenameMatch) {
         filename = filenameMatch[1];
       }
     }
-    
+
     const blob = await res.blob();
     const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
     a.download = filename;
     document.body.appendChild(a);
     a.click();
     window.URL.revokeObjectURL(url);
     document.body.removeChild(a);
-    
+
     return { success: true, filename };
   } catch (error) {
-    console.error('导出数据失败:', error);
+    console.error("导出数据失败:", error);
     throw error;
   }
 }
@@ -210,21 +210,21 @@ export async function importData(file: File) {
   try {
     const fileContent = await file.text();
     const importData = JSON.parse(fileContent);
-    
+
     const res = await fetch(`${API_BASE}/api/import`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(importData),
     });
-    
+
     if (!res.ok) {
       const errorData = await res.json();
       throw new Error(errorData.error || `HTTP error! status: ${res.status}`);
     }
-    
+
     return await res.json();
   } catch (error) {
-    console.error('导入数据失败:', error);
+    console.error("导入数据失败:", error);
     throw error;
   }
-} 
+}

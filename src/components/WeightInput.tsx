@@ -1,1 +1,1 @@
-export { WeightInput } from './WeightInputComponent/index'; 
+export { WeightInput } from "./WeightInputComponent/index";

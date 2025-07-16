@@ -1,17 +1,17 @@
-import React, { useState, useEffect } from 'react';
-import { Card, Form, message } from 'antd';
-import { WeightRecord, UserProfile, CalendarData } from '../../types';
-import { generateId } from '../../utils/helpers';
-import { addRecord, updateRecord, updateProfile } from '../../utils/api';
-import dayjs, { Dayjs } from 'dayjs';
+import React, { useState } from "react";
+import { Card, Form, message } from "antd";
+import { WeightRecord, UserProfile, CalendarData } from "../../types";
+import { generateId } from "../../utils/helpers";
+import { addRecord, updateRecord, updateProfile } from "../../utils/api";
+import dayjs, { Dayjs } from "dayjs";
 
 // 导入子组件
-import { CalendarView } from './CalendarView';
-import { DayRecordCard } from './DayRecordCard';
-import { WeightRecordModal } from './WeightRecordModal';
-import { SettingsModal } from './SettingsModal';
-import { CalendarHeader } from './CalendarHeader';
-import { TIME_SLOTS, TimeSlot } from './constants';
+import { CalendarView } from "./CalendarView";
+import { DayRecordCard } from "./DayRecordCard";
+import { WeightRecordModal } from "./WeightRecordModal";
+import { SettingsModal } from "./SettingsModal";
+import { CalendarHeader } from "./CalendarHeader";
+import { TIME_SLOTS, TimeSlot } from "./constants";
 
 interface WeightInputProps {
   onAdd: () => void;
@@ -20,21 +20,25 @@ interface WeightInputProps {
   calendarData: CalendarData;
 }
 
-export const WeightInput: React.FC<WeightInputProps> = ({ 
-  onAdd, 
-  profile, 
-  onProfileChange, 
-  calendarData 
+export const WeightInput: React.FC<WeightInputProps> = ({
+  onAdd,
+  profile,
+  onProfileChange,
+  calendarData,
 }) => {
   const [form] = Form.useForm();
   const [settingsForm] = Form.useForm();
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isSettingsModalVisible, setIsSettingsModalVisible] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Dayjs>(dayjs());
-  const [selectedTimeSlot, setSelectedTimeSlot] = useState<TimeSlot>(TIME_SLOTS[0]);
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState<TimeSlot>(
+    TIME_SLOTS[0]
+  );
   const [loading, setLoading] = useState(false);
   const [currentDate, setCurrentDate] = useState<Dayjs>(dayjs());
-  const [calendarView, setCalendarView] = useState<'date' | 'month' | 'year'>('date');
+  const [calendarView, setCalendarView] = useState<"date" | "month" | "year">(
+    "date"
+  );
   const [editingRecord, setEditingRecord] = useState<WeightRecord | null>(null);
 
   // 打开添加记录弹窗
@@ -49,9 +53,11 @@ export const WeightInput: React.FC<WeightInputProps> = ({
   // 编辑记录
   const handleEditRecord = (date: Dayjs, timeSlot: TimeSlot) => {
     const { dayRecords = {} } = calendarData;
-    const dateKey = date.format('YYYY-MM-DD');
-    const record = dayRecords[dateKey]?.[timeSlot.key] as WeightRecord | undefined;
-    
+    const dateKey = date.format("YYYY-MM-DD");
+    const record = dayRecords[dateKey]?.[timeSlot.key] as
+      | WeightRecord
+      | undefined;
+
     if (record) {
       setSelectedDate(date);
       setSelectedTimeSlot(timeSlot);
@@ -60,8 +66,8 @@ export const WeightInput: React.FC<WeightInputProps> = ({
       form.setFieldsValue({
         weight: record.weight,
         note: record.note,
-        fasting: record.fasting === '空腹',
-        exercise: record.exercise || false
+        fasting: record.fasting === "空腹",
+        exercise: record.exercise || false,
       });
     }
   };
@@ -71,22 +77,22 @@ export const WeightInput: React.FC<WeightInputProps> = ({
     try {
       setLoading(true);
       const { dayRecords = {} } = calendarData;
-      const dateKey = date.format('YYYY-MM-DD');
+      const dateKey = date.format("YYYY-MM-DD");
       const dayData = dayRecords[dateKey];
-      
+
       if (dayData && Object.keys(dayData).length > 0) {
         // 如果当天有体重记录，更新第一个记录的运动状态
         const firstTimeSlot = Object.keys(dayData)[0];
         const record = dayData[firstTimeSlot];
-        
+
         if (record) {
           const updatedRecord: WeightRecord = {
             ...record,
-            exercise: exercise
+            exercise: exercise,
           };
-          
+
           await updateRecord(record.id, updatedRecord);
-          message.success(exercise ? '已标记为运动日' : '已取消运动标记');
+          message.success(exercise ? "已标记为运动日" : "已取消运动标记");
         }
       } else {
         // 如果当天没有体重记录，创建一个虚拟记录来保存运动状态
@@ -94,18 +100,18 @@ export const WeightInput: React.FC<WeightInputProps> = ({
           id: generateId(),
           date: date.hour(8).minute(0).second(0).toISOString(),
           weight: 0, // 虚拟体重，不会显示
-          fasting: '空腹',
-          exercise: exercise
+          fasting: "空腹",
+          exercise: exercise,
         };
-        
+
         await addRecord(virtualRecord);
-        message.success(exercise ? '已标记为运动日' : '已取消运动标记');
+        message.success(exercise ? "已标记为运动日" : "已取消运动标记");
       }
-      
+
       onAdd(); // 通知父组件重新加载数据
     } catch (error) {
-      console.error('更新运动状态失败:', error);
-      message.error('更新运动状态失败，请重试');
+      console.error("更新运动状态失败:", error);
+      message.error("更新运动状态失败，请重试");
     } finally {
       setLoading(false);
     }
@@ -116,8 +122,11 @@ export const WeightInput: React.FC<WeightInputProps> = ({
     try {
       setLoading(true);
       const values = await form.validateFields();
-      const date = selectedDate.hour(selectedTimeSlot.hour).minute(selectedTimeSlot.minute).second(0);
-      
+      const date = selectedDate
+        .hour(selectedTimeSlot.hour)
+        .minute(selectedTimeSlot.minute)
+        .second(0);
+
       if (editingRecord) {
         // 编辑现有记录
         const updatedRecord: WeightRecord = {
@@ -125,12 +134,12 @@ export const WeightInput: React.FC<WeightInputProps> = ({
           date: date.toISOString(),
           weight: values.weight,
           note: values.note?.trim() || undefined,
-          fasting: values.fasting ? '空腹' : '非空腹',
-          exercise: values.exercise || false
+          fasting: values.fasting ? "空腹" : "非空腹",
+          exercise: values.exercise || false,
         };
-        
+
         await updateRecord(editingRecord.id, updatedRecord);
-        message.success('记录更新成功！');
+        message.success("记录更新成功！");
       } else {
         // 新增记录
         const record: WeightRecord = {
@@ -138,21 +147,21 @@ export const WeightInput: React.FC<WeightInputProps> = ({
           date: date.toISOString(),
           weight: values.weight,
           note: values.note?.trim() || undefined,
-          fasting: values.fasting ? '空腹' : '非空腹',
-          exercise: values.exercise || false
+          fasting: values.fasting ? "空腹" : "非空腹",
+          exercise: values.exercise || false,
         };
-        
+
         await addRecord(record);
-        message.success('记录添加成功！');
+        message.success("记录添加成功！");
       }
-      
+
       form.resetFields();
       setIsModalVisible(false);
       setEditingRecord(null);
       onAdd(); // 通知父组件重新加载数据
     } catch (error) {
-      console.error('保存记录失败:', error);
-      message.error('保存失败，请重试');
+      console.error("保存记录失败:", error);
+      message.error("保存失败，请重试");
     } finally {
       setLoading(false);
     }
@@ -171,15 +180,15 @@ export const WeightInput: React.FC<WeightInputProps> = ({
       const newProfile: UserProfile = {
         ...profile,
         height: values.height,
-        targetWeight: values.targetWeight || undefined
+        targetWeight: values.targetWeight || undefined,
       };
       await updateProfile(newProfile);
       onProfileChange(newProfile);
       setIsSettingsModalVisible(false);
-      message.success('设置保存成功！');
+      message.success("设置保存成功！");
     } catch (error) {
-      console.error('保存设置失败:', error);
-      message.error('保存设置失败');
+      console.error("保存设置失败:", error);
+      message.error("保存设置失败");
     }
   };
 
@@ -190,10 +199,10 @@ export const WeightInput: React.FC<WeightInputProps> = ({
 
   return (
     <div style={{ marginBottom: 24 }}>
-      <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start' }}>
+      <div style={{ display: "flex", gap: 20, alignItems: "flex-start" }}>
         {/* 左侧日历 */}
         <div style={{ flex: 1, minWidth: 0 }}>
-          <Card 
+          <Card
             title={
               <CalendarHeader
                 calendarView={calendarView}
@@ -201,8 +210,8 @@ export const WeightInput: React.FC<WeightInputProps> = ({
                 onSettingsClick={() => setIsSettingsModalVisible(true)}
               />
             }
-            style={{ borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}
-            styles={{ body: { padding: 0, border: 'none' } }}
+            style={{ borderRadius: 12, boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }}
+            styles={{ body: { padding: 0, border: "none" } }}
           >
             <CalendarView
               currentDate={currentDate}
@@ -249,4 +258,4 @@ export const WeightInput: React.FC<WeightInputProps> = ({
       />
     </div>
   );
-}; 
+};
