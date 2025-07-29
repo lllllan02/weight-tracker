@@ -108,9 +108,9 @@ export const TimeSlotCard: React.FC<TimeSlotCardProps> = ({
           <div>
             <div style={{ marginBottom: 12 }}>
               <InputNumber
-                value={editWeight}
+                value={editWeight || null}
                 onChange={(value) => setEditWeight(value || 0)}
-                placeholder="体重"
+                placeholder="请输入体重"
                 style={{
                   width: "100%",
                   borderRadius: 8,
