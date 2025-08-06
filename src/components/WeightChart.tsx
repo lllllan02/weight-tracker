@@ -5,12 +5,13 @@ import {
   LinearScale,
   PointElement,
   LineElement,
+  BarElement,
   Title,
   Tooltip,
   Legend,
   Filler,
 } from "chart.js";
-import { Line } from "react-chartjs-2";
+import { Chart } from "react-chartjs-2";
 import { Card, Empty } from "antd";
 import { ChartData } from "../types";
 
@@ -19,6 +20,7 @@ ChartJS.register(
   LinearScale,
   PointElement,
   LineElement,
+  BarElement,
   Title,
   Tooltip,
   Legend,
@@ -27,9 +29,10 @@ ChartJS.register(
 
 interface WeightChartProps {
   chartData: ChartData;
+  height: number; // 用户身高，单位：厘米
 }
 
-export const WeightChart: React.FC<WeightChartProps> = ({ chartData }) => {
+export const WeightChart: React.FC<WeightChartProps> = ({ chartData, height }) => {
   if (!chartData || chartData.labels.length === 0) {
     return (
       <Card className="chart-container">
@@ -69,16 +72,10 @@ export const WeightChart: React.FC<WeightChartProps> = ({ chartData }) => {
       legend: {
         display: true,
         position: "top" as const,
-        labels: {
-          filter: function (legendItem: any) {
-            // 隐藏零线在图例中的显示
-            return legendItem.text !== "零线 (无变化)";
-          },
-        },
       },
       title: {
         display: true,
-        text: "体重、BMI和变化速度趋势",
+        text: "体重趋势",
         font: {
           size: 16,
           weight: "bold" as const,
@@ -91,17 +88,16 @@ export const WeightChart: React.FC<WeightChartProps> = ({ chartData }) => {
           label: function (context: any) {
             const dataset = context.dataset;
             if (dataset.label === "体重 (kg)") {
-              return `体重: ${context.parsed.y} kg`;
-            } else if (dataset.label === "BMI") {
-              return `BMI: ${context.parsed.y}`;
-            } else if (dataset.label === "变化速度 (kg/天)") {
-              return `变化速度: ${context.parsed.y} kg/天`;
+              const bmi = (context.parsed.y / Math.pow(height / 100, 2)).toFixed(1);
+              return [`体重: ${context.parsed.y} kg`, `BMI: ${bmi}`];
+            } else if (dataset.label === "体重变化") {
+              const value = context.parsed.y;
+              return `变化: ${value > 0 ? "+" : ""}${value} kg`;
             }
             return `${dataset.label}: ${context.parsed.y}`;
           },
         },
       },
-      // 移除annotation插件配置，使用数据集方式绘制零线
     },
     interaction: {
       mode: "nearest" as const,
@@ -126,28 +122,14 @@ export const WeightChart: React.FC<WeightChartProps> = ({ chartData }) => {
         },
         beginAtZero: false,
       },
-      y1: {
-        type: "linear" as const,
-        display: true,
-        position: "right" as const,
-        title: {
-          display: true,
-          text: "BMI",
-        },
-        beginAtZero: false,
-        grid: {
-          drawOnChartArea: false,
-        },
-      },
       y2: {
         type: "linear" as const,
         display: true,
         position: "right" as const,
         title: {
           display: true,
-          text: "变化速度 (kg/天)",
+          text: "体重变化 (kg)",
         },
-        beginAtZero: false,
         grid: {
           drawOnChartArea: false,
         },
@@ -157,10 +139,8 @@ export const WeightChart: React.FC<WeightChartProps> = ({ chartData }) => {
         // 自定义刻度，确保0在中间
         ticks: {
           stepSize: 0.5,
-          // 确保包含0刻度
-          values: [-2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2],
           callback: function (value: any) {
-            return value + " kg/天";
+            return (value > 0 ? "+" : "") + value + " kg";
           },
         },
       },
@@ -169,7 +149,7 @@ export const WeightChart: React.FC<WeightChartProps> = ({ chartData }) => {
 
   return (
     <Card className="chart-container">
-      <Line options={options} data={chartDataWithZeroLine} />
+      <Chart type="bar" options={options} data={chartData} />
     </Card>
   );
 };

@@ -198,7 +198,7 @@ function App() {
           </div>
 
           {/* 体重图表 */}
-          <WeightChart chartData={chartData} />
+          <WeightChart chartData={chartData} height={profile.height} />
 
           {/* 数据备份 */}
           <DataBackup

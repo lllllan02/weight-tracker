@@ -118,50 +118,50 @@ function calculateChartData(records, profile) {
 
   const sortedRecords = [...records].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   
-  // 计算BMI数据
-  const bmiData = sortedRecords.map(r => calculateBMI(r.weight, profile.height));
-  
-  // 计算体重变化速度 (kg/天)
-  const weightChangeRate = sortedRecords.map((record, index) => {
-    if (index === 0) return 0; // 第一条记录没有变化速度
-    const currentWeight = record.weight;
-    const previousWeight = sortedRecords[index - 1].weight;
-    const currentDate = new Date(record.date);
-    const previousDate = new Date(sortedRecords[index - 1].date);
-    const daysDiff = (currentDate.getTime() - previousDate.getTime()) / (1000 * 60 * 60 * 24);
-    
-    if (daysDiff === 0) return 0;
-    return Number(((currentWeight - previousWeight) / daysDiff).toFixed(2));
+  // 计算体重变化
+  const weightChanges = sortedRecords.map((record, index) => {
+    if (index === 0) return 0;
+    return Number((record.weight - sortedRecords[index - 1].weight).toFixed(2));
   });
   
   return {
     labels: sortedRecords.map(r => formatDate(r.date)),
     datasets: [
       {
+        type: 'line',
         label: '体重 (kg)',
         data: sortedRecords.map(r => r.weight),
-        borderColor: '#0ea5e9',
-        backgroundColor: 'rgba(14, 165, 233, 0.1)',
-        tension: 0.1,
-        fill: true,
+        borderColor: '#3b82f6',
+        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+        borderWidth: 2,
+        pointRadius: 2,
+        pointHoverRadius: 4,
+        pointBackgroundColor: '#ffffff',
+        pointBorderColor: '#3b82f6',
+        pointBorderWidth: 1.5,
+        tension: 0.4,
+        fill: {
+          target: 'origin',
+          above: 'rgba(14, 165, 233, 0.1)',
+          below: 'rgba(14, 165, 233, 0.1)'
+        },
         yAxisID: 'y'
       },
       {
-        label: 'BMI',
-        data: bmiData,
-        borderColor: '#10b981',
-        backgroundColor: 'rgba(16, 185, 129, 0.1)',
-        tension: 0.1,
-        fill: false,
-        yAxisID: 'y1'
-      },
-      {
-        label: '变化速度 (kg/天)',
-        data: weightChangeRate,
-        borderColor: '#f59e0b',
-        backgroundColor: 'rgba(245, 158, 11, 0.1)',
-        tension: 0.1,
-        fill: false,
+        type: 'bar',
+        label: '体重变化',
+        data: weightChanges,
+        backgroundColor: weightChanges.map(change => 
+          change > 0 ? 'rgba(239, 68, 68, 0.7)' : // 红色表示增加
+          change < 0 ? 'rgba(34, 197, 94, 0.7)' : // 绿色表示减少
+          'rgba(156, 163, 175, 0.7)' // 灰色表示无变化
+        ),
+        borderColor: weightChanges.map(change => 
+          change > 0 ? 'rgb(239, 68, 68)' : // 红色表示增加
+          change < 0 ? 'rgb(34, 197, 94)' : // 绿色表示减少
+          'rgb(156, 163, 175)' // 灰色表示无变化
+        ),
+        borderWidth: 1,
         yAxisID: 'y2'
       }
     ]
