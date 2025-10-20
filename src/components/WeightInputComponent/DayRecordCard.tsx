@@ -11,7 +11,7 @@ interface DayRecordCardProps {
   calendarData: CalendarData;
   onAddRecord: (date: Dayjs, timeSlot: TimeSlot) => void;
   onEditRecord: (date: Dayjs, timeSlot: TimeSlot) => void;
-  onSaveRecord: (date: Dayjs, timeSlot: TimeSlot, weight: number, fasting: boolean) => void;
+  onSaveRecord: (date: Dayjs, timeSlot: TimeSlot, weight: number) => void;
   onCancelEdit: () => void;
   onExerciseDurationChange: (date: Dayjs, duration: number | null) => void;
   onDeleteRecord: (date: Dayjs, timeSlot: TimeSlot) => void;

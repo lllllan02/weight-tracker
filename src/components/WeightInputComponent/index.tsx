@@ -90,7 +90,7 @@ export const WeightInput: React.FC<WeightInputProps> = ({
   };
 
   // 保存记录（直接在卡片上编辑）
-  const handleSaveRecord = async (date: Dayjs, timeSlot: TimeSlot, weight: number, fasting: boolean) => {
+  const handleSaveRecord = async (date: Dayjs, timeSlot: TimeSlot, weight: number) => {
     try {
       setLoading(true);
       const recordDate = date.hour(timeSlot.hour).minute(timeSlot.minute).second(0);
@@ -106,7 +106,7 @@ export const WeightInput: React.FC<WeightInputProps> = ({
           ...existingRecord,
           date: recordDate.toISOString(),
           weight: weight,
-          fasting: fasting ? "空腹" : "非空腹",
+          fasting: "空腹", // 默认为空腹
         };
 
         await updateRecord(existingRecord.id, updatedRecord);
@@ -117,7 +117,7 @@ export const WeightInput: React.FC<WeightInputProps> = ({
           id: generateId(),
           date: recordDate.toISOString(),
           weight: weight,
-          fasting: fasting ? "空腹" : "非空腹",
+          fasting: "空腹", // 默认为空腹
         };
 
         await addRecord(record);

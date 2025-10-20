@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Button, InputNumber, Switch, message } from "antd";
+import { Button, InputNumber, message } from "antd";
 import { PlusOutlined, EditOutlined, CheckOutlined, CloseOutlined, DeleteOutlined } from "@ant-design/icons";
 import { Dayjs } from "dayjs";
 import dayjs from "dayjs";
@@ -12,7 +12,7 @@ interface TimeSlotCardProps {
   record?: WeightRecord;
   onAddRecord: (date: Dayjs, slot: TimeSlot) => void;
   onEditRecord: (date: Dayjs, slot: TimeSlot) => void;
-  onSaveRecord: (date: Dayjs, slot: TimeSlot, weight: number, fasting: boolean) => void;
+  onSaveRecord: (date: Dayjs, slot: TimeSlot, weight: number) => void;
   onCancelEdit: () => void;
   onDeleteRecord: (date: Dayjs, slot: TimeSlot) => void;
 }
@@ -30,7 +30,6 @@ export const TimeSlotCard: React.FC<TimeSlotCardProps> = ({
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editWeight, setEditWeight] = useState(record?.weight || 0);
-  const [editFasting, setEditFasting] = useState(record?.fasting === "空腹" || false);
   
   const isToday = selectedDate.isSame(dayjs(), "day");
   const isPast = selectedDate.isBefore(dayjs(), "day");
@@ -40,17 +39,15 @@ export const TimeSlotCard: React.FC<TimeSlotCardProps> = ({
     // 如果是新增记录，设置默认值
     if (hasRecord && record) {
       setEditWeight(record.weight);
-      setEditFasting(record.fasting === "空腹");
     } else {
       // 新增记录时设置默认值
       setEditWeight(0);
-      setEditFasting(false);
     }
   };
 
   const handleSave = () => {
     if (editWeight > 0) {
-      onSaveRecord(selectedDate, slot, editWeight, editFasting);
+      onSaveRecord(selectedDate, slot, editWeight);
       setIsEditing(false);
     } else {
       // 提示用户输入有效的体重
@@ -122,15 +119,6 @@ export const TimeSlotCard: React.FC<TimeSlotCardProps> = ({
                 max={300}
               />
             </div>
-            <div style={{ marginBottom: 12, textAlign: "center" }}>
-              <Switch
-                checked={editFasting}
-                onChange={setEditFasting}
-                checkedChildren="空腹"
-                unCheckedChildren="非空腹"
-                style={{ fontSize: 12 }}
-              />
-            </div>
           </div>
         ) : hasRecord ? (
           <div>
@@ -143,21 +131,7 @@ export const TimeSlotCard: React.FC<TimeSlotCardProps> = ({
                 letterSpacing: 0.5,
               }}
             >
-              {record?.weight}
-            </div>
-            <div
-              style={{
-                fontSize: 11,
-                color: "#666",
-                marginBottom: 6,
-                fontWeight: 500,
-                background: "rgba(255,255,255,0.8)",
-                padding: "3px 8px",
-                borderRadius: 8,
-                display: "inline-block",
-              }}
-            >
-              {record?.fasting}
+              {record?.weight} kg
             </div>
           </div>
         ) : (
