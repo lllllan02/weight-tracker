@@ -10,7 +10,8 @@ function readData() {
       return { 
         records: [], 
         exerciseRecords: [],
-        profile: { height: 170, targetWeight: 65, theme: 'light' }
+        profile: { height: 170, targetWeight: 65, theme: 'light' },
+        aiReports: { weekly: {}, monthly: {} }
       };
     }
     
@@ -20,14 +21,16 @@ function readData() {
     return {
       records: data.records || [],
       exerciseRecords: data.exerciseRecords || [],
-      profile: data.profile || { height: 170, targetWeight: 65, theme: 'light' }
+      profile: data.profile || { height: 170, targetWeight: 65, theme: 'light' },
+      aiReports: data.aiReports || { weekly: {}, monthly: {} }
     };
   } catch (error) {
     console.error('读取数据文件失败，使用默认数据:', error.message);
     return { 
       records: [], 
       exerciseRecords: [],
-      profile: { height: 170, targetWeight: 65, theme: 'light' }
+      profile: { height: 170, targetWeight: 65, theme: 'light' },
+      aiReports: { weekly: {}, monthly: {} }
     };
   }
 }
@@ -39,7 +42,8 @@ function writeData(data) {
     const coreData = {
       records: data.records || [],
       exerciseRecords: data.exerciseRecords || [],
-      profile: data.profile || { height: 170, targetWeight: 65, theme: 'light' }
+      profile: data.profile || { height: 170, targetWeight: 65, theme: 'light' },
+      aiReports: data.aiReports || { weekly: {}, monthly: {} }
     };
     
     fs.writeFileSync(DATA_FILE, JSON.stringify(coreData, null, 2), 'utf-8');

@@ -87,10 +87,18 @@ export interface ReportStats {
   weeklyAverages?: number[];
 }
 
+export interface AIAnalysis {
+  summary: string;
+  insights: string[];
+  suggestions: string[];
+  generatedAt?: string;
+}
+
 export interface Report {
   period: string;
   type: "weekly" | "monthly";
   records: WeightRecord[];
   stats: ReportStats;
   insights: string[];
+  aiAnalysis?: AIAnalysis;
 }

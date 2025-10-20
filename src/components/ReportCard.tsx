@@ -1,12 +1,28 @@
-import React, { useState } from "react";
-import { Card, Button, Modal, Tag, Typography, Divider } from "antd";
+import React, { useState, useEffect } from "react";
+import {
+  Card,
+  Button,
+  Modal,
+  Typography,
+  Divider,
+  message,
+  Alert,
+  Spin,
+  Tag,
+} from "antd";
 import {
   FileTextOutlined,
   CalendarOutlined,
   TrophyOutlined,
   RiseOutlined,
+  RobotOutlined,
+  BulbOutlined,
 } from "@ant-design/icons";
-import { Report } from "../types";
+import { Report, AIAnalysis } from "../types";
+import {
+  generateWeeklyAIAnalysis,
+  generateMonthlyAIAnalysis,
+} from "../utils/api";
 
 const { Text, Title } = Typography;
 
@@ -20,6 +36,17 @@ export const ReportCard: React.FC<ReportCardProps> = ({
   loading = false,
 }) => {
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [aiAnalysis, setAiAnalysis] = useState<AIAnalysis | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+
+  // 当报告加载时，检查是否有已保存的 AI 分析
+  useEffect(() => {
+    if (report.aiAnalysis) {
+      setAiAnalysis(report.aiAnalysis);
+    } else {
+      setAiAnalysis(null);
+    }
+  }, [report]);
 
   const getReportIcon = () => {
     return report.type === "weekly" ? (
@@ -46,7 +73,29 @@ export const ReportCard: React.FC<ReportCardProps> = ({
   };
 
   const showModal = () => setIsModalVisible(true);
-  const handleCancel = () => setIsModalVisible(false);
+  const handleCancel = () => {
+    setIsModalVisible(false);
+  };
+
+  const handleGenerateAIAnalysis = async () => {
+    setAiLoading(true);
+    try {
+      let result;
+      const force = !!aiAnalysis; // 如果已有分析，则强制重新生成
+      if (report.type === "weekly") {
+        result = await generateWeeklyAIAnalysis(force);
+      } else {
+        result = await generateMonthlyAIAnalysis(force);
+      }
+      setAiAnalysis(result);
+      message.success(force ? "AI 分析已重新生成！" : "AI 分析生成成功！");
+    } catch (error) {
+      message.error("生成 AI 分析失败，请稍后重试");
+      console.error(error);
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
   return (
     <>
@@ -92,24 +141,6 @@ export const ReportCard: React.FC<ReportCardProps> = ({
             <Text type="secondary">体重变化</Text>
           </div>
         </div>
-
-        {report.insights.length > 0 && (
-          <div style={{ marginTop: 12 }}>
-            <Text type="secondary">主要发现:</Text>
-            <div style={{ marginTop: 4 }}>
-              {report.insights.slice(0, 2).map((insight, index) => (
-                <Tag key={index} color="blue" style={{ marginBottom: 4 }}>
-                  {insight}
-                </Tag>
-              ))}
-              {report.insights.length > 2 && (
-                <Text type="secondary" style={{ fontSize: 12 }}>
-                  +{report.insights.length - 2} 更多
-                </Text>
-              )}
-            </div>
-          </div>
-        )}
       </Card>
 
       <Modal
@@ -121,6 +152,16 @@ export const ReportCard: React.FC<ReportCardProps> = ({
         open={isModalVisible}
         onCancel={handleCancel}
         footer={[
+          <Button
+            key="ai"
+            type={aiAnalysis ? "default" : "primary"}
+            icon={<RobotOutlined />}
+            onClick={handleGenerateAIAnalysis}
+            loading={aiLoading}
+            disabled={report.stats.recordCount === 0}
+          >
+            {aiAnalysis ? "重新生成分析" : "生成 AI 分析"}
+          </Button>,
           <Button key="close" onClick={handleCancel}>
             关闭
           </Button>,
@@ -240,48 +281,149 @@ export const ReportCard: React.FC<ReportCardProps> = ({
 
           <Divider />
 
-          {/* 洞察分析 */}
-          <div
-            style={{
-              marginBottom: 24,
-              padding: "16px",
-              backgroundColor: "#fff7e6",
-              borderRadius: "8px",
-              border: "1px solid #ffd591",
-            }}
-          >
-            <Title level={5} style={{ marginBottom: 16, color: "#d46b08" }}>
-              <TrophyOutlined style={{ marginRight: 8 }} />
-              洞察分析
-            </Title>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {report.insights.map((insight, index) => (
-                <div
-                  key={index}
-                  style={{
-                    display: "flex",
-                    alignItems: "flex-start",
-                    padding: "8px 12px",
-                    backgroundColor: "white",
-                    borderRadius: "6px",
-                    border: "1px solid #ffd591",
-                  }}
-                >
-                  <span
-                    style={{
-                      color: "#d46b08",
-                      fontWeight: "bold",
-                      marginRight: 8,
-                      minWidth: "20px",
-                    }}
-                  >
-                    {index + 1}.
+          {/* AI 分析结果 */}
+          {aiAnalysis ? (
+            <>
+              <Alert
+                message={
+                  <span>
+                    <RobotOutlined style={{ marginRight: 8 }} />
+                    AI 智能分析
                   </span>
-                  <Text style={{ flex: 1, lineHeight: "1.5" }}>{insight}</Text>
+                }
+                description={
+                  <div>
+                    <div style={{ marginBottom: 16 }}>
+                      <Text strong style={{ fontSize: 15 }}>
+                        总结
+                      </Text>
+                      <div
+                        style={{
+                          marginTop: 8,
+                          padding: "12px",
+                          backgroundColor: "#f0f5ff",
+                          borderRadius: "6px",
+                          borderLeft: "4px solid #1890ff",
+                        }}
+                      >
+                        <Text>{aiAnalysis.summary}</Text>
+                      </div>
+                    </div>
+
+                    {aiAnalysis.insights &&
+                      aiAnalysis.insights.length > 0 && (
+                        <div style={{ marginBottom: 16 }}>
+                          <Text strong style={{ fontSize: 15 }}>
+                            <TrophyOutlined style={{ marginRight: 8 }} />
+                            数据洞察
+                          </Text>
+                          <div
+                            style={{
+                              display: "flex",
+                              flexDirection: "column",
+                              gap: 8,
+                              marginTop: 8,
+                            }}
+                          >
+                            {aiAnalysis.insights.map((insight, index) => (
+                              <div
+                                key={index}
+                                style={{
+                                  display: "flex",
+                                  alignItems: "flex-start",
+                                  padding: "10px 12px",
+                                  backgroundColor: "#f6ffed",
+                                  borderRadius: "6px",
+                                  border: "1px solid #b7eb8f",
+                                }}
+                              >
+                                <span
+                                  style={{
+                                    color: "#52c41a",
+                                    fontWeight: "bold",
+                                    marginRight: 8,
+                                    minWidth: "20px",
+                                  }}
+                                >
+                                  {index + 1}.
+                                </span>
+                                <Text style={{ flex: 1, lineHeight: "1.5" }}>
+                                  {insight}
+                                </Text>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                    {aiAnalysis.suggestions &&
+                      aiAnalysis.suggestions.length > 0 && (
+                        <div>
+                          <Text strong style={{ fontSize: 15 }}>
+                            <BulbOutlined style={{ marginRight: 8 }} />
+                            个性化建议
+                          </Text>
+                          <div
+                            style={{
+                              display: "flex",
+                              flexDirection: "column",
+                              gap: 8,
+                              marginTop: 8,
+                            }}
+                          >
+                            {aiAnalysis.suggestions.map((suggestion, index) => (
+                              <div
+                                key={index}
+                                style={{
+                                  display: "flex",
+                                  alignItems: "flex-start",
+                                  padding: "10px 12px",
+                                  backgroundColor: "#fff7e6",
+                                  borderRadius: "6px",
+                                  border: "1px solid #ffd591",
+                                }}
+                              >
+                                <span
+                                  style={{
+                                    color: "#faad14",
+                                    fontWeight: "bold",
+                                    marginRight: 8,
+                                    minWidth: "20px",
+                                  }}
+                                >
+                                  {index + 1}.
+                                </span>
+                                <Text style={{ flex: 1, lineHeight: "1.5" }}>
+                                  {suggestion}
+                                </Text>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                  </div>
+                }
+                type="info"
+                style={{ marginBottom: 24 }}
+              />
+              <Divider />
+            </>
+          ) : (
+            aiLoading && (
+              <div
+                style={{
+                  textAlign: "center",
+                  padding: "24px",
+                  marginBottom: 24,
+                }}
+              >
+                <Spin size="large" />
+                <div style={{ marginTop: 16 }}>
+                  <Text type="secondary">AI 正在分析您的数据...</Text>
                 </div>
-              ))}
-            </div>
-          </div>
+              </div>
+            )
+          )}
 
           {/* 记录列表 */}
           {report.records.length > 0 && (
