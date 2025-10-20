@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Layout, Typography, message } from "antd";
 import { DashboardOutlined } from "@ant-design/icons";
 import {
@@ -16,6 +16,8 @@ import {
   updateProfile,
   getWeeklyReport,
   getMonthlyReport,
+  getAvailableWeeks,
+  getAvailableMonths,
 } from "./utils/api";
 import { WeightInput } from "./components/WeightInput";
 import { StatsCard } from "./components/StatsCard";
@@ -59,11 +61,46 @@ function App() {
   const [weeklyReport, setWeeklyReport] = useState<Report | null>(null);
   const [monthlyReport, setMonthlyReport] = useState<Report | null>(null);
   const [reportsLoading, setReportsLoading] = useState(false);
+  const [currentWeekDate, setCurrentWeekDate] = useState<Date>(new Date());
+  const [currentMonthDate, setCurrentMonthDate] = useState<Date>(new Date());
+  const [availableWeeks, setAvailableWeeks] = useState<string[]>([]);
+  const [availableMonths, setAvailableMonths] = useState<string[]>([]);
+  const [canGoPreviousWeek, setCanGoPreviousWeek] = useState(false);
+  const [canGoNextWeek, setCanGoNextWeek] = useState(false);
+  const [canGoPreviousMonth, setCanGoPreviousMonth] = useState(false);
+  const [canGoNextMonth, setCanGoNextMonth] = useState(false);
 
   useEffect(() => {
     loadData();
-    loadReports();
+    loadAvailableDates();
   }, []);
+
+  useEffect(() => {
+    if (availableWeeks.length > 0) {
+      loadWeeklyReport();
+      updateWeekNavigation();
+    }
+  }, [currentWeekDate, availableWeeks]);
+
+  useEffect(() => {
+    if (availableMonths.length > 0) {
+      loadMonthlyReport();
+      updateMonthNavigation();
+    }
+  }, [currentMonthDate, availableMonths]);
+
+  const loadAvailableDates = async () => {
+    try {
+      const [weeks, months] = await Promise.all([
+        getAvailableWeeks(),
+        getAvailableMonths(),
+      ]);
+      setAvailableWeeks(weeks);
+      setAvailableMonths(months);
+    } catch (error) {
+      console.error("加载可用日期失败:", error);
+    }
+  };
 
   const loadData = async () => {
     try {
@@ -83,27 +120,149 @@ function App() {
     }
   };
 
-  const loadReports = async () => {
+  const getWeekStartKey = (date: Date) => {
+    const weekStart = new Date(date);
+    weekStart.setDate(date.getDate() - date.getDay());
+    weekStart.setHours(0, 0, 0, 0);
+    // 使用本地日期格式，避免时区问题
+    const year = weekStart.getFullYear();
+    const month = String(weekStart.getMonth() + 1).padStart(2, '0');
+    const day = String(weekStart.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const getMonthKey = (date: Date) => {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+  };
+
+  const updateWeekNavigation = () => {
+    const currentWeekKey = getWeekStartKey(currentWeekDate);
+    const currentIndex = availableWeeks.indexOf(currentWeekKey);
+    
+    console.log('周导航状态更新:', {
+      currentWeekKey,
+      currentIndex,
+      availableWeeks,
+      totalWeeks: availableWeeks.length
+    });
+    
+    setCanGoPreviousWeek(currentIndex > 0);
+    setCanGoNextWeek(currentIndex >= 0 && currentIndex < availableWeeks.length - 1);
+  };
+
+  const updateMonthNavigation = () => {
+    const currentMonthKey = getMonthKey(currentMonthDate);
+    const currentIndex = availableMonths.indexOf(currentMonthKey);
+    
+    setCanGoPreviousMonth(currentIndex > 0);
+    setCanGoNextMonth(currentIndex >= 0 && currentIndex < availableMonths.length - 1);
+  };
+
+  const loadWeeklyReport = async () => {
     try {
       setReportsLoading(true);
-      const [weekly, monthly] = await Promise.all([
-        getWeeklyReport(),
-        getMonthlyReport(),
-      ]);
+      // 使用本地日期格式，避免时区问题
+      const year = currentWeekDate.getFullYear();
+      const month = String(currentWeekDate.getMonth() + 1).padStart(2, '0');
+      const day = String(currentWeekDate.getDate()).padStart(2, '0');
+      const dateStr = `${year}-${month}-${day}`;
+      const weekly = await getWeeklyReport(dateStr);
       setWeeklyReport(weekly);
-      setMonthlyReport(monthly);
     } catch (error) {
-      console.error("加载报告失败:", error);
-      message.error("加载报告失败");
+      console.error("加载周报失败:", error);
+      message.error("加载周报失败");
     } finally {
       setReportsLoading(false);
+    }
+  };
+
+  const loadMonthlyReport = async () => {
+    try {
+      setReportsLoading(true);
+      const year = currentMonthDate.getFullYear();
+      const month = currentMonthDate.getMonth() + 1;
+      const monthly = await getMonthlyReport(year, month);
+      setMonthlyReport(monthly);
+    } catch (error) {
+      console.error("加载月报失败:", error);
+      message.error("加载月报失败");
+    } finally {
+      setReportsLoading(false);
+    }
+  };
+
+  const handlePreviousWeek = () => {
+    if (!canGoPreviousWeek) return;
+    
+    const currentWeekKey = getWeekStartKey(currentWeekDate);
+    const currentIndex = availableWeeks.indexOf(currentWeekKey);
+    
+    console.log('点击上一周:', {
+      currentWeekKey,
+      currentIndex,
+      canGoPreviousWeek
+    });
+    
+    if (currentIndex > 0) {
+      const prevWeekKey = availableWeeks[currentIndex - 1];
+      console.log('切换到上一周:', prevWeekKey);
+      // 手动解析日期，避免时区问题
+      const [year, month, day] = prevWeekKey.split('-').map(Number);
+      setCurrentWeekDate(new Date(year, month - 1, day));
+    }
+  };
+
+  const handleNextWeek = () => {
+    if (!canGoNextWeek) return;
+    
+    const currentWeekKey = getWeekStartKey(currentWeekDate);
+    const currentIndex = availableWeeks.indexOf(currentWeekKey);
+    
+    console.log('点击下一周:', {
+      currentWeekKey,
+      currentIndex,
+      canGoNextWeek
+    });
+    
+    if (currentIndex < availableWeeks.length - 1) {
+      const nextWeekKey = availableWeeks[currentIndex + 1];
+      console.log('切换到下一周:', nextWeekKey);
+      // 手动解析日期，避免时区问题
+      const [year, month, day] = nextWeekKey.split('-').map(Number);
+      setCurrentWeekDate(new Date(year, month - 1, day));
+    }
+  };
+
+  const handlePreviousMonth = () => {
+    if (!canGoPreviousMonth) return;
+    
+    const currentMonthKey = getMonthKey(currentMonthDate);
+    const currentIndex = availableMonths.indexOf(currentMonthKey);
+    
+    if (currentIndex > 0) {
+      const prevMonthKey = availableMonths[currentIndex - 1];
+      const [year, month] = prevMonthKey.split('-');
+      setCurrentMonthDate(new Date(parseInt(year), parseInt(month) - 1, 1));
+    }
+  };
+
+  const handleNextMonth = () => {
+    if (!canGoNextMonth) return;
+    
+    const currentMonthKey = getMonthKey(currentMonthDate);
+    const currentIndex = availableMonths.indexOf(currentMonthKey);
+    
+    if (currentIndex < availableMonths.length - 1) {
+      const nextMonthKey = availableMonths[currentIndex + 1];
+      const [year, month] = nextMonthKey.split('-');
+      setCurrentMonthDate(new Date(parseInt(year), parseInt(month) - 1, 1));
     }
   };
 
   const handleAddRecord = async () => {
     try {
       // 重新加载所有数据，因为后端会自动更新所有计算数据
-      await Promise.all([loadData(), loadReports()]);
+      await Promise.all([loadData(), loadAvailableDates()]);
       message.success("体重记录添加成功");
     } catch (error) {
       message.error("添加记录失败");
@@ -113,7 +272,7 @@ function App() {
   const handleExerciseChange = async () => {
     try {
       // 只重新加载数据，不显示成功提示
-      await Promise.all([loadData(), loadReports()]);
+      await Promise.all([loadData(), loadAvailableDates()]);
     } catch (error) {
       console.error("重新加载数据失败:", error);
     }
@@ -123,7 +282,7 @@ function App() {
     try {
       await updateProfile(newProfile);
       // 重新加载所有数据，因为后端会自动更新所有计算数据
-      await Promise.all([loadData(), loadReports()]);
+      await Promise.all([loadData(), loadAvailableDates()]);
       message.success("用户资料更新成功");
     } catch (error) {
       message.error("更新用户资料失败");
@@ -186,7 +345,7 @@ function App() {
             <MilestonesCard
               currentWeight={stats.current}
               onMilestoneChange={async () => {
-                await Promise.all([loadData(), loadReports()]);
+                await Promise.all([loadData(), loadAvailableDates()]);
               }}
             />
           )}
@@ -204,12 +363,26 @@ function App() {
               gap: 8,
             }}
           >
-            {weeklyReport && (
-              <ReportCard report={weeklyReport} loading={reportsLoading} />
-            )}
-            {monthlyReport && (
-              <ReportCard report={monthlyReport} loading={reportsLoading} />
-            )}
+              {weeklyReport && (
+                <ReportCard
+                  report={weeklyReport}
+                  loading={reportsLoading}
+                  onPrevious={handlePreviousWeek}
+                  onNext={handleNextWeek}
+                  canGoPrevious={canGoPreviousWeek}
+                  canGoNext={canGoNextWeek}
+                />
+              )}
+              {monthlyReport && (
+                <ReportCard
+                  report={monthlyReport}
+                  loading={reportsLoading}
+                  onPrevious={handlePreviousMonth}
+                  onNext={handleNextMonth}
+                  canGoPrevious={canGoPreviousMonth}
+                  canGoNext={canGoNextMonth}
+                />
+              )}
           </div>
 
           {/* 体重图表 */}
@@ -218,7 +391,7 @@ function App() {
           {/* 数据备份 */}
           <DataBackup
             onDataChange={async () => {
-              await Promise.all([loadData(), loadReports()]);
+              await Promise.all([loadData(), loadAvailableDates()]);
             }}
           />
 

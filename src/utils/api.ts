@@ -208,10 +208,41 @@ export async function deleteExerciseRecord(id: string) {
 }
 
 // ===== 报告 API =====
-// 获取周报
-export async function getWeeklyReport() {
+// 获取所有有数据的周列表
+export async function getAvailableWeeks() {
   try {
-    const res = await fetch(`${API_BASE}/api/reports/weekly`);
+    const res = await fetch(`${API_BASE}/api/reports/available-weeks`);
+    if (!res.ok) {
+      throw new Error(`HTTP error! status: ${res.status}`);
+    }
+    return await res.json();
+  } catch (error) {
+    console.error("获取可用周列表失败:", error);
+    throw error;
+  }
+}
+
+// 获取所有有数据的月列表
+export async function getAvailableMonths() {
+  try {
+    const res = await fetch(`${API_BASE}/api/reports/available-months`);
+    if (!res.ok) {
+      throw new Error(`HTTP error! status: ${res.status}`);
+    }
+    return await res.json();
+  } catch (error) {
+    console.error("获取可用月列表失败:", error);
+    throw error;
+  }
+}
+
+// 获取周报
+export async function getWeeklyReport(date?: string) {
+  try {
+    const url = date
+      ? `${API_BASE}/api/reports/weekly?date=${date}`
+      : `${API_BASE}/api/reports/weekly`;
+    const res = await fetch(url);
     if (!res.ok) {
       throw new Error(`HTTP error! status: ${res.status}`);
     }
@@ -223,9 +254,13 @@ export async function getWeeklyReport() {
 }
 
 // 获取月报
-export async function getMonthlyReport() {
+export async function getMonthlyReport(year?: number, month?: number) {
   try {
-    const res = await fetch(`${API_BASE}/api/reports/monthly`);
+    let url = `${API_BASE}/api/reports/monthly`;
+    if (year && month) {
+      url += `?year=${year}&month=${month}`;
+    }
+    const res = await fetch(url);
     if (!res.ok) {
       throw new Error(`HTTP error! status: ${res.status}`);
     }
@@ -237,12 +272,12 @@ export async function getMonthlyReport() {
 }
 
 // 生成周报 AI 分析
-export async function generateWeeklyAIAnalysis(force = false) {
+export async function generateWeeklyAIAnalysis(force = false, date?: string) {
   try {
     const res = await fetch(`${API_BASE}/api/reports/weekly/ai`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ force }),
+      body: JSON.stringify({ force, date }),
     });
     if (!res.ok) {
       throw new Error(`HTTP error! status: ${res.status}`);
@@ -255,12 +290,12 @@ export async function generateWeeklyAIAnalysis(force = false) {
 }
 
 // 生成月报 AI 分析
-export async function generateMonthlyAIAnalysis(force = false) {
+export async function generateMonthlyAIAnalysis(force = false, year?: number, month?: number) {
   try {
     const res = await fetch(`${API_BASE}/api/reports/monthly/ai`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ force }),
+      body: JSON.stringify({ force, year, month }),
     });
     if (!res.ok) {
       throw new Error(`HTTP error! status: ${res.status}`);

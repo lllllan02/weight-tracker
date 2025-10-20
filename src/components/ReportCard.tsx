@@ -17,6 +17,8 @@ import {
   RiseOutlined,
   RobotOutlined,
   BulbOutlined,
+  LeftOutlined,
+  RightOutlined,
 } from "@ant-design/icons";
 import { Report, AIAnalysis } from "../types";
 import {
@@ -29,11 +31,19 @@ const { Text, Title } = Typography;
 interface ReportCardProps {
   report: Report;
   loading?: boolean;
+  onPrevious?: () => void;
+  onNext?: () => void;
+  canGoPrevious?: boolean;
+  canGoNext?: boolean;
 }
 
 export const ReportCard: React.FC<ReportCardProps> = ({
   report,
   loading = false,
+  onPrevious,
+  onNext,
+  canGoPrevious = true,
+  canGoNext = true,
 }) => {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [aiAnalysis, setAiAnalysis] = useState<AIAnalysis | null>(null);
@@ -82,11 +92,23 @@ export const ReportCard: React.FC<ReportCardProps> = ({
     try {
       let result;
       const force = !!aiAnalysis; // 如果已有分析，则强制重新生成
+      
       if (report.type === "weekly") {
-        result = await generateWeeklyAIAnalysis(force);
+        // 从 period 中提取日期，格式如 "2025/10/20 - 2025/10/26"
+        const dateStr = report.period.split(' - ')[0].replace(/\//g, '-');
+        result = await generateWeeklyAIAnalysis(force, dateStr);
       } else {
-        result = await generateMonthlyAIAnalysis(force);
+        // 从 period 中提取年月，格式如 "2025年10月"
+        const match = report.period.match(/(\d{4})年(\d{1,2})月/);
+        if (match) {
+          const year = parseInt(match[1]);
+          const month = parseInt(match[2]);
+          result = await generateMonthlyAIAnalysis(force, year, month);
+        } else {
+          throw new Error("无法解析报告日期");
+        }
       }
+      
       setAiAnalysis(result);
       message.success(force ? "AI 分析已重新生成！" : "AI 分析生成成功！");
     } catch (error) {
@@ -145,9 +167,33 @@ export const ReportCard: React.FC<ReportCardProps> = ({
 
       <Modal
         title={
-          <span>
-            {getReportIcon()} {getReportTitle()} - {report.period}
-          </span>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              {onPrevious && (
+                <Button
+                  type="text"
+                  icon={<LeftOutlined />}
+                  onClick={onPrevious}
+                  size="small"
+                  title={report.type === "weekly" ? "上一周" : "上一月"}
+                  disabled={!canGoPrevious}
+                />
+              )}
+              <span>
+                {getReportIcon()} {getReportTitle()} - {report.period}
+              </span>
+              {onNext && (
+                <Button
+                  type="text"
+                  icon={<RightOutlined />}
+                  onClick={onNext}
+                  size="small"
+                  title={report.type === "weekly" ? "下一周" : "下一月"}
+                  disabled={!canGoNext}
+                />
+              )}
+            </div>
+          </div>
         }
         open={isModalVisible}
         onCancel={handleCancel}

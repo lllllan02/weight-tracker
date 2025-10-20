@@ -31,10 +31,58 @@ function getWeekNumber(date) {
   return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
 }
 
+// 获取所有有数据的周列表
+router.get('/available-weeks', (req, res) => {
+  try {
+    const data = readData();
+    const weeks = new Set();
+    
+    data.records.forEach(record => {
+      const date = new Date(record.date);
+      const weekStart = new Date(date);
+      weekStart.setDate(date.getDate() - date.getDay());
+      weekStart.setHours(0, 0, 0, 0);
+      // 使用本地日期格式，避免时区问题
+      const year = weekStart.getFullYear();
+      const month = String(weekStart.getMonth() + 1).padStart(2, '0');
+      const day = String(weekStart.getDate()).padStart(2, '0');
+      const weekKey = `${year}-${month}-${day}`;
+      weeks.add(weekKey);
+    });
+    
+    res.json(Array.from(weeks).sort());
+  } catch (error) {
+    console.error('获取可用周列表失败:', error);
+    res.status(500).json({ error: '获取可用周列表失败' });
+  }
+});
+
+// 获取所有有数据的月列表
+router.get('/available-months', (req, res) => {
+  try {
+    const data = readData();
+    const months = new Set();
+    
+    data.records.forEach(record => {
+      const date = new Date(record.date);
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      months.add(monthKey);
+    });
+    
+    res.json(Array.from(months).sort());
+  } catch (error) {
+    console.error('获取可用月列表失败:', error);
+    res.status(500).json({ error: '获取可用月列表失败' });
+  }
+});
+
 // 获取周报
 router.get('/weekly', (req, res) => {
+  const { date } = req.query; // 可选参数：指定日期
   const data = readData();
-  const weeklyReport = generateWeeklyReport(data.records, data.profile);
+  
+  let targetDate = date ? new Date(date) : new Date();
+  const weeklyReport = generateWeeklyReportForDate(data.records, data.profile, targetDate);
   
   // 如果有已保存的 AI 分析，附加到报告中
   const reportKey = getReportKey(weeklyReport.period, 'weekly');
@@ -47,8 +95,13 @@ router.get('/weekly', (req, res) => {
 
 // 获取月报
 router.get('/monthly', (req, res) => {
+  const { year, month } = req.query; // 可选参数：指定年月
   const data = readData();
-  const monthlyReport = generateMonthlyReport(data.records, data.profile);
+  
+  let targetYear = year ? parseInt(year) : new Date().getFullYear();
+  let targetMonth = month ? parseInt(month) : new Date().getMonth() + 1;
+  
+  const monthlyReport = generateMonthlyReportForMonth(data.records, data.profile, targetYear, targetMonth);
   
   // 如果有已保存的 AI 分析，附加到报告中
   const reportKey = getReportKey(monthlyReport.period, 'monthly');
@@ -59,12 +112,168 @@ router.get('/monthly', (req, res) => {
   res.json(monthlyReport);
 });
 
+// 生成指定日期的周报
+function generateWeeklyReportForDate(records, profile, targetDate) {
+  const weekStart = new Date(targetDate);
+  weekStart.setDate(targetDate.getDate() - targetDate.getDay());
+  weekStart.setHours(0, 0, 0, 0);
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekStart.getDate() + 6);
+  weekEnd.setHours(23, 59, 59, 999);
+
+  const weekRecords = records.filter(r => {
+    const recordDate = new Date(r.date);
+    return recordDate >= weekStart && recordDate <= weekEnd;
+  });
+
+  if (weekRecords.length === 0) {
+    return {
+      period: `${weekStart.toLocaleDateString('zh-CN')} - ${weekEnd.toLocaleDateString('zh-CN')}`,
+      type: 'weekly',
+      records: [],
+      stats: {
+        startWeight: 0,
+        endWeight: 0,
+        change: 0,
+        average: 0,
+        min: 0,
+        max: 0,
+        recordCount: 0
+      },
+      insights: ['本周暂无记录']
+    };
+  }
+
+  const sortedWeekRecords = weekRecords.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  const startWeight = sortedWeekRecords[0].weight;
+  const endWeight = sortedWeekRecords[sortedWeekRecords.length - 1].weight;
+  const change = Number((endWeight - startWeight).toFixed(1));
+  const weights = weekRecords.map(r => r.weight);
+  const average = Number((weights.reduce((sum, w) => sum + w, 0) / weights.length).toFixed(1));
+  const min = Math.min(...weights);
+  const max = Math.max(...weights);
+
+  const insights = [];
+  if (change > 0) {
+    insights.push(`本周体重增加了 ${change}kg`);
+  } else if (change < 0) {
+    insights.push(`本周体重减少了 ${Math.abs(change)}kg`);
+  } else {
+    insights.push('本周体重保持稳定');
+  }
+
+  return {
+    period: `${weekStart.toLocaleDateString('zh-CN')} - ${weekEnd.toLocaleDateString('zh-CN')}`,
+    type: 'weekly',
+    records: weekRecords,
+    stats: {
+      startWeight,
+      endWeight,
+      change,
+      average,
+      min,
+      max,
+      recordCount: weekRecords.length
+    },
+    insights
+  };
+}
+
+// 生成指定年月的月报
+function generateMonthlyReportForMonth(records, profile, year, month) {
+  const monthStart = new Date(year, month - 1, 1);
+  const monthEnd = new Date(year, month, 0, 23, 59, 59, 999);
+
+  const monthRecords = records.filter(r => {
+    const recordDate = new Date(r.date);
+    return recordDate >= monthStart && recordDate <= monthEnd;
+  });
+
+  if (monthRecords.length === 0) {
+    return {
+      period: `${year}年${month}月`,
+      type: 'monthly',
+      records: [],
+      stats: {
+        startWeight: 0,
+        endWeight: 0,
+        change: 0,
+        average: 0,
+        min: 0,
+        max: 0,
+        recordCount: 0,
+        weeklyAverages: []
+      },
+      insights: ['本月暂无记录']
+    };
+  }
+
+  const sortedMonthRecords = monthRecords.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  const startWeight = sortedMonthRecords[0].weight;
+  const endWeight = sortedMonthRecords[sortedMonthRecords.length - 1].weight;
+  const change = Number((endWeight - startWeight).toFixed(1));
+  const weights = monthRecords.map(r => r.weight);
+  const average = Number((weights.reduce((sum, w) => sum + w, 0) / weights.length).toFixed(1));
+  const min = Math.min(...weights);
+  const max = Math.max(...weights);
+
+  // 计算每周平均体重
+  const weeklyAverages = [];
+  for (let i = 0; i < 5; i++) {
+    const weekStart = new Date(monthStart);
+    weekStart.setDate(monthStart.getDate() + i * 7);
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6);
+    
+    const weekRecords = monthRecords.filter(r => {
+      const recordDate = new Date(r.date);
+      return recordDate >= weekStart && recordDate <= weekEnd;
+    });
+    
+    if (weekRecords.length > 0) {
+      const weekAverage = Number((weekRecords.reduce((sum, r) => sum + r.weight, 0) / weekRecords.length).toFixed(1));
+      weeklyAverages.push(weekAverage);
+    } else {
+      weeklyAverages.push(0);
+    }
+  }
+
+  const insights = [];
+  if (change > 0) {
+    insights.push(`本月体重增加了 ${change}kg`);
+  } else if (change < 0) {
+    insights.push(`本月体重减少了 ${Math.abs(change)}kg`);
+  } else {
+    insights.push('本月体重保持稳定');
+  }
+
+  return {
+    period: `${year}年${month}月`,
+    type: 'monthly',
+    records: monthRecords,
+    stats: {
+      startWeight,
+      endWeight,
+      change,
+      average,
+      min,
+      max,
+      recordCount: monthRecords.length,
+      weeklyAverages
+    },
+    insights
+  };
+}
+
 // 生成周报 AI 分析
 router.post('/weekly/ai', async (req, res) => {
   try {
-    const { force = false } = req.body;
+    const { force = false, date } = req.body;
     const data = readData();
-    const weeklyReport = generateWeeklyReport(data.records, data.profile);
+    
+    // 根据日期参数生成报告
+    let targetDate = date ? new Date(date) : new Date();
+    const weeklyReport = generateWeeklyReportForDate(data.records, data.profile, targetDate);
     const reportKey = getReportKey(weeklyReport.period, 'weekly');
     
     // 检查是否已有分析（如果不是强制重新生成）
@@ -101,9 +310,13 @@ router.post('/weekly/ai', async (req, res) => {
 // 生成月报 AI 分析
 router.post('/monthly/ai', async (req, res) => {
   try {
-    const { force = false } = req.body;
+    const { force = false, year, month } = req.body;
     const data = readData();
-    const monthlyReport = generateMonthlyReport(data.records, data.profile);
+    
+    // 根据年月参数生成报告
+    let targetYear = year || new Date().getFullYear();
+    let targetMonth = month || new Date().getMonth() + 1;
+    const monthlyReport = generateMonthlyReportForMonth(data.records, data.profile, targetYear, targetMonth);
     const reportKey = getReportKey(monthlyReport.period, 'monthly');
     
     // 检查是否已有分析（如果不是强制重新生成）
