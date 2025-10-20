@@ -23,6 +23,7 @@ import { WeightChart } from "./components/WeightChart";
 import { TargetProgress } from "./components/TargetProgress";
 import { ReportCard } from "./components/ReportCard";
 import { DataBackup } from "./components/DataBackup";
+import { MilestonesCard } from "./components/MilestonesCard";
 
 const { Header, Content } = Layout;
 const { Title, Paragraph } = Typography;
@@ -171,9 +172,23 @@ function App() {
             calendarData={calendarData}
           />
 
-          {/* 目标进度 */}
+          {/* 目标进度 - 使用最小的阶段目标作为最终目标 */}
+          {stats.current > 0 && profile.milestones && profile.milestones.length > 0 && (
+            <TargetProgress 
+              stats={stats} 
+              targetWeight={Math.min(...profile.milestones.map(m => m.targetWeight))}
+              milestones={profile.milestones}
+            />
+          )}
+
+          {/* 阶段目标 */}
           {stats.current > 0 && (
-            <TargetProgress stats={stats} targetWeight={profile.targetWeight} />
+            <MilestonesCard
+              currentWeight={stats.current}
+              onMilestoneChange={async () => {
+                await Promise.all([loadData(), loadReports()]);
+              }}
+            />
           )}
 
           {/* 统计卡片 */}

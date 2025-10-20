@@ -64,13 +64,19 @@ function calculateStats(records, profile) {
     return recordDate >= weekStart && recordDate <= weekEnd;
   }).length;
 
-  // 计算目标进度
+  // 计算目标进度 - 使用阶段目标中最小的作为最终目标
   let targetProgress = 0;
   let targetRemaining = 0;
   
-  if (safeProfile.targetWeight && safeProfile.targetWeight > 0) {
+  // 优先使用阶段目标，如果没有则使用旧的 targetWeight
+  let targetWeight = safeProfile.targetWeight;
+  if (safeProfile.milestones && safeProfile.milestones.length > 0) {
+    // 找到最小的目标体重（最终目标）
+    targetWeight = Math.min(...safeProfile.milestones.map(m => m.targetWeight));
+  }
+  
+  if (targetWeight && targetWeight > 0) {
     // 计算目标进度
-    const targetWeight = safeProfile.targetWeight;
     const isLosingWeight = initialWeight > targetWeight; // 初始体重 > 目标体重 = 需要减重
     
     if (isLosingWeight) {

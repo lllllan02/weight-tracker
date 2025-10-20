@@ -12,10 +12,18 @@ export interface ExerciseRecord {
   duration: number; // 运动时长（分钟），大于0表示有运动
 }
 
+export interface Milestone {
+  id: string;
+  targetWeight: number;
+  achievedDate?: string; // 达成日期
+  note?: string; // 备注
+}
+
 export interface UserProfile {
   height: number;
   targetWeight?: number;
   theme: "light" | "dark";
+  milestones?: Milestone[]; // 阶段目标列表
 }
 
 export interface WeightStats {

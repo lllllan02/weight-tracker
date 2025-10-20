@@ -37,7 +37,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         layout="vertical"
         initialValues={{
           height: profile.height,
-          targetWeight: profile.targetWeight,
         }}
       >
         <Form.Item
@@ -60,15 +59,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             max={250}
           />
         </Form.Item>
-        <Form.Item name="targetWeight" label="目标体重 (kg) - 可选">
-          <InputNumber
-            placeholder="例如: 65.0"
-            style={{ width: "100%" }}
-            precision={1}
-            min={30}
-            max={300}
-          />
-        </Form.Item>
+        <div style={{ color: "#999", fontSize: 14, marginTop: -8 }}>
+          💡 提示：请在下方"阶段目标"中设置减重目标
+        </div>
       </Form>
     </Modal>
   );

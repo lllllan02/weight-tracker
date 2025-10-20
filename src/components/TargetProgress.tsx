@@ -1,18 +1,21 @@
 import React from "react";
-import { Card, Progress, Typography } from "antd";
-import { AimOutlined, TrophyOutlined } from "@ant-design/icons";
-import { WeightStats } from "../types";
+import { Card, Progress, Typography, Tooltip } from "antd";
+import { AimOutlined, TrophyOutlined, CheckCircleOutlined } from "@ant-design/icons";
+import { WeightStats, Milestone } from "../types";
+import dayjs from "dayjs";
 
 const { Text } = Typography;
 
 interface TargetProgressProps {
   stats: WeightStats;
   targetWeight?: number;
+  milestones?: Milestone[];
 }
 
 export const TargetProgress: React.FC<TargetProgressProps> = ({
   stats,
   targetWeight,
+  milestones = [],
 }) => {
   if (!targetWeight || targetWeight <= 0) {
     return (
@@ -33,14 +36,16 @@ export const TargetProgress: React.FC<TargetProgressProps> = ({
   }
 
   const getProgressColor = () => {
-    if (stats.targetProgress >= 80) return "#52c41a";
-    if (stats.targetProgress >= 50) return "#faad14";
-    return "#1890ff";
+    if (stats.targetProgress >= 80) return "#52c41a"; // 深绿色 - 即将胜利！
+    if (stats.targetProgress >= 60) return "#73d13d"; // 浅绿色 - 很棒！
+    if (stats.targetProgress >= 40) return "#faad14"; // 黄色 - 加油！
+    if (stats.targetProgress >= 20) return "#ff7a45"; // 橙色 - 继续努力
+    return "#ff4d4f"; // 红色 - 刚开始
   };
 
   const getProgressStatus = () => {
     if (stats.targetProgress >= 100) return "success";
-    if (stats.targetProgress >= 80) return "active";
+    if (stats.targetProgress >= 60) return "active";
     return "normal";
   };
 
@@ -55,6 +60,13 @@ export const TargetProgress: React.FC<TargetProgressProps> = ({
     }
     const direction = getTargetDirection();
     return `还需${direction} ${Math.abs(stats.targetRemaining)}kg`;
+  };
+
+  // 计算阶段目标在进度条上的位置
+  const calculateMilestonePosition = (milestoneWeight: number) => {
+    const totalChange = Math.abs(stats.initialWeight - targetWeight);
+    const milestoneChange = Math.abs(stats.initialWeight - milestoneWeight);
+    return Math.min(100, (milestoneChange / totalChange) * 100);
   };
 
   return (
@@ -75,15 +87,72 @@ export const TargetProgress: React.FC<TargetProgressProps> = ({
       styles={{ body: { padding: 16 } }}
     >
       <div>
-        {/* 进度条 */}
-        <div style={{ marginBottom: 8 }}>
+        {/* 进度条容器 */}
+        <div style={{ position: "relative", marginBottom: 8 }}>
+          {/* 进度条 - 使用渐变色 */}
           <Progress
             percent={Math.min(100, stats.targetProgress)}
             status={getProgressStatus()}
-            strokeColor={getProgressColor()}
+            strokeColor={{
+              '0%': stats.targetProgress < 20 ? '#ff4d4f' : 
+                    stats.targetProgress < 40 ? '#ff7a45' :
+                    stats.targetProgress < 60 ? '#faad14' :
+                    stats.targetProgress < 80 ? '#73d13d' : '#52c41a',
+              '100%': stats.targetProgress < 40 ? '#ff7a45' :
+                      stats.targetProgress < 60 ? '#faad14' :
+                      stats.targetProgress < 80 ? '#73d13d' : '#52c41a'
+            }}
             format={(percent) => `${percent?.toFixed(1)}%`}
             showInfo={false}
+            strokeWidth={12}
           />
+          
+          {/* 阶段目标标记 */}
+          {milestones.map((milestone) => {
+            const position = calculateMilestonePosition(milestone.targetWeight);
+            const isAchieved = !!milestone.achievedDate;
+            
+            return (
+              <Tooltip
+                key={milestone.id}
+                title={
+                  <div>
+                    <div>{milestone.targetWeight}kg</div>
+                    {milestone.note && <div>{milestone.note}</div>}
+                    {isAchieved && (
+                      <div>✓ {dayjs(milestone.achievedDate).format("YYYY-MM-DD")}</div>
+                    )}
+                  </div>
+                }
+              >
+                <div
+                  style={{
+                    position: "absolute",
+                    left: `${position}%`,
+                    top: "50%",
+                    transform: "translate(-50%, -50%)",
+                    width: 20,
+                    height: 20,
+                    borderRadius: "50%",
+                    background: isAchieved ? "#52c41a" : "#fff",
+                    border: `2px solid ${isAchieved ? "#52c41a" : "#1890ff"}`,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    cursor: "pointer",
+                    zIndex: 10,
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+                  }}
+                >
+                  {isAchieved && (
+                    <CheckCircleOutlined
+                      style={{ color: "#fff", fontSize: 12 }}
+                    />
+                  )}
+                </div>
+              </Tooltip>
+            );
+          })}
         </div>
 
         {/* 体重范围和进度信息 */}

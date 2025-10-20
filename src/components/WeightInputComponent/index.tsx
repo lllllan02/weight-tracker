@@ -167,7 +167,6 @@ export const WeightInput: React.FC<WeightInputProps> = ({
       const newProfile: UserProfile = {
         ...profile,
         height: values.height,
-        targetWeight: values.targetWeight || undefined,
       };
       await updateProfile(newProfile);
       onProfileChange(newProfile);

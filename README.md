@@ -7,8 +7,9 @@
 - 📊 体重记录管理（增删查）
 - 📈 体重变化趋势图表
 - 📋 统计信息（当前体重、平均值、BMI、体重范围等）
-- 👤 用户资料设置（身高、目标体重）
+- 👤 用户资料设置（身高）
 - 🏃‍♂️ 运动记录（记录运动时长，有时长即表示运动）
+- 🏆 阶段目标（设置多个减重里程碑，自动记录达成日期）
 - 💾 数据实时保存到本地 JSON 文件
 
 ## 技术栈
@@ -61,6 +62,12 @@ npm start
 - `PUT /api/exercise/:id` - 更新运动记录
 - `DELETE /api/exercise/:id` - 删除运动记录
 
+### 阶段目标接口
+- `GET /api/milestones` - 获取所有阶段目标
+- `POST /api/milestones` - 添加阶段目标
+- `PUT /api/milestones/:id` - 更新阶段目标
+- `DELETE /api/milestones/:id` - 删除阶段目标
+
 ## 数据存储策略
 
 采用**最小化存储**策略，只存储核心数据，其他数据由后端实时计算：
@@ -87,8 +94,20 @@ npm start
   ],
   "profile": {
     "height": 170,
-    "targetWeight": 65,
-    "theme": "light"
+    "theme": "light",
+    "milestones": [
+      {
+        "id": "xxx",
+        "targetWeight": 70,
+        "note": "第一阶段目标",
+        "achievedDate": "2024-01-15T00:00:00.000Z"
+      },
+      {
+        "id": "yyy",
+        "targetWeight": 65,
+        "note": "最终目标"
+      }
+    ]
   }
 }
 ```

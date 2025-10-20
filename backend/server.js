@@ -9,6 +9,7 @@ const reportsRoutes = require('./routes/reports');
 const profileRoutes = require('./routes/profile');
 const recordsRoutes = require('./routes/records');
 const exerciseRoutes = require('./routes/exercise');
+const milestonesRoutes = require('./routes/milestones');
 const backupRoutes = require('./routes/backup');
 const healthRoutes = require('./routes/health');
 
@@ -27,6 +28,7 @@ app.use('/api/reports', reportsRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/records', recordsRoutes);
 app.use('/api/exercise', exerciseRoutes);
+app.use('/api/milestones', milestonesRoutes);
 app.use('/api/backup', backupRoutes);
 app.use('/api/health', healthRoutes);
 

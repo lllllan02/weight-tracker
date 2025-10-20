@@ -2,6 +2,41 @@ const express = require('express');
 const router = express.Router();
 const { readData, writeData, validateRecord } = require('../utils/dataManager');
 
+// 检查并更新达成的阶段目标
+function checkAndUpdateMilestones(data, newWeight, recordDate) {
+  if (!data.profile?.milestones || data.profile.milestones.length === 0) {
+    return;
+  }
+  
+  // 判断是减重还是增重场景
+  const allRecords = data.records || [];
+  if (allRecords.length === 0) return;
+  
+  const sortedRecords = [...allRecords].sort((a, b) => 
+    new Date(a.date).getTime() - new Date(b.date).getTime()
+  );
+  const initialWeight = sortedRecords[0].weight;
+  
+  // 检查每个未达成的目标
+  data.profile.milestones.forEach(milestone => {
+    // 如果已经达成，跳过
+    if (milestone.achievedDate) return;
+    
+    const targetWeight = milestone.targetWeight;
+    
+    // 减重场景：新体重 <= 目标体重
+    // 增重场景：新体重 >= 目标体重
+    const isAchieved = initialWeight > targetWeight
+      ? newWeight <= targetWeight
+      : newWeight >= targetWeight;
+    
+    if (isAchieved) {
+      milestone.achievedDate = recordDate;
+      console.log(`🎉 达成阶段目标：${targetWeight}kg，日期：${recordDate}`);
+    }
+  });
+}
+
 // 获取所有记录（原始数据）
 router.get('/', (req, res) => {
   const data = readData();
@@ -20,6 +55,10 @@ router.post('/', (req, res) => {
     
     data.records = data.records || [];
     data.records.push(record);
+    
+    // 检查并更新阶段目标
+    checkAndUpdateMilestones(data, record.weight, record.date);
+    
     writeData(data);
     
     res.json({ success: true });
@@ -49,6 +88,10 @@ router.put('/:id', (req, res) => {
     }
     
     data.records[recordIndex] = mergedRecord;
+    
+    // 检查并更新阶段目标
+    checkAndUpdateMilestones(data, mergedRecord.weight, mergedRecord.date);
+    
     writeData(data);
     
     res.json({ success: true });
