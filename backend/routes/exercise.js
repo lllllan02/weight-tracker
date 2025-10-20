@@ -17,14 +17,17 @@ router.get('/', async (req, res) => {
 // 添加运动记录
 router.post('/', async (req, res) => {
   try {
-    const { date, exercise } = req.body;
+    const { date, duration } = req.body;
     
     if (!date) {
       return res.status(400).json({ error: '日期是必需的' });
     }
-    
-    if (typeof exercise !== 'boolean') {
-      return res.status(400).json({ error: '运动状态必须是布尔值' });
+
+    // 验证运动时长
+    if (duration !== undefined && duration !== null) {
+      if (typeof duration !== 'number' || duration < 0) {
+        return res.status(400).json({ error: '运动时长必须是非负数' });
+      }
     }
 
     const data = readData();
@@ -35,17 +38,33 @@ router.post('/', async (req, res) => {
       record.date.split('T')[0] === date.split('T')[0]
     );
     
-    const exerciseRecord = {
-      id: generateId(),
-      date: date,
-      exercise: exercise
-    };
+    let exerciseRecord;
+    
+    // 如果时长为 0 或 null/undefined，删除该记录
+    if (!duration || duration === 0) {
+      if (existingIndex >= 0) {
+        exerciseRecords.splice(existingIndex, 1);
+      }
+      data.exerciseRecords = exerciseRecords;
+      writeData(data);
+      return res.json({ message: '运动记录已清除' });
+    }
     
     if (existingIndex >= 0) {
-      // 更新现有记录
+      // 更新现有记录，保留原有的 id
+      exerciseRecord = {
+        ...exerciseRecords[existingIndex],
+        date: date,
+        duration: duration
+      };
       exerciseRecords[existingIndex] = exerciseRecord;
     } else {
       // 添加新记录
+      exerciseRecord = {
+        id: generateId(),
+        date: date,
+        duration: duration
+      };
       exerciseRecords.push(exerciseRecord);
     }
     
@@ -63,10 +82,13 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { date, exercise } = req.body;
-    
-    if (typeof exercise !== 'boolean') {
-      return res.status(400).json({ error: '运动状态必须是布尔值' });
+    const { date, duration } = req.body;
+
+    // 验证运动时长
+    if (duration !== undefined && duration !== null) {
+      if (typeof duration !== 'number' || duration < 0) {
+        return res.status(400).json({ error: '运动时长必须是非负数' });
+      }
     }
 
     const data = readData();
@@ -77,10 +99,18 @@ router.put('/:id', async (req, res) => {
       return res.status(404).json({ error: '运动记录不存在' });
     }
     
+    // 如果时长为 0 或 null/undefined，删除该记录
+    if (!duration || duration === 0) {
+      exerciseRecords.splice(recordIndex, 1);
+      data.exerciseRecords = exerciseRecords;
+      writeData(data);
+      return res.json({ message: '运动记录已清除' });
+    }
+    
     exerciseRecords[recordIndex] = {
       ...exerciseRecords[recordIndex],
       date: date || exerciseRecords[recordIndex].date,
-      exercise: exercise
+      duration: duration
     };
     
     data.exerciseRecords = exerciseRecords;

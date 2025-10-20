@@ -46,8 +46,8 @@ export const WeightInput: React.FC<WeightInputProps> = ({
     setSelectedDate(date);
   };
 
-  // 处理运动状态变化
-  const handleExerciseChange = async (date: Dayjs, exercise: boolean) => {
+  // 处理运动时长变化
+  const handleExerciseDurationChange = async (date: Dayjs, duration: number | null) => {
     try {
       setLoading(true);
       
@@ -60,25 +60,30 @@ export const WeightInput: React.FC<WeightInputProps> = ({
         new Date(record.date).toISOString().split('T')[0] === dateKey
       );
       
+      // 有时长且>0就保存，否则删除
+      const hasExercise = duration !== null && duration > 0;
+      
       if (existingRecord) {
-        // 更新现有运动记录
+        // 更新现有运动记录（后端会自动处理删除逻辑）
         await updateExerciseRecord(existingRecord.id, {
           date: date.hour(8).minute(0).second(0).toISOString(),
-          exercise: exercise,
+          duration: duration || 0,
         });
-      } else {
-        // 创建新的运动记录
+      } else if (hasExercise) {
+        // 只有在有运动时长时才创建新记录
         await addExerciseRecord({
           date: date.hour(8).minute(0).second(0).toISOString(),
-          exercise: exercise,
+          duration: duration,
         });
       }
 
-      message.success(exercise ? "已标记为运动日" : "已取消运动标记");
-      onExerciseChange(); // 通知父组件重新加载数据
+      message.success(hasExercise ? "运动记录保存成功！" : "已清除运动记录");
+      
+      // 通知父组件重新加载数据
+      await onExerciseChange();
     } catch (error) {
-      console.error("更新运动状态失败:", error);
-      message.error("更新运动状态失败，请重试");
+      console.error("保存运动记录失败:", error);
+      message.error("保存失败，请重试");
     } finally {
       setLoading(false);
     }
@@ -215,13 +220,11 @@ export const WeightInput: React.FC<WeightInputProps> = ({
             onEditRecord={handleEditRecord}
             onSaveRecord={handleSaveRecord}
             onCancelEdit={handleCancelEdit}
-            onExerciseChange={handleExerciseChange}
+            onExerciseDurationChange={handleExerciseDurationChange}
             onDeleteRecord={handleDeleteRecord}
           />
         </div>
       </div>
-
-
 
       {/* 设置弹窗 */}
       <SettingsModal

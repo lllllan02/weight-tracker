@@ -1,5 +1,5 @@
-import React from "react";
-import { Card, Tag, Checkbox } from "antd";
+import React, { useState, useEffect, useRef } from "react";
+import { Card, Tag, InputNumber } from "antd";
 import { Dayjs } from "dayjs";
 import dayjs from "dayjs";
 import { WeightRecord, CalendarData } from "../../types";
@@ -13,7 +13,7 @@ interface DayRecordCardProps {
   onEditRecord: (date: Dayjs, timeSlot: TimeSlot) => void;
   onSaveRecord: (date: Dayjs, timeSlot: TimeSlot, weight: number, fasting: boolean) => void;
   onCancelEdit: () => void;
-  onExerciseChange: (date: Dayjs, exercise: boolean) => void;
+  onExerciseDurationChange: (date: Dayjs, duration: number | null) => void;
   onDeleteRecord: (date: Dayjs, timeSlot: TimeSlot) => void;
 }
 
@@ -24,10 +24,13 @@ export const DayRecordCard: React.FC<DayRecordCardProps> = ({
   onEditRecord,
   onSaveRecord,
   onCancelEdit,
-  onExerciseChange,
+  onExerciseDurationChange,
   onDeleteRecord,
 }) => {
   const { dayRecords = {}, exerciseRecords = {} } = calendarData;
+  const [exerciseDuration, setExerciseDuration] = useState<number | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // 检查某个时间段是否已有记录
   const hasRecord = (date: Dayjs, timeSlot: TimeSlot): boolean => {
@@ -41,10 +44,41 @@ export const DayRecordCard: React.FC<DayRecordCardProps> = ({
     return dayRecords[dateKey]?.[timeSlot.key] as WeightRecord | undefined;
   };
 
-  // 获取当天的运动状态
-  const getExerciseStatus = (date: Dayjs) => {
-    const dateKey = date.format("YYYY-MM-DD");
-    return exerciseRecords[dateKey] || false;
+  // 当选中日期或日历数据变化时，更新输入框的值
+  useEffect(() => {
+    const dateKey = selectedDate.format("YYYY-MM-DD");
+    const data = exerciseRecords[dateKey];
+    const duration = data?.duration || null;
+    setExerciseDuration(duration);
+  }, [selectedDate, exerciseRecords]);
+
+  // 清理定时器
+  useEffect(() => {
+    return () => {
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current);
+      }
+    };
+  }, []);
+
+  // 处理运动时长变化（带防抖）
+  const handleDurationChange = (value: number | null) => {
+    setExerciseDuration(value);
+    setIsSaving(true);
+    
+    // 清除之前的定时器
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+    }
+    
+    // 设置新的定时器，1000ms 后保存
+    saveTimerRef.current = setTimeout(async () => {
+      try {
+        await onExerciseDurationChange(selectedDate, value);
+      } finally {
+        setIsSaving(false);
+      }
+    }, 1000);
   };
 
   return (
@@ -115,12 +149,12 @@ export const DayRecordCard: React.FC<DayRecordCardProps> = ({
           );
         })}
 
-        {/* 运动选项 */}
+        {/* 运动时长输入 */}
         <div
           style={{
-            border: "1px solid #d9d9d9",
+            border: exerciseDuration && exerciseDuration > 0 ? "2px solid #52c41a" : "1px dashed #d9d9d9",
             borderRadius: 12,
-            background: "#fafbfc",
+            background: exerciseDuration && exerciseDuration > 0 ? "#f6ffed" : "#fafbfc",
             padding: "16px",
             textAlign: "center",
             position: "relative",
@@ -128,22 +162,34 @@ export const DayRecordCard: React.FC<DayRecordCardProps> = ({
             display: "flex",
             flexDirection: "column",
             justifyContent: "center",
+            alignItems: "center",
             boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
             transition: "all 0.3s ease",
-            borderStyle: "dashed",
           }}
         >
-          <Checkbox
-            checked={getExerciseStatus(selectedDate)}
-            onChange={(e) => onExerciseChange(selectedDate, e.target.checked)}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+            <span style={{ fontSize: 14, fontWeight: 600, color: "#52c41a" }}>
+              🏃‍♂️ 运动时长（分钟）
+            </span>
+            {isSaving && (
+              <span style={{ fontSize: 12, color: "#999" }}>保存中...</span>
+            )}
+          </div>
+          <InputNumber
+            value={exerciseDuration}
+            onChange={handleDurationChange}
+            placeholder="输入分钟数"
+            min={0}
+            max={1440}
+            precision={0}
             style={{
+              width: "100%",
+              borderRadius: 8,
+              height: 36,
               fontSize: 16,
-              fontWeight: 600,
-              color: "#1890ff",
             }}
-          >
-            🏃‍♂️ 今天有运动
-          </Checkbox>
+            controls={false}
+          />
         </div>
       </div>
     </Card>

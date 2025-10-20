@@ -37,9 +37,13 @@ export const DateView: React.FC<DateViewProps> = ({
   };
 
   // 获取当天的运动状态
-  const getExerciseStatus = (date: Dayjs) => {
+  const getExerciseData = (date: Dayjs) => {
     const dateKey = date.format("YYYY-MM-DD");
-    return exerciseRecords[dateKey] || false;
+    const data = exerciseRecords[dateKey];
+    if (!data) {
+      return { exercise: false, duration: undefined };
+    }
+    return data;
   };
 
   // 切换到上个月
@@ -187,7 +191,8 @@ export const DateView: React.FC<DateViewProps> = ({
     const dayWeights = getDayWeights(date);
     const isToday = date.isSame(dayjs(), "day");
     const hasRecord = dayWeights?.hasAnyRecord || false;
-    const hasExercise = getExerciseStatus(date);
+    const exerciseData = getExerciseData(date);
+    const hasExercise = exerciseData.exercise;
     const isCurrentMonth = date.month() === currentDate.month();
 
     // 根据状态确定样式
@@ -302,7 +307,7 @@ export const DateView: React.FC<DateViewProps> = ({
               opacity: 0.9,
             }}
           >
-            🏃‍♂️ 运动
+            {exerciseData.duration ? `${exerciseData.duration}分钟` : "🏃‍♂️ 运动"}
           </div>
         ) : null}
       </div>

@@ -193,11 +193,14 @@ function calculateCalendarData(records, exerciseRecords = []) {
     }
   });
 
-  // 处理运动记录
+  // 处理运动记录（只有有时长的才算运动）
   exerciseRecords.forEach(record => {
-    if (record.exercise) {
+    if (record.duration && record.duration > 0) {
       const dateKey = new Date(record.date).toISOString().split('T')[0];
-      exerciseRecordsMap[dateKey] = true;
+      exerciseRecordsMap[dateKey] = {
+        exercise: true,
+        duration: record.duration
+      };
     }
   });
 

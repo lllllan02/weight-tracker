@@ -9,7 +9,7 @@ export interface WeightRecord {
 export interface ExerciseRecord {
   id: string;
   date: string;
-  exercise: boolean;
+  duration: number; // 运动时长（分钟），大于0表示有运动
 }
 
 export interface UserProfile {
@@ -49,7 +49,10 @@ export interface CalendarData {
     };
   };
   exerciseRecords: {
-    [dateKey: string]: boolean;
+    [dateKey: string]: {
+      exercise: boolean;
+      duration?: number; // 运动时长（分钟）
+    };
   };
 }
 
