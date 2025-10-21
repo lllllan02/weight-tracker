@@ -1,17 +1,15 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import { Layout, Typography, message, Tabs, Card } from "antd";
 import { DashboardOutlined, BarChartOutlined } from "@ant-design/icons";
 import {
   UserProfile,
   WeightStats,
   CalendarData,
-  ChartData,
   Report,
 } from "./types";
 import {
   getCalendarData,
   getStats,
-  getChartData,
   getProfile,
   updateProfile,
   getWeeklyReport,
@@ -21,8 +19,6 @@ import {
   getAvailableMonths,
 } from "./utils/api";
 import { WeightInput } from "./components/WeightInput";
-import { StatsCard } from "./components/StatsCard";
-import { WeightChart } from "./components/WeightChart";
 import { TargetProgress } from "./components/TargetProgress";
 import { UnifiedReportPanel } from "./components/UnifiedReportPanel";
 import { DataBackup } from "./components/DataBackup";
@@ -50,10 +46,6 @@ function App() {
     targetProgress: 0,
     targetRemaining: 0,
     initialWeight: 0,
-  });
-  const [chartData, setChartData] = useState<ChartData>({
-    labels: [],
-    datasets: [],
   });
   const [profile, setProfile] = useState<UserProfile>({
     height: 170,
@@ -83,6 +75,7 @@ function App() {
       loadMonthlyReport();
       updateMonthNavigation();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentMonthDate, availableMonths]);
 
   useEffect(() => {
@@ -90,6 +83,7 @@ function App() {
       loadWeeklyReport();
       updateWeekNavigation();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentWeekDate, availableWeeks]);
 
   const loadAvailableDates = async () => {
@@ -107,15 +101,13 @@ function App() {
 
   const loadData = async () => {
     try {
-      const [calendar, statsData, chart, profileData] = await Promise.all([
+      const [calendar, statsData, profileData] = await Promise.all([
         getCalendarData(),
         getStats(),
-        getChartData(),
         getProfile(),
       ]);
       setCalendarData(calendar);
       setStats(statsData);
-      setChartData(chart);
       setProfile(profileData);
     } catch (error) {
       console.error("加载数据失败:", error);
@@ -371,16 +363,16 @@ function App() {
           )}
 
           {/* 报告标签页 */}
-          <Card
-            title={
-              <span>
-                <BarChartOutlined /> 数据报告
-              </span>
-            }
-            style={{ marginBottom: 8 }}
-          >
+          <Card style={{ marginBottom: 8 }}>
             <Tabs
               defaultActiveKey="all-time"
+              tabBarExtraContent={{
+                left: (
+                  <span style={{ marginRight: 16, fontSize: 16, fontWeight: 500 }}>
+                    <BarChartOutlined /> 数据报告
+                  </span>
+                ),
+              }}
               items={[
                 {
                   key: "all-time",
@@ -389,6 +381,7 @@ function App() {
                     <UnifiedReportPanel
                       report={allTimeReport}
                       loading={reportsLoading}
+                      height={profile.height}
                     />
                   ),
                 },
@@ -403,6 +396,7 @@ function App() {
                       onNext={handleNextMonth}
                       canGoPrevious={canGoPreviousMonth}
                       canGoNext={canGoNextMonth}
+                      height={profile.height}
                     />
                   ),
                 },
@@ -417,15 +411,13 @@ function App() {
                       onNext={handleNextWeek}
                       canGoPrevious={canGoPreviousWeek}
                       canGoNext={canGoNextWeek}
+                      height={profile.height}
                     />
                   ),
                 },
               ]}
             />
           </Card>
-
-          {/* 体重图表 */}
-          <WeightChart chartData={chartData} height={profile.height} />
 
           {/* 数据备份 */}
           <DataBackup

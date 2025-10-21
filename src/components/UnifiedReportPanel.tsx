@@ -3,24 +3,47 @@ import {
   Card,
   Button,
   Typography,
-  Divider,
   message,
   Alert,
   Spin,
-  Tag,
+  Empty,
 } from "antd";
 import {
   RobotOutlined,
-  BulbOutlined,
   LeftOutlined,
   RightOutlined,
 } from "@ant-design/icons";
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Title as ChartTitle,
+  Tooltip,
+  Legend,
+  Filler,
+} from "chart.js";
+import { Chart } from "react-chartjs-2";
 import { Report, AIAnalysis } from "../types";
 import {
   generateWeeklyAIAnalysis,
   generateMonthlyAIAnalysis,
   generateAllTimeAIAnalysis,
 } from "../utils/api";
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  ChartTitle,
+  Tooltip,
+  Legend,
+  Filler
+);
 
 const { Text, Title } = Typography;
 
@@ -31,6 +54,7 @@ interface UnifiedReportPanelProps {
   onNext?: () => void;
   canGoPrevious?: boolean;
   canGoNext?: boolean;
+  height?: number; // 用户身高，用于计算 BMI
 }
 
 export const UnifiedReportPanel: React.FC<UnifiedReportPanelProps> = ({
@@ -40,6 +64,7 @@ export const UnifiedReportPanel: React.FC<UnifiedReportPanelProps> = ({
   onNext,
   canGoPrevious = true,
   canGoNext = true,
+  height = 170, // 默认身高
 }) => {
   const [aiAnalysis, setAiAnalysis] = useState<AIAnalysis | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
@@ -63,6 +88,79 @@ export const UnifiedReportPanel: React.FC<UnifiedReportPanelProps> = ({
     if (change < 0) return "↘";
     return "→";
   };
+
+  const generateChartData = () => {
+    if (!report.records || report.records.length === 0) {
+      return null;
+    }
+
+    const sortedRecords = [...report.records].sort(
+      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+    );
+
+    const labels = sortedRecords.map((record) => {
+      const date = new Date(record.date);
+      return `${date.getMonth() + 1}/${date.getDate()}`;
+    });
+
+    const weights = sortedRecords.map((record) => record.weight);
+
+    // 计算体重变化（与前一天的差值）
+    const changes = sortedRecords.map((record, index) => {
+      if (index === 0) return 0;
+      return Number((record.weight - sortedRecords[index - 1].weight).toFixed(1));
+    });
+
+    // 根据变化值设置颜色（红色增加，绿色减少）
+    const changeColors = changes.map((change) => {
+      if (change > 0) return "rgba(255, 77, 79, 0.6)"; // 红色
+      if (change < 0) return "rgba(82, 196, 26, 0.6)"; // 绿色
+      return "rgba(140, 140, 140, 0.6)"; // 灰色
+    });
+
+    return {
+      labels,
+      datasets: [
+        {
+          type: "line" as const,
+          label: "体重 (kg)",
+          data: weights,
+          borderColor: "#1890ff",
+          backgroundColor: "rgba(24, 144, 255, 0.1)",
+          tension: 0.4,
+          fill: true,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          yAxisID: "y",
+        },
+        {
+          type: "bar" as const,
+          label: "体重变化",
+          data: changes,
+          backgroundColor: changeColors,
+          borderColor: changeColors.map((color) => color.replace("0.6", "1")),
+          borderWidth: 1,
+          yAxisID: "y2",
+        },
+        {
+          type: "line" as const,
+          label: "零线 (无变化)",
+          data: labels.map(() => 0),
+          borderColor: "#f59e0b",
+          backgroundColor: "transparent",
+          borderWidth: 2,
+          borderDash: [5, 5],
+          tension: 0,
+          fill: false,
+          yAxisID: "y2",
+          pointRadius: 0,
+          pointHoverRadius: 0,
+        },
+      ],
+    };
+  };
+
+  const chartData = generateChartData();
 
   const handleGenerateAIAnalysis = async () => {
     setAiLoading(true);
@@ -228,26 +326,99 @@ export const UnifiedReportPanel: React.FC<UnifiedReportPanelProps> = ({
           </div>
         </div>
 
-        <Divider />
-
-        {/* 系统洞察 */}
-        <div style={{ marginBottom: 16 }}>
-        <Title level={5}>
-          <BulbOutlined /> 数据概览
-        </Title>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-          {report.insights.map((insight, index) => (
-            <Tag key={index} color="blue">
-              {insight}
-            </Tag>
-          ))}
-          </div>
+        {/* 体重趋势图 */}
+        <div style={{ marginBottom: 16, marginTop: 16 }}>
+          {chartData ? (
+            <div style={{ height: 350 }}>
+              <Chart
+                type="bar"
+                data={chartData}
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: {
+                    legend: {
+                      display: true,
+                      position: "top",
+                    },
+                    tooltip: {
+                      mode: "index",
+                      intersect: false,
+                      callbacks: {
+                        label: function (context: any) {
+                          const dataset = context.dataset;
+                          if (dataset.label === "体重 (kg)") {
+                            const bmi = (
+                              context.parsed.y /
+                              Math.pow(height / 100, 2)
+                            ).toFixed(1);
+                            return [
+                              `体重: ${context.parsed.y} kg`,
+                              `BMI: ${bmi}`,
+                            ];
+                          } else if (dataset.label === "体重变化") {
+                            const value = context.parsed.y;
+                            return `变化: ${value > 0 ? "+" : ""}${value} kg`;
+                          }
+                          return `${dataset.label}: ${context.parsed.y}`;
+                        },
+                      },
+                    },
+                  },
+                  interaction: {
+                    mode: "nearest",
+                    axis: "x",
+                    intersect: false,
+                  },
+                  scales: {
+                    x: {
+                      display: true,
+                      title: {
+                        display: true,
+                        text: "日期",
+                      },
+                    },
+                    y: {
+                      type: "linear",
+                      display: true,
+                      position: "left",
+                      title: {
+                        display: true,
+                        text: "体重 (kg)",
+                      },
+                      beginAtZero: false,
+                    },
+                    y2: {
+                      type: "linear",
+                      display: true,
+                      position: "right",
+                      title: {
+                        display: true,
+                        text: "体重变化 (kg)",
+                      },
+                      grid: {
+                        drawOnChartArea: false,
+                      },
+                      min: -2,
+                      max: 2,
+                      ticks: {
+                        stepSize: 0.5,
+                        callback: function (value: any) {
+                          return (value > 0 ? "+" : "") + value + " kg";
+                        },
+                      },
+                    },
+                  },
+                }}
+              />
+            </div>
+          ) : (
+            <Empty description="暂无体重数据" />
+          )}
         </div>
 
-        <Divider />
-
         {/* AI 分析 */}
-        <div>
+        <div style={{ marginTop: 24 }}>
         <div
           style={{
             display: "flex",
