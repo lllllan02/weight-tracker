@@ -145,7 +145,7 @@ export const ReportCard: React.FC<ReportCardProps> = ({
           <div>
             <Text strong>{report.period}</Text>
             <br />
-            <Text type="secondary">记录数: {report.stats.recordCount}</Text>
+            <Text type="secondary">记录数: {report.records.length}</Text>
           </div>
 
           <div style={{ textAlign: "right" }}>
@@ -204,7 +204,7 @@ export const ReportCard: React.FC<ReportCardProps> = ({
             icon={<RobotOutlined />}
             onClick={handleGenerateAIAnalysis}
             loading={aiLoading}
-            disabled={report.stats.recordCount === 0}
+            disabled={report.records.length === 0}
           >
             {aiAnalysis ? "重新生成分析" : "生成 AI 分析"}
           </Button>,

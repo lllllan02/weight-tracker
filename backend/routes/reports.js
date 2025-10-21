@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { readData, writeData } = require('../utils/dataManager');
 const { generateWeeklyReport, generateMonthlyReport } = require('../utils/reports');
-const { generateAIWeeklyReport, generateAIMonthlyReport } = require('../utils/aiReports');
+const { generateAIWeeklyReport, generateAIMonthlyReport, generateAIAllTimeReport } = require('../utils/aiReports');
 
 // 生成报告的唯一键（基于时间段）
 function getReportKey(period, type) {
@@ -76,13 +76,112 @@ router.get('/available-months', (req, res) => {
   }
 });
 
+// 获取全部历史报告
+router.get('/all-time', (req, res) => {
+  const data = readData();
+  
+  if (data.records.length === 0) {
+    return res.json({
+      period: '暂无数据',
+      type: 'all-time',
+      records: [],
+      stats: {
+        startWeight: 0,
+        endWeight: 0,
+        change: 0,
+        average: 0,
+        min: 0,
+        max: 0,
+        bmi: 0,
+        exerciseCount: 0,
+        exerciseDuration: 0
+      },
+      insights: ['暂无记录']
+    });
+  }
+
+  const sortedRecords = data.records.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  const startRecord = sortedRecords[0];
+  const endRecord = sortedRecords[sortedRecords.length - 1];
+  const startDate = new Date(startRecord.date);
+  const endDate = new Date(endRecord.date);
+  
+  const startWeight = startRecord.weight;
+  const endWeight = endRecord.weight;
+  const change = Number((endWeight - startWeight).toFixed(1));
+  const weights = data.records.map(r => r.weight);
+  const average = Number((weights.reduce((sum, w) => sum + w, 0) / weights.length).toFixed(1));
+  const min = Math.min(...weights);
+  const max = Math.max(...weights);
+
+  // 计算 BMI
+  const heightInMeters = data.profile.height / 100;
+  const bmi = Number((endWeight / (heightInMeters * heightInMeters)).toFixed(1));
+
+  // 统计运动数据（全时段）
+  const periodExerciseRecords = data.exerciseRecords.filter(record => {
+    const recordDate = new Date(record.date);
+    return recordDate >= startDate && recordDate <= endDate;
+  });
+  const exerciseCount = periodExerciseRecords.length;
+  const exerciseDuration = periodExerciseRecords.reduce((sum, r) => sum + (r.duration || 0), 0);
+
+  const insights = [];
+  const daysDiff = Math.floor((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
+  
+  insights.push(`共记录 ${daysDiff} 天，${data.records.length} 次`);
+  
+  if (change !== 0) {
+    insights.push(`总体变化 ${change > 0 ? '+' : ''}${change}kg`);
+  }
+  
+  if (exerciseCount > 0) {
+    insights.push(`运动 ${exerciseCount} 次，共 ${exerciseDuration} 分钟`);
+  }
+  
+  if (data.profile.targetWeight) {
+    const toTarget = Number((data.profile.targetWeight - endWeight).toFixed(1));
+    if (toTarget !== 0) {
+      insights.push(`距离目标还有 ${toTarget > 0 ? '+' : ''}${toTarget}kg`);
+    } else {
+      insights.push('已达到目标体重！');
+    }
+  }
+
+  const allTimeReport = {
+    period: `${startDate.toLocaleDateString('zh-CN')} - ${endDate.toLocaleDateString('zh-CN')}`,
+    type: 'all-time',
+    records: sortedRecords,
+    stats: {
+      startWeight,
+      endWeight,
+      change,
+      average,
+      min,
+      max,
+      bmi,
+      exerciseCount,
+      exerciseDuration
+    },
+    insights
+  };
+
+  // 如果有已保存的 AI 分析，附加到报告中
+  const reportKey = 'all-time';
+  if (data.aiReports && data.aiReports.allTime) {
+    allTimeReport.aiAnalysis = data.aiReports.allTime;
+  }
+  
+  res.json(allTimeReport);
+});
+
 // 获取周报
 router.get('/weekly', (req, res) => {
   const { date } = req.query; // 可选参数：指定日期
   const data = readData();
   
   let targetDate = date ? new Date(date) : new Date();
-  const weeklyReport = generateWeeklyReportForDate(data.records, data.profile, targetDate);
+  const weeklyReport = generateWeeklyReportForDate(data.records, data.profile, targetDate, data.exerciseRecords);
   
   // 如果有已保存的 AI 分析，附加到报告中
   const reportKey = getReportKey(weeklyReport.period, 'weekly');
@@ -101,7 +200,7 @@ router.get('/monthly', (req, res) => {
   let targetYear = year ? parseInt(year) : new Date().getFullYear();
   let targetMonth = month ? parseInt(month) : new Date().getMonth() + 1;
   
-  const monthlyReport = generateMonthlyReportForMonth(data.records, data.profile, targetYear, targetMonth);
+  const monthlyReport = generateMonthlyReportForMonth(data.records, data.profile, targetYear, targetMonth, data.exerciseRecords);
   
   // 如果有已保存的 AI 分析，附加到报告中
   const reportKey = getReportKey(monthlyReport.period, 'monthly');
@@ -113,7 +212,7 @@ router.get('/monthly', (req, res) => {
 });
 
 // 生成指定日期的周报
-function generateWeeklyReportForDate(records, profile, targetDate) {
+function generateWeeklyReportForDate(records, profile, targetDate, exerciseRecords = []) {
   const weekStart = new Date(targetDate);
   weekStart.setDate(targetDate.getDate() - targetDate.getDay());
   weekStart.setHours(0, 0, 0, 0);
@@ -138,7 +237,9 @@ function generateWeeklyReportForDate(records, profile, targetDate) {
         average: 0,
         min: 0,
         max: 0,
-        recordCount: 0
+        bmi: 0,
+        exerciseCount: 0,
+        exerciseDuration: 0
       },
       insights: ['本周暂无记录']
     };
@@ -153,6 +254,18 @@ function generateWeeklyReportForDate(records, profile, targetDate) {
   const min = Math.min(...weights);
   const max = Math.max(...weights);
 
+  // 计算 BMI
+  const heightInMeters = profile.height / 100;
+  const bmi = Number((endWeight / (heightInMeters * heightInMeters)).toFixed(1));
+
+  // 统计运动数据（本周）
+  const weekExerciseRecords = exerciseRecords.filter(record => {
+    const recordDate = new Date(record.date);
+    return recordDate >= weekStart && recordDate <= weekEnd;
+  });
+  const exerciseCount = weekExerciseRecords.length;
+  const exerciseDuration = weekExerciseRecords.reduce((sum, r) => sum + (r.duration || 0), 0);
+
   const insights = [];
   if (change > 0) {
     insights.push(`本周体重增加了 ${change}kg`);
@@ -160,6 +273,10 @@ function generateWeeklyReportForDate(records, profile, targetDate) {
     insights.push(`本周体重减少了 ${Math.abs(change)}kg`);
   } else {
     insights.push('本周体重保持稳定');
+  }
+
+  if (exerciseCount > 0) {
+    insights.push(`本周运动 ${exerciseCount} 次，共 ${exerciseDuration} 分钟`);
   }
 
   return {
@@ -173,14 +290,16 @@ function generateWeeklyReportForDate(records, profile, targetDate) {
       average,
       min,
       max,
-      recordCount: weekRecords.length
+      bmi,
+      exerciseCount,
+      exerciseDuration
     },
     insights
   };
 }
 
 // 生成指定年月的月报
-function generateMonthlyReportForMonth(records, profile, year, month) {
+function generateMonthlyReportForMonth(records, profile, year, month, exerciseRecords = []) {
   const monthStart = new Date(year, month - 1, 1);
   const monthEnd = new Date(year, month, 0, 23, 59, 59, 999);
 
@@ -201,7 +320,9 @@ function generateMonthlyReportForMonth(records, profile, year, month) {
         average: 0,
         min: 0,
         max: 0,
-        recordCount: 0,
+        bmi: 0,
+        exerciseCount: 0,
+        exerciseDuration: 0,
         weeklyAverages: []
       },
       insights: ['本月暂无记录']
@@ -216,6 +337,18 @@ function generateMonthlyReportForMonth(records, profile, year, month) {
   const average = Number((weights.reduce((sum, w) => sum + w, 0) / weights.length).toFixed(1));
   const min = Math.min(...weights);
   const max = Math.max(...weights);
+
+  // 计算 BMI
+  const heightInMeters = profile.height / 100;
+  const bmi = Number((endWeight / (heightInMeters * heightInMeters)).toFixed(1));
+
+  // 统计运动数据（本月）
+  const monthExerciseRecords = exerciseRecords.filter(record => {
+    const recordDate = new Date(record.date);
+    return recordDate >= monthStart && recordDate <= monthEnd;
+  });
+  const exerciseCount = monthExerciseRecords.length;
+  const exerciseDuration = monthExerciseRecords.reduce((sum, r) => sum + (r.duration || 0), 0);
 
   // 计算每周平均体重
   const weeklyAverages = [];
@@ -247,6 +380,10 @@ function generateMonthlyReportForMonth(records, profile, year, month) {
     insights.push('本月体重保持稳定');
   }
 
+  if (exerciseCount > 0) {
+    insights.push(`本月运动 ${exerciseCount} 次，共 ${exerciseDuration} 分钟`);
+  }
+
   return {
     period: `${year}年${month}月`,
     type: 'monthly',
@@ -258,7 +395,9 @@ function generateMonthlyReportForMonth(records, profile, year, month) {
       average,
       min,
       max,
-      recordCount: monthRecords.length,
+      bmi,
+      exerciseCount,
+      exerciseDuration,
       weeklyAverages
     },
     insights
@@ -273,7 +412,7 @@ router.post('/weekly/ai', async (req, res) => {
     
     // 根据日期参数生成报告
     let targetDate = date ? new Date(date) : new Date();
-    const weeklyReport = generateWeeklyReportForDate(data.records, data.profile, targetDate);
+    const weeklyReport = generateWeeklyReportForDate(data.records, data.profile, targetDate, data.exerciseRecords);
     const reportKey = getReportKey(weeklyReport.period, 'weekly');
     
     // 检查是否已有分析（如果不是强制重新生成）
@@ -307,6 +446,74 @@ router.post('/weekly/ai', async (req, res) => {
   }
 });
 
+// 生成全时段 AI 分析
+router.post('/all-time/ai', async (req, res) => {
+  try {
+    const { force = false } = req.body;
+    const data = readData();
+    
+    // 检查是否已有分析（如果不是强制重新生成）
+    if (!force && data.aiReports.allTime) {
+      return res.json(data.aiReports.allTime);
+    }
+    
+    // 生成全时段报告
+    if (data.records.length === 0) {
+      return res.status(400).json({ error: '暂无体重记录' });
+    }
+
+    const sortedRecords = data.records.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    const startRecord = sortedRecords[0];
+    const endRecord = sortedRecords[sortedRecords.length - 1];
+    const startDate = new Date(startRecord.date);
+    const endDate = new Date(endRecord.date);
+    
+    const startWeight = startRecord.weight;
+    const endWeight = endRecord.weight;
+    const change = Number((endWeight - startWeight).toFixed(1));
+    const weights = data.records.map(r => r.weight);
+    const average = Number((weights.reduce((sum, w) => sum + w, 0) / weights.length).toFixed(1));
+    const min = Math.min(...weights);
+    const max = Math.max(...weights);
+
+    const allTimeReport = {
+      period: `${startDate.toLocaleDateString('zh-CN')} - ${endDate.toLocaleDateString('zh-CN')}`,
+      type: 'all-time',
+      records: sortedRecords,
+      stats: {
+        startWeight,
+        endWeight,
+        change,
+        average,
+        min,
+        max,
+        recordCount: data.records.length
+      }
+    };
+    
+    const aiAnalysis = await generateAIAllTimeReport(allTimeReport, data.profile, data.exerciseRecords);
+    
+    if (aiAnalysis.success) {
+      const analysisData = {
+        ...aiAnalysis.data,
+        generatedAt: new Date().toISOString()
+      };
+      
+      if (!data.aiReports.allTime) {
+        data.aiReports.allTime = null;
+      }
+      data.aiReports.allTime = analysisData;
+      writeData(data);
+      
+      res.json(analysisData);
+    } else {
+      res.status(500).json({ error: aiAnalysis.error });
+    }
+  } catch (error) {
+    res.status(500).json({ error: '生成 AI 分析失败' });
+  }
+});
+
 // 生成月报 AI 分析
 router.post('/monthly/ai', async (req, res) => {
   try {
@@ -316,7 +523,7 @@ router.post('/monthly/ai', async (req, res) => {
     // 根据年月参数生成报告
     let targetYear = year || new Date().getFullYear();
     let targetMonth = month || new Date().getMonth() + 1;
-    const monthlyReport = generateMonthlyReportForMonth(data.records, data.profile, targetYear, targetMonth);
+    const monthlyReport = generateMonthlyReportForMonth(data.records, data.profile, targetYear, targetMonth, data.exerciseRecords);
     const reportKey = getReportKey(monthlyReport.period, 'monthly');
     
     // 检查是否已有分析（如果不是强制重新生成）

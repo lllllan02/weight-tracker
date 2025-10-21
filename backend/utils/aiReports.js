@@ -308,8 +308,152 @@ ${report.records.length > 10 ? report.records.slice(-10).map(r => {
   }
 }
 
+// 生成全时段报告的 AI 分析
+async function generateAIAllTimeReport(report, profile, exerciseRecords = []) {
+  try {
+    const { apiKey, baseUrl, model } = getApiConfig();
+
+    // 筛选全时段的运动记录
+    const sortedRecords = report.records.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    const startDate = new Date(sortedRecords[0].date);
+    const endDate = new Date(sortedRecords[sortedRecords.length - 1].date);
+    
+    const periodExerciseRecords = exerciseRecords.filter(record => {
+      const recordDate = new Date(record.date);
+      return recordDate >= startDate && recordDate <= endDate;
+    });
+
+    // 统计运动数据
+    let exerciseDataText = '';
+    if (periodExerciseRecords.length > 0) {
+      const totalExerciseDays = new Set(periodExerciseRecords.map(r => r.date.split('T')[0])).size;
+      const totalExercises = periodExerciseRecords.length;
+      
+      const exerciseTypeCount = {};
+      periodExerciseRecords.forEach(record => {
+        exerciseTypeCount[record.type] = (exerciseTypeCount[record.type] || 0) + 1;
+      });
+      
+      exerciseDataText = `
+【运动记录】
+- 总运动天数: ${totalExerciseDays} 天
+- 总运动次数: ${totalExercises} 次
+- 运动类型分布: ${Object.entries(exerciseTypeCount).map(([type, count]) => `${type} ${count}次`).join(', ')}
+`;
+    } else {
+      exerciseDataText = '\n【运动记录】\n- 该时间段内暂无运动记录\n';
+    }
+
+    const daysDiff = Math.floor((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
+
+    const prompt = `你是一位专业的健康管理顾问，请根据以下全时段体重和运动数据生成一份详细的综合分析报告。
+
+【基本信息】
+- 记录时间段: ${report.period}
+- 总天数: ${daysDiff} 天
+- 记录次数: ${report.stats.recordCount} 次
+- 起始体重: ${report.stats.startWeight}kg
+- 当前体重: ${report.stats.endWeight}kg
+- 总体变化: ${report.stats.change > 0 ? '+' : ''}${report.stats.change}kg
+- 平均体重: ${report.stats.average}kg
+- 最低体重: ${report.stats.min}kg
+- 最高体重: ${report.stats.max}kg
+- 身高: ${profile.height}cm
+${profile.targetWeight ? `- 目标体重: ${profile.targetWeight}kg` : ''}
+
+${exerciseDataText}
+
+【体重记录详情（仅显示前10条和后10条）】
+前10条:
+${report.records.slice(0, 10).map(r => {
+  const date = new Date(r.date);
+  return `- ${date.getMonth() + 1}月${date.getDate()}日 ${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')} ${r.weight}kg (${r.fasting})`;
+}).join('\n')}
+
+后10条:
+${report.records.slice(-10).map(r => {
+  const date = new Date(r.date);
+  return `- ${date.getMonth() + 1}月${date.getDate()}日 ${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')} ${r.weight}kg (${r.fasting})`;
+}).join('\n')}
+
+请生成一份专业且有建设性的全时段综合分析报告，包括：
+1. 总体评价（50字以内）
+2. 体重与运动关联分析（长期体重变化与运动的关系）
+3. 趋势分析（整体变化趋势是否健康、有什么阶段性特点）
+4. 目标完成度评价（如果设置了目标体重）
+5. 具体建议（3-5条，结合体重和运动数据，包括饮食、运动强度/频率、作息等方面）
+
+要求：
+- 分析要专业、客观、有数据支撑
+- 建议要具体、可操作
+- 语气友好、鼓励为主
+- 使用中文
+- **重要**：综合体重和运动数据进行长期趋势分析
+- **重要**：基于现有数据进行分析，不要批评或提及数据缺失、时间范围不完整、记录频率不够等问题
+- 专注于已有数据的趋势和建议，而不是数据本身的完整性
+- **必须**以纯JSON格式返回，不要包含任何其他文字说明，只返回JSON对象
+- JSON格式如下：
+{
+  "summary": "总结（一句话）",
+  "insights": ["洞察1", "洞察2", "洞察3", ...],
+  "suggestions": ["建议1", "建议2", "建议3", ...]
+}`;
+
+    const systemMessage = `你是一位专业的健康管理顾问，擅长分析长期体重和运动数据。你需要基于用户的全时段数据，提供专业、客观、有建设性的分析。请务必返回纯JSON格式，不要包含任何markdown标记或额外说明。`;
+
+    const response = await axios.post(
+      `${baseUrl}/chat/completions`,
+      {
+        model: model,
+        messages: [
+          {
+            role: 'system',
+            content: systemMessage
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        temperature: 0.7
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        }
+      }
+    );
+
+    let content = response.data.choices[0].message.content;
+    
+    // 移除可能的 markdown 代码块标记
+    content = content.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+    
+    const aiResponse = JSON.parse(content);
+    return {
+      success: true,
+      data: {
+        summary: aiResponse.summary,
+        insights: aiResponse.insights || [],
+        suggestions: aiResponse.suggestions || []
+      }
+    };
+  } catch (error) {
+    console.error('AI 全时段报告生成失败:', error.response?.data || error.message);
+    if (error.response?.data) {
+      console.error('详细错误:', JSON.stringify(error.response.data, null, 2));
+    }
+    return {
+      success: false,
+      error: error.response?.data?.error?.message || '生成 AI 分析失败，请稍后重试'
+    };
+  }
+}
+
 module.exports = {
   generateAIWeeklyReport,
-  generateAIMonthlyReport
+  generateAIMonthlyReport,
+  generateAIAllTimeReport
 };
 

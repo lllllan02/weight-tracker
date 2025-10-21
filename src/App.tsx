@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Layout, Typography, message } from "antd";
-import { DashboardOutlined } from "@ant-design/icons";
+import { Layout, Typography, message, Tabs, Card } from "antd";
+import { DashboardOutlined, BarChartOutlined } from "@ant-design/icons";
 import {
   UserProfile,
   WeightStats,
@@ -16,6 +16,7 @@ import {
   updateProfile,
   getWeeklyReport,
   getMonthlyReport,
+  getAllTimeReport,
   getAvailableWeeks,
   getAvailableMonths,
 } from "./utils/api";
@@ -23,7 +24,7 @@ import { WeightInput } from "./components/WeightInput";
 import { StatsCard } from "./components/StatsCard";
 import { WeightChart } from "./components/WeightChart";
 import { TargetProgress } from "./components/TargetProgress";
-import { ReportCard } from "./components/ReportCard";
+import { UnifiedReportPanel } from "./components/UnifiedReportPanel";
 import { DataBackup } from "./components/DataBackup";
 import { MilestonesCard } from "./components/MilestonesCard";
 
@@ -58,8 +59,9 @@ function App() {
     height: 170,
     theme: "light",
   });
-  const [weeklyReport, setWeeklyReport] = useState<Report | null>(null);
+  const [allTimeReport, setAllTimeReport] = useState<Report | null>(null);
   const [monthlyReport, setMonthlyReport] = useState<Report | null>(null);
+  const [weeklyReport, setWeeklyReport] = useState<Report | null>(null);
   const [reportsLoading, setReportsLoading] = useState(false);
   const [currentWeekDate, setCurrentWeekDate] = useState<Date>(new Date());
   const [currentMonthDate, setCurrentMonthDate] = useState<Date>(new Date());
@@ -73,14 +75,8 @@ function App() {
   useEffect(() => {
     loadData();
     loadAvailableDates();
+    loadAllTimeReport();
   }, []);
-
-  useEffect(() => {
-    if (availableWeeks.length > 0) {
-      loadWeeklyReport();
-      updateWeekNavigation();
-    }
-  }, [currentWeekDate, availableWeeks]);
 
   useEffect(() => {
     if (availableMonths.length > 0) {
@@ -88,6 +84,13 @@ function App() {
       updateMonthNavigation();
     }
   }, [currentMonthDate, availableMonths]);
+
+  useEffect(() => {
+    if (availableWeeks.length > 0) {
+      loadWeeklyReport();
+      updateWeekNavigation();
+    }
+  }, [currentWeekDate, availableWeeks]);
 
   const loadAvailableDates = async () => {
     try {
@@ -158,19 +161,14 @@ function App() {
     setCanGoNextMonth(currentIndex >= 0 && currentIndex < availableMonths.length - 1);
   };
 
-  const loadWeeklyReport = async () => {
+  const loadAllTimeReport = async () => {
     try {
       setReportsLoading(true);
-      // 使用本地日期格式，避免时区问题
-      const year = currentWeekDate.getFullYear();
-      const month = String(currentWeekDate.getMonth() + 1).padStart(2, '0');
-      const day = String(currentWeekDate.getDate()).padStart(2, '0');
-      const dateStr = `${year}-${month}-${day}`;
-      const weekly = await getWeeklyReport(dateStr);
-      setWeeklyReport(weekly);
+      const allTime = await getAllTimeReport();
+      setAllTimeReport(allTime);
     } catch (error) {
-      console.error("加载周报失败:", error);
-      message.error("加载周报失败");
+      console.error("加载全时段报告失败:", error);
+      message.error("加载全时段报告失败");
     } finally {
       setReportsLoading(false);
     }
@@ -186,6 +184,24 @@ function App() {
     } catch (error) {
       console.error("加载月报失败:", error);
       message.error("加载月报失败");
+    } finally {
+      setReportsLoading(false);
+    }
+  };
+
+  const loadWeeklyReport = async () => {
+    try {
+      setReportsLoading(true);
+      // 使用本地日期格式，避免时区问题
+      const year = currentWeekDate.getFullYear();
+      const month = String(currentWeekDate.getMonth() + 1).padStart(2, "0");
+      const day = String(currentWeekDate.getDate()).padStart(2, "0");
+      const dateStr = `${year}-${month}-${day}`;
+      const weekly = await getWeeklyReport(dateStr);
+      setWeeklyReport(weekly);
+    } catch (error) {
+      console.error("加载周报失败:", error);
+      message.error("加载周报失败");
     } finally {
       setReportsLoading(false);
     }
@@ -262,7 +278,7 @@ function App() {
   const handleAddRecord = async () => {
     try {
       // 重新加载所有数据，因为后端会自动更新所有计算数据
-      await Promise.all([loadData(), loadAvailableDates()]);
+      await Promise.all([loadData(), loadAvailableDates(), loadAllTimeReport()]);
       message.success("体重记录添加成功");
     } catch (error) {
       message.error("添加记录失败");
@@ -272,7 +288,7 @@ function App() {
   const handleExerciseChange = async () => {
     try {
       // 只重新加载数据，不显示成功提示
-      await Promise.all([loadData(), loadAvailableDates()]);
+      await Promise.all([loadData(), loadAvailableDates(), loadAllTimeReport()]);
     } catch (error) {
       console.error("重新加载数据失败:", error);
     }
@@ -282,7 +298,7 @@ function App() {
     try {
       await updateProfile(newProfile);
       // 重新加载所有数据，因为后端会自动更新所有计算数据
-      await Promise.all([loadData(), loadAvailableDates()]);
+      await Promise.all([loadData(), loadAvailableDates(), loadAllTimeReport()]);
       message.success("用户资料更新成功");
     } catch (error) {
       message.error("更新用户资料失败");
@@ -345,45 +361,68 @@ function App() {
             <MilestonesCard
               currentWeight={stats.current}
               onMilestoneChange={async () => {
-                await Promise.all([loadData(), loadAvailableDates()]);
+                await Promise.all([
+                  loadData(),
+                  loadAvailableDates(),
+                  loadAllTimeReport(),
+                ]);
               }}
             />
           )}
 
-          {/* 统计卡片 */}
-          {stats.current > 0 && (
-            <StatsCard stats={stats} height={profile.height} />
-          )}
-
-          {/* 报告卡片 */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
-              gap: 8,
-            }}
+          {/* 报告标签页 */}
+          <Card
+            title={
+              <span>
+                <BarChartOutlined /> 数据报告
+              </span>
+            }
+            style={{ marginBottom: 8 }}
           >
-              {weeklyReport && (
-                <ReportCard
-                  report={weeklyReport}
-                  loading={reportsLoading}
-                  onPrevious={handlePreviousWeek}
-                  onNext={handleNextWeek}
-                  canGoPrevious={canGoPreviousWeek}
-                  canGoNext={canGoNextWeek}
-                />
-              )}
-              {monthlyReport && (
-                <ReportCard
-                  report={monthlyReport}
-                  loading={reportsLoading}
-                  onPrevious={handlePreviousMonth}
-                  onNext={handleNextMonth}
-                  canGoPrevious={canGoPreviousMonth}
-                  canGoNext={canGoNextMonth}
-                />
-              )}
-          </div>
+            <Tabs
+              defaultActiveKey="all-time"
+              items={[
+                {
+                  key: "all-time",
+                  label: "📊 全部历史",
+                  children: allTimeReport && (
+                    <UnifiedReportPanel
+                      report={allTimeReport}
+                      loading={reportsLoading}
+                    />
+                  ),
+                },
+                {
+                  key: "monthly",
+                  label: "📅 月报",
+                  children: monthlyReport && (
+                    <UnifiedReportPanel
+                      report={monthlyReport}
+                      loading={reportsLoading}
+                      onPrevious={handlePreviousMonth}
+                      onNext={handleNextMonth}
+                      canGoPrevious={canGoPreviousMonth}
+                      canGoNext={canGoNextMonth}
+                    />
+                  ),
+                },
+                {
+                  key: "weekly",
+                  label: "📆 周报",
+                  children: weeklyReport && (
+                    <UnifiedReportPanel
+                      report={weeklyReport}
+                      loading={reportsLoading}
+                      onPrevious={handlePreviousWeek}
+                      onNext={handleNextWeek}
+                      canGoPrevious={canGoPreviousWeek}
+                      canGoNext={canGoNextWeek}
+                    />
+                  ),
+                },
+              ]}
+            />
+          </Card>
 
           {/* 体重图表 */}
           <WeightChart chartData={chartData} height={profile.height} />
@@ -391,7 +430,11 @@ function App() {
           {/* 数据备份 */}
           <DataBackup
             onDataChange={async () => {
-              await Promise.all([loadData(), loadAvailableDates()]);
+              await Promise.all([
+                loadData(),
+                loadAvailableDates(),
+                loadAllTimeReport(),
+              ]);
             }}
           />
 

@@ -83,7 +83,9 @@ export interface ReportStats {
   average: number;
   min: number;
   max: number;
-  recordCount: number;
+  bmi: number;
+  exerciseCount: number;
+  exerciseDuration: number;
   weeklyAverages?: number[];
 }
 
@@ -96,7 +98,7 @@ export interface AIAnalysis {
 
 export interface Report {
   period: string;
-  type: "weekly" | "monthly";
+  type: "weekly" | "monthly" | "all-time";
   records: WeightRecord[];
   stats: ReportStats;
   insights: string[];

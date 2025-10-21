@@ -236,6 +236,20 @@ export async function getAvailableMonths() {
   }
 }
 
+// 获取全时段报告
+export async function getAllTimeReport() {
+  try {
+    const res = await fetch(`${API_BASE}/api/reports/all-time`);
+    if (!res.ok) {
+      throw new Error(`HTTP error! status: ${res.status}`);
+    }
+    return await res.json();
+  } catch (error) {
+    console.error("获取全时段报告失败:", error);
+    throw error;
+  }
+}
+
 // 获取周报
 export async function getWeeklyReport(date?: string) {
   try {
@@ -267,6 +281,24 @@ export async function getMonthlyReport(year?: number, month?: number) {
     return await res.json();
   } catch (error) {
     console.error("获取月报失败:", error);
+    throw error;
+  }
+}
+
+// 生成全时段 AI 分析
+export async function generateAllTimeAIAnalysis(force = false) {
+  try {
+    const res = await fetch(`${API_BASE}/api/reports/all-time/ai`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ force }),
+    });
+    if (!res.ok) {
+      throw new Error(`HTTP error! status: ${res.status}`);
+    }
+    return await res.json();
+  } catch (error) {
+    console.error("生成全时段 AI 分析失败:", error);
     throw error;
   }
 }
