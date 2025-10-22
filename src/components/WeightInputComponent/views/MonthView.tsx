@@ -1,4 +1,5 @@
 import React from "react";
+import { Button } from "antd";
 import { Dayjs } from "dayjs";
 import dayjs from "dayjs";
 import { CalendarData } from "../../../types";
@@ -8,6 +9,7 @@ interface MonthViewProps {
   setCurrentDate: (date: Dayjs) => void;
   setCalendarView: (view: "date" | "month" | "year") => void;
   calendarData: CalendarData;
+  calendarView: "date" | "month" | "year";
 }
 
 export const MonthView: React.FC<MonthViewProps> = ({
@@ -15,6 +17,7 @@ export const MonthView: React.FC<MonthViewProps> = ({
   setCurrentDate,
   setCalendarView,
   calendarData,
+  calendarView,
 }) => {
   const { dayRecords = {} } = calendarData;
 
@@ -50,8 +53,7 @@ export const MonthView: React.FC<MonthViewProps> = ({
           alignItems: "center",
           justifyContent: "space-between",
           padding: "8px 12px",
-          marginBottom: 8,
-          borderBottom: "1px solid #f0f0f0",
+          marginBottom: 4,
         }}
       >
         {/* 左箭头 */}
@@ -82,18 +84,82 @@ export const MonthView: React.FC<MonthViewProps> = ({
           ←
         </button>
 
-        {/* 中间区域：年份和回到当前月份按钮 */}
+        {/* 中间区域：视图切换 + 年份 + 今天按钮 */}
         <div
           style={{
             display: "flex",
             alignItems: "center",
             gap: "12px",
+            flex: 1,
+            justifyContent: "center",
           }}
         >
+          {/* 视图切换按钮组 */}
+          <div
+            style={{
+              display: "flex",
+              border: "1px solid #d9d9d9",
+              borderRadius: 4,
+              overflow: "hidden",
+            }}
+          >
+            <Button
+              type={calendarView === "date" ? "primary" : "default"}
+              size="small"
+              onClick={() => setCalendarView("date")}
+              style={{
+                borderRadius: 0,
+                border: "none",
+                background: calendarView === "date" ? "#1677ff" : "#fff",
+                color: calendarView === "date" ? "#fff" : "#666",
+                transition: "all 0.2s ease",
+                height: 24,
+                padding: "0 8px",
+                fontSize: 12,
+              }}
+            >
+              日期
+            </Button>
+            <Button
+              type={calendarView === "month" ? "primary" : "default"}
+              size="small"
+              onClick={() => setCalendarView("month")}
+              style={{
+                borderRadius: 0,
+                border: "none",
+                background: calendarView === "month" ? "#1677ff" : "#fff",
+                color: calendarView === "month" ? "#fff" : "#666",
+                transition: "all 0.2s ease",
+                height: 24,
+                padding: "0 8px",
+                fontSize: 12,
+              }}
+            >
+              月份
+            </Button>
+            <Button
+              type={calendarView === "year" ? "primary" : "default"}
+              size="small"
+              onClick={() => setCalendarView("year")}
+              style={{
+                borderRadius: 0,
+                border: "none",
+                background: calendarView === "year" ? "#1677ff" : "#fff",
+                color: calendarView === "year" ? "#fff" : "#666",
+                transition: "all 0.2s ease",
+                height: 24,
+                padding: "0 8px",
+                fontSize: 12,
+              }}
+            >
+              年份
+            </Button>
+          </div>
+
           {/* 当前年份 */}
           <div
             style={{
-              fontSize: 16,
+              fontSize: 15,
               fontWeight: 600,
               color: "#333",
               textAlign: "center",
@@ -109,7 +175,7 @@ export const MonthView: React.FC<MonthViewProps> = ({
               background: "#1890ff",
               border: "none",
               cursor: "pointer",
-              padding: "4px 8px",
+              padding: "0 8px",
               borderRadius: 4,
               display: "flex",
               alignItems: "center",
@@ -118,6 +184,7 @@ export const MonthView: React.FC<MonthViewProps> = ({
               color: "#fff",
               transition: "all 0.2s ease",
               fontWeight: 500,
+              height: 24,
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.backgroundColor = "#40a9ff";

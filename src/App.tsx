@@ -11,7 +11,6 @@ import {
   getCalendarData,
   getStats,
   getProfile,
-  updateProfile,
   getWeeklyReport,
   getMonthlyReport,
   getAllTimeReport,
@@ -286,16 +285,6 @@ function App() {
     }
   };
 
-  const handleProfileChange = async (newProfile: UserProfile) => {
-    try {
-      await updateProfile(newProfile);
-      // 重新加载所有数据，因为后端会自动更新所有计算数据
-      await Promise.all([loadData(), loadAvailableDates(), loadAllTimeReport()]);
-      message.success("用户资料更新成功");
-    } catch (error) {
-      message.error("更新用户资料失败");
-    }
-  };
 
   return (
     <Layout className="app-container">
@@ -334,8 +323,6 @@ function App() {
           <WeightInput
             onAdd={handleAddRecord}
             onExerciseChange={handleExerciseChange}
-            profile={profile}
-            onProfileChange={handleProfileChange}
             calendarData={calendarData}
           />
 

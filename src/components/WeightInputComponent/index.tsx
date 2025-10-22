@@ -1,36 +1,27 @@
 import React, { useState } from "react";
-import { Card, Form, message } from "antd";
-import { WeightRecord, UserProfile, CalendarData, ExerciseRecord } from "../../types";
+import { Card, message } from "antd";
+import { WeightRecord, CalendarData, ExerciseRecord } from "../../types";
 import { generateId } from "../../utils/helpers";
-import { addRecord, updateRecord, updateProfile, deleteRecord, addExerciseRecord, updateExerciseRecord, getExerciseRecords } from "../../utils/api";
+import { addRecord, updateRecord, deleteRecord, addExerciseRecord, updateExerciseRecord, getExerciseRecords } from "../../utils/api";
 import dayjs, { Dayjs } from "dayjs";
 
 // 导入子组件
 import { CalendarView } from "./CalendarView";
 import { DayRecordCard } from "./DayRecordCard";
-import { SettingsModal } from "./SettingsModal";
-import { CalendarHeader } from "./CalendarHeader";
-import { TIME_SLOTS, TimeSlot } from "./constants";
+import { TimeSlot } from "./constants";
 
 interface WeightInputProps {
   onAdd: () => void;
   onExerciseChange: () => void; // 专门用于运动状态变化的回调
-  profile: UserProfile;
-  onProfileChange: (profile: UserProfile) => void;
   calendarData: CalendarData;
 }
 
 export const WeightInput: React.FC<WeightInputProps> = ({
   onAdd,
   onExerciseChange,
-  profile,
-  onProfileChange,
   calendarData,
 }) => {
-  const [settingsForm] = Form.useForm();
-  const [isSettingsModalVisible, setIsSettingsModalVisible] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Dayjs>(dayjs());
-  const [loading, setLoading] = useState(false);
   const [currentDate, setCurrentDate] = useState<Dayjs>(dayjs());
   const [calendarView, setCalendarView] = useState<"date" | "month" | "year">(
     "date"
@@ -49,8 +40,6 @@ export const WeightInput: React.FC<WeightInputProps> = ({
   // 处理运动时长变化
   const handleExerciseDurationChange = async (date: Dayjs, duration: number | null) => {
     try {
-      setLoading(true);
-      
       // 获取所有运动记录
       const exerciseRecords = await getExerciseRecords();
       const dateKey = date.format("YYYY-MM-DD");
@@ -84,15 +73,12 @@ export const WeightInput: React.FC<WeightInputProps> = ({
     } catch (error) {
       console.error("保存运动记录失败:", error);
       message.error("保存失败，请重试");
-    } finally {
-      setLoading(false);
     }
   };
 
   // 保存记录（直接在卡片上编辑）
   const handleSaveRecord = async (date: Dayjs, timeSlot: TimeSlot, weight: number) => {
     try {
-      setLoading(true);
       const recordDate = date.hour(timeSlot.hour).minute(timeSlot.minute).second(0);
       
       // 检查是否已有记录
@@ -128,8 +114,6 @@ export const WeightInput: React.FC<WeightInputProps> = ({
     } catch (error) {
       console.error("保存记录失败:", error);
       message.error("保存失败，请重试");
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -140,7 +124,6 @@ export const WeightInput: React.FC<WeightInputProps> = ({
   // 删除记录
   const handleDeleteRecord = async (date: Dayjs, timeSlot: TimeSlot) => {
     try {
-      setLoading(true);
       const { dayRecords = {} } = calendarData;
       const dateKey = date.format("YYYY-MM-DD");
       const existingRecord = dayRecords[dateKey]?.[timeSlot.key];
@@ -153,51 +136,23 @@ export const WeightInput: React.FC<WeightInputProps> = ({
     } catch (error) {
       console.error("删除记录失败:", error);
       message.error("删除失败，请重试");
-    } finally {
-      setLoading(false);
     }
-  };
-
-
-
-  // 设置相关函数
-  const handleSettingsSave = async () => {
-    try {
-      const values = await settingsForm.validateFields();
-      const newProfile: UserProfile = {
-        ...profile,
-        height: values.height,
-      };
-      await updateProfile(newProfile);
-      onProfileChange(newProfile);
-      setIsSettingsModalVisible(false);
-      message.success("设置保存成功！");
-    } catch (error) {
-      console.error("保存设置失败:", error);
-      message.error("保存设置失败");
-    }
-  };
-
-  const handleSettingsCancel = () => {
-    settingsForm.resetFields();
-    setIsSettingsModalVisible(false);
   };
 
   return (
     <div style={{ marginBottom: 24 }}>
-      <div style={{ display: "flex", gap: 20, alignItems: "flex-start" }}>
+      <div style={{ display: "flex", gap: 20, alignItems: "stretch" }}>
         {/* 左侧日历 */}
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
           <Card
-            title={
-              <CalendarHeader
-                calendarView={calendarView}
-                setCalendarView={setCalendarView}
-                onSettingsClick={() => setIsSettingsModalVisible(true)}
-              />
-            }
-            style={{ borderRadius: 12, boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }}
-            styles={{ body: { padding: 0, border: "none" } }}
+            style={{ 
+              borderRadius: 12, 
+              boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+              height: "100%",
+              display: "flex",
+              flexDirection: "column"
+            }}
+            styles={{ body: { padding: 0, border: "none", flex: 1 } }}
           >
             <CalendarView
               currentDate={currentDate}
@@ -211,7 +166,7 @@ export const WeightInput: React.FC<WeightInputProps> = ({
         </div>
 
         {/* 右侧当天记录 */}
-        <div style={{ width: 260, flexShrink: 0 }}>
+        <div style={{ width: 260, flexShrink: 0, display: "flex", flexDirection: "column" }}>
           <DayRecordCard
             selectedDate={selectedDate}
             calendarData={calendarData}
@@ -224,15 +179,6 @@ export const WeightInput: React.FC<WeightInputProps> = ({
           />
         </div>
       </div>
-
-      {/* 设置弹窗 */}
-      <SettingsModal
-        isVisible={isSettingsModalVisible}
-        onOk={handleSettingsSave}
-        onCancel={handleSettingsCancel}
-        profile={profile}
-        form={settingsForm}
-      />
     </div>
   );
 };

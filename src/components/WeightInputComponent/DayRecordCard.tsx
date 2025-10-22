@@ -125,10 +125,22 @@ export const DayRecordCard: React.FC<DayRecordCardProps> = ({
           ? "2px solid #1677ff"
           : "1px solid #f0f0f0",
         background: "#fff",
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
       }}
-      styles={{ body: { padding: "16px 12px" } }}
+      styles={{ 
+        body: { padding: "16px 12px", flex: 1, display: "flex", flexDirection: "column" },
+        header: { padding: "16px", minHeight: "auto" }
+      }}
     >
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <div style={{ 
+        display: "flex", 
+        flexDirection: "column", 
+        gap: 12,
+        flex: 1,
+        justifyContent: "space-evenly"
+      }}>
         {TIME_SLOTS.map((slot) => {
           const hasRecordForSlot = hasRecord(selectedDate, slot);
           const record = getRecord(selectedDate, slot);

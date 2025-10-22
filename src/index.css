@@ -120,3 +120,71 @@ code {
   padding: 0 12px !important;
   box-sizing: border-box !important;
 }
+
+/* 隐藏日历中非当月的日期（上月和下月日期） */
+.custom-calendar .ant-picker-cell-disabled {
+  visibility: hidden !important;
+  height: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  display: none !important;
+}
+
+/* 隐藏包含所有禁用单元格的行 */
+.custom-calendar tbody tr {
+  display: table-row !important;
+}
+
+.custom-calendar tbody tr:has(.ant-picker-cell:not(.ant-picker-cell-disabled)) {
+  display: table-row !important;
+}
+
+/* 如果一行中所有单元格都被禁用，隐藏整行 */
+.custom-calendar tbody tr:not(:has(.ant-picker-cell:not(.ant-picker-cell-disabled))) {
+  display: none !important;
+}
+
+/* 优化日历单元格高度 */
+.custom-calendar .ant-picker-cell {
+  padding: 0 !important;
+  height: 54px !important;
+}
+
+.custom-calendar .ant-picker-cell-inner {
+  padding: 0 !important;
+  height: 100% !important;
+}
+
+/* 优化日历表格间距 */
+.custom-calendar .ant-picker-content {
+  height: auto !important;
+}
+
+.custom-calendar .ant-picker-content th {
+  height: 30px !important;
+  line-height: 30px !important;
+  padding: 4px 0 !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+}
+
+.custom-calendar .ant-picker-content td {
+  vertical-align: middle !important;
+  height: 54px !important;
+}
+
+/* 优化日历体的padding */
+.custom-calendar .ant-picker-body {
+  padding: 4px 0 !important;
+}
+
+/* 设置日历表格的整体高度 */
+.custom-calendar table {
+  table-layout: fixed !important;
+  border-spacing: 6px !important;
+  border-collapse: separate !important;
+}
+
+.custom-calendar tbody {
+  height: auto !important;
+}

@@ -1,5 +1,5 @@
 import React from "react";
-import { Calendar } from "antd";
+import { Calendar, Button } from "antd";
 import { Dayjs } from "dayjs";
 import dayjs from "dayjs";
 import { CalendarData } from "../../../types";
@@ -9,6 +9,8 @@ interface DateViewProps {
   setCurrentDate: (date: Dayjs) => void;
   calendarData: CalendarData;
   onDateSelect: (date: Dayjs) => void;
+  calendarView: "date" | "month" | "year";
+  setCalendarView: (view: "date" | "month" | "year") => void;
 }
 
 export const DateView: React.FC<DateViewProps> = ({
@@ -16,6 +18,8 @@ export const DateView: React.FC<DateViewProps> = ({
   setCurrentDate,
   calendarData,
   onDateSelect,
+  calendarView,
+  setCalendarView,
 }) => {
   const { dayRecords = {}, exerciseRecords = {} } = calendarData;
 
@@ -76,7 +80,7 @@ export const DateView: React.FC<DateViewProps> = ({
           alignItems: "center",
           justifyContent: "space-between",
           padding: "8px 12px",
-          marginBottom: 8,
+          marginBottom: 4,
         }}
       >
         {/* 左箭头 */}
@@ -107,18 +111,82 @@ export const DateView: React.FC<DateViewProps> = ({
           ←
         </button>
 
-        {/* 中间区域：月份和回到今天按钮 */}
+        {/* 中间区域：视图切换 + 月份 + 今天按钮 */}
         <div
           style={{
             display: "flex",
             alignItems: "center",
             gap: "12px",
+            flex: 1,
+            justifyContent: "center",
           }}
         >
+          {/* 视图切换按钮组 */}
+          <div
+            style={{
+              display: "flex",
+              border: "1px solid #d9d9d9",
+              borderRadius: 4,
+              overflow: "hidden",
+            }}
+          >
+            <Button
+              type={calendarView === "date" ? "primary" : "default"}
+              size="small"
+              onClick={() => setCalendarView("date")}
+              style={{
+                borderRadius: 0,
+                border: "none",
+                background: calendarView === "date" ? "#1677ff" : "#fff",
+                color: calendarView === "date" ? "#fff" : "#666",
+                transition: "all 0.2s ease",
+                height: 24,
+                padding: "0 8px",
+                fontSize: 12,
+              }}
+            >
+              日期
+            </Button>
+            <Button
+              type={calendarView === "month" ? "primary" : "default"}
+              size="small"
+              onClick={() => setCalendarView("month")}
+              style={{
+                borderRadius: 0,
+                border: "none",
+                background: calendarView === "month" ? "#1677ff" : "#fff",
+                color: calendarView === "month" ? "#fff" : "#666",
+                transition: "all 0.2s ease",
+                height: 24,
+                padding: "0 8px",
+                fontSize: 12,
+              }}
+            >
+              月份
+            </Button>
+            <Button
+              type={calendarView === "year" ? "primary" : "default"}
+              size="small"
+              onClick={() => setCalendarView("year")}
+              style={{
+                borderRadius: 0,
+                border: "none",
+                background: calendarView === "year" ? "#1677ff" : "#fff",
+                color: calendarView === "year" ? "#fff" : "#666",
+                transition: "all 0.2s ease",
+                height: 24,
+                padding: "0 8px",
+                fontSize: 12,
+              }}
+            >
+              年份
+            </Button>
+          </div>
+
           {/* 当前月份和年份 */}
           <div
             style={{
-              fontSize: 16,
+              fontSize: 15,
               fontWeight: 600,
               color: "#333",
               textAlign: "center",
@@ -134,7 +202,7 @@ export const DateView: React.FC<DateViewProps> = ({
               background: "#1890ff",
               border: "none",
               cursor: "pointer",
-              padding: "4px 8px",
+              padding: "0 8px",
               borderRadius: 4,
               display: "flex",
               alignItems: "center",
@@ -143,6 +211,7 @@ export const DateView: React.FC<DateViewProps> = ({
               color: "#fff",
               transition: "all 0.2s ease",
               fontWeight: 500,
+              height: 24,
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.backgroundColor = "#40a9ff";
@@ -195,30 +264,31 @@ export const DateView: React.FC<DateViewProps> = ({
     const hasExercise = exerciseData.exercise;
     const isCurrentMonth = date.month() === currentDate.month();
 
-    // 根据状态确定样式
+    // 根据状态确定样式 - 现代简洁配色
     let backgroundColor = "#fff";
     let borderColor = "transparent";
     let textColor = "#d9d9d9";
     let fontWeight = 400;
+    let boxShadow = "none";
 
     if (isToday) {
-      backgroundColor = "#e6f7ff";
-      borderColor = "#1677ff";
-      textColor = "#1677ff";
+      // 今天：蓝色强调
+      backgroundColor = "#1890ff";
+      borderColor = "#1890ff";
+      textColor = "#fff";
       fontWeight = 600;
-    } else if (hasRecord && isCurrentMonth) {
-      backgroundColor = "#f6ffed";
-      borderColor = "#52c41a";
-      textColor = "#389e0d";
-      fontWeight = 600;
-    } else if (hasExercise && isCurrentMonth) {
-      backgroundColor = "#fff7e6";
-      borderColor = "#fa8c16";
-      textColor = "#d46b08";
+      boxShadow = "0 2px 8px rgba(24, 144, 255, 0.35)";
+    } else if ((hasRecord || hasExercise) && isCurrentMonth) {
+      // 有数据（体重或运动）：淡蓝色背景
+      backgroundColor = "#f0f5ff";
+      borderColor = "#d6e4ff";
+      textColor = "#1890ff";
       fontWeight = 600;
     } else if (isCurrentMonth) {
-      textColor = "#333";
-      fontWeight = 500;
+      // 普通日期：灰色文字
+      borderColor = "transparent";
+      textColor = "#595959";
+      fontWeight = 400;
     }
 
     return (
@@ -226,23 +296,19 @@ export const DateView: React.FC<DateViewProps> = ({
         style={{
           width: "100%",
           height: "100%",
-          minHeight: 50,
-          minWidth: 80,
-          maxWidth: 80,
-          maxHeight: 50,
-          margin: "3px",
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          borderRadius: 6,
+          borderRadius: 8,
           background: backgroundColor,
-          border: `1px solid ${borderColor}`,
+          border: `2px solid ${borderColor}`,
           boxSizing: "border-box",
-          padding: "4px 2px",
+          padding: "4px 3px",
           transition: "all 0.2s ease",
           cursor: "pointer",
           position: "relative",
+          boxShadow: boxShadow,
         }}
         onClick={() => onDateSelect(date)}
       >
@@ -251,16 +317,13 @@ export const DateView: React.FC<DateViewProps> = ({
           <div
             style={{
               position: "absolute",
-              top: 2,
-              right: 4,
+              top: 1,
+              right: 3,
               fontSize: 14,
-              color: "#52c41a",
-              fontWeight: "bold",
-              textShadow: "0 1px 2px rgba(255,255,255,0.8)",
               zIndex: 1,
             }}
           >
-            🏃‍♂️
+            🏃
           </div>
         )}
         <div
@@ -282,12 +345,11 @@ export const DateView: React.FC<DateViewProps> = ({
               fontSize: 11,
               fontWeight: 600,
               color: textColor,
-              lineHeight: 1.05,
+              lineHeight: 1.1,
               marginBottom: 0,
-              letterSpacing: 0.1,
               whiteSpace: "nowrap",
               textAlign: "center",
-              opacity: 0.9,
+              opacity: isToday ? 0.95 : 0.85,
             }}
           >
             {dayWeights.morning ? dayWeights.morning.toFixed(1) : "—"}/
@@ -299,15 +361,14 @@ export const DateView: React.FC<DateViewProps> = ({
               fontSize: 11,
               fontWeight: 600,
               color: textColor,
-              lineHeight: 1.05,
+              lineHeight: 1.1,
               marginBottom: 0,
-              letterSpacing: 0.1,
               whiteSpace: "nowrap",
               textAlign: "center",
-              opacity: 0.9,
+              opacity: 0.85,
             }}
           >
-            {exerciseData.duration ? `${exerciseData.duration}分钟` : "🏃‍♂️ 运动"}
+            {exerciseData.duration ? `${exerciseData.duration}分钟` : "运动"}
           </div>
         ) : null}
       </div>

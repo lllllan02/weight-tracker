@@ -30,6 +30,8 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
           setCurrentDate={setCurrentDate}
           calendarData={calendarData}
           onDateSelect={onDateSelect}
+          calendarView={calendarView}
+          setCalendarView={setCalendarView}
         />
       ) : calendarView === "month" ? (
         <MonthView
@@ -37,6 +39,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
           setCurrentDate={setCurrentDate}
           setCalendarView={setCalendarView}
           calendarData={calendarData}
+          calendarView={calendarView}
         />
       ) : (
         <YearView
@@ -44,6 +47,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
           setCurrentDate={setCurrentDate}
           setCalendarView={setCalendarView}
           calendarData={calendarData}
+          calendarView={calendarView}
         />
       )}
     </>
