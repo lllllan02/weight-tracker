@@ -16,6 +16,7 @@ import {
 import {
   Chart as ChartJS,
   CategoryScale,
+  TimeScale,
   LinearScale,
   PointElement,
   LineElement,
@@ -25,6 +26,7 @@ import {
   Legend,
   Filler,
 } from "chart.js";
+import "chartjs-adapter-date-fns";
 import { Chart } from "react-chartjs-2";
 import { Report, AIAnalysis } from "../types";
 import {
@@ -35,6 +37,7 @@ import {
 
 ChartJS.register(
   CategoryScale,
+  TimeScale,
   LinearScale,
   PointElement,
   LineElement,
@@ -98,33 +101,50 @@ export const UnifiedReportPanel: React.FC<UnifiedReportPanelProps> = ({
       (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
     );
 
-    const labels = sortedRecords.map((record) => {
-      const date = new Date(record.date);
-      return `${date.getMonth() + 1}/${date.getDate()}`;
-    });
+    // 使用时间戳作为 x 轴数据
+    const weightData = sortedRecords.map((record) => ({
+      x: new Date(record.date).getTime(),
+      y: record.weight,
+    }));
 
-    const weights = sortedRecords.map((record) => record.weight);
-
-    // 计算体重变化（与前一天的差值）
-    const changes = sortedRecords.map((record, index) => {
-      if (index === 0) return 0;
-      return Number((record.weight - sortedRecords[index - 1].weight).toFixed(1));
+    // 计算体重变化（与前一条记录的差值）
+    const changeData = sortedRecords.map((record, index) => {
+      const change = index === 0 
+        ? 0 
+        : Number((record.weight - sortedRecords[index - 1].weight).toFixed(1));
+      return {
+        x: new Date(record.date).getTime(),
+        y: change,
+      };
     });
 
     // 根据变化值设置颜色（红色增加，绿色减少）
-    const changeColors = changes.map((change) => {
-      if (change > 0) return "rgba(255, 77, 79, 0.6)"; // 红色
-      if (change < 0) return "rgba(82, 196, 26, 0.6)"; // 绿色
+    const changeColors = changeData.map((item) => {
+      if (item.y > 0) return "rgba(255, 77, 79, 0.6)"; // 红色
+      if (item.y < 0) return "rgba(82, 196, 26, 0.6)"; // 绿色
       return "rgba(140, 140, 140, 0.6)"; // 灰色
     });
 
+    // 计算时间范围（不添加边距，完全撑满）
+    const minTime = weightData[0].x;
+    const maxTime = weightData[weightData.length - 1].x;
+    
+    // 完全撑满图表，不留边距
+    const chartMinTime = minTime;
+    const chartMaxTime = maxTime;
+
+    // 零线数据（覆盖整个时间范围）
+    const zeroLineData = [
+      { x: chartMinTime, y: 0 },
+      { x: chartMaxTime, y: 0 },
+    ];
+
     return {
-      labels,
       datasets: [
         {
           type: "line" as const,
           label: "体重 (kg)",
-          data: weights,
+          data: weightData,
           borderColor: "#1890ff",
           backgroundColor: "rgba(24, 144, 255, 0.1)",
           tension: 0.4,
@@ -136,7 +156,7 @@ export const UnifiedReportPanel: React.FC<UnifiedReportPanelProps> = ({
         {
           type: "bar" as const,
           label: "体重变化",
-          data: changes,
+          data: changeData,
           backgroundColor: changeColors,
           borderColor: changeColors.map((color) => color.replace("0.6", "1")),
           borderWidth: 1,
@@ -145,7 +165,7 @@ export const UnifiedReportPanel: React.FC<UnifiedReportPanelProps> = ({
         {
           type: "line" as const,
           label: "零线 (无变化)",
-          data: labels.map(() => 0),
+          data: zeroLineData,
           borderColor: "#f59e0b",
           backgroundColor: "transparent",
           borderWidth: 2,
@@ -157,6 +177,7 @@ export const UnifiedReportPanel: React.FC<UnifiedReportPanelProps> = ({
           pointHoverRadius: 0,
         },
       ],
+      timeRange: { min: chartMinTime, max: chartMaxTime },
     };
   };
 
@@ -372,10 +393,61 @@ export const UnifiedReportPanel: React.FC<UnifiedReportPanelProps> = ({
                   },
                   scales: {
                     x: {
+                      type: "time",
                       display: true,
                       title: {
                         display: true,
                         text: "日期",
+                      },
+                      min: (chartData as any)?.timeRange?.min,
+                      max: (chartData as any)?.timeRange?.max,
+                      offset: false,
+                      bounds: "data",
+                      time: {
+                        unit: (() => {
+                          if (report.type === "weekly") return "day";
+                          if (report.type === "monthly") return "day";
+                          // 全时段：根据数据跨度智能选择
+                          if (report.records.length > 0) {
+                            const sortedRecords = [...report.records].sort(
+                              (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+                            );
+                            const timeSpan = new Date(sortedRecords[sortedRecords.length - 1].date).getTime() - 
+                                           new Date(sortedRecords[0].date).getTime();
+                            const days = timeSpan / (1000 * 60 * 60 * 24);
+                            
+                            if (days <= 31) return "day";      // 1个月内：按天
+                            if (days <= 90) return "week";     // 3个月内：按周
+                            if (days <= 365) return "month";   // 1年内：按月
+                            return "month";                     // 超过1年：按月
+                          }
+                          return "day";
+                        })(),
+                        displayFormats: {
+                          day: "M/d",
+                          week: "M/d",
+                          month: "yyyy/M",
+                        },
+                        tooltipFormat: "yyyy年M月d日 HH:mm",
+                      },
+                      ticks: {
+                        maxRotation: 45,
+                        minRotation: 0,
+                        autoSkip: true,
+                        autoSkipPadding: 10,
+                        maxTicksLimit: report.type === "weekly" 
+                          ? 7 
+                          : report.type === "monthly" 
+                          ? 15 
+                          : report.records.length < 30 
+                          ? 10 
+                          : report.records.length < 100 
+                          ? 15 
+                          : 20,
+                        source: "auto",
+                      },
+                      grid: {
+                        offset: false,
                       },
                     },
                     y: {
