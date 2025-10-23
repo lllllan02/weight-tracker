@@ -125,13 +125,53 @@ export const UnifiedReportPanel: React.FC<UnifiedReportPanelProps> = ({
       return "rgba(140, 140, 140, 0.6)"; // 灰色
     });
 
-    // 计算时间范围（不添加边距，完全撑满）
-    const minTime = weightData[0].x;
-    const maxTime = weightData[weightData.length - 1].x;
-    
-    // 完全撑满图表，不留边距
-    const chartMinTime = minTime;
-    const chartMaxTime = maxTime;
+    // 计算时间范围
+    let chartMinTime: number;
+    let chartMaxTime: number;
+
+    if (report.type === "weekly") {
+      // 周报：显示完整的周一到周日
+      // 从 period 中解析周的起始和结束日期
+      const periodParts = report.period.split(" - ");
+      if (periodParts.length === 2) {
+        // 支持中文格式 "2025/10/20" 和标准格式
+        const startDate = new Date(periodParts[0].replace(/\//g, '-'));
+        const endDate = new Date(periodParts[1].replace(/\//g, '-'));
+        if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime())) {
+          startDate.setHours(0, 0, 0, 0);
+          endDate.setHours(23, 59, 59, 999);
+          chartMinTime = startDate.getTime();
+          chartMaxTime = endDate.getTime();
+        } else {
+          // 解析失败，使用数据范围
+          chartMinTime = weightData[0].x;
+          chartMaxTime = weightData[weightData.length - 1].x;
+        }
+      } else {
+        // 兜底：使用数据范围
+        chartMinTime = weightData[0].x;
+        chartMaxTime = weightData[weightData.length - 1].x;
+      }
+    } else if (report.type === "monthly") {
+      // 月报：显示完整的月份（1号到月底）
+      const match = report.period.match(/(\d{4})年(\d{1,2})月/);
+      if (match) {
+        const year = parseInt(match[1]);
+        const month = parseInt(match[2]) - 1; // JavaScript月份从0开始
+        const startDate = new Date(year, month, 1, 0, 0, 0, 0);
+        const endDate = new Date(year, month + 1, 0, 23, 59, 59, 999); // 月底最后一天
+        chartMinTime = startDate.getTime();
+        chartMaxTime = endDate.getTime();
+      } else {
+        // 兜底：使用数据范围
+        chartMinTime = weightData[0].x;
+        chartMaxTime = weightData[weightData.length - 1].x;
+      }
+    } else {
+      // 全时段报告：使用数据范围
+      chartMinTime = weightData[0].x;
+      chartMaxTime = weightData[weightData.length - 1].x;
+    }
 
     // 零线数据（覆盖整个时间范围）
     const zeroLineData = [
@@ -413,7 +453,7 @@ export const UnifiedReportPanel: React.FC<UnifiedReportPanelProps> = ({
                       min: (chartData as any)?.timeRange?.min,
                       max: (chartData as any)?.timeRange?.max,
                       offset: false,
-                      bounds: "data",
+                      bounds: "ticks",
                       time: {
                         unit: (() => {
                           if (report.type === "weekly") return "day";
@@ -444,12 +484,12 @@ export const UnifiedReportPanel: React.FC<UnifiedReportPanelProps> = ({
                       ticks: {
                         maxRotation: 45,
                         minRotation: 0,
-                        autoSkip: true,
-                        autoSkipPadding: 10,
+                        autoSkip: report.type === "weekly" ? false : true,
+                        autoSkipPadding: report.type === "monthly" ? 5 : 10,
                         maxTicksLimit: report.type === "weekly" 
                           ? 7 
                           : report.type === "monthly" 
-                          ? 15 
+                          ? 15
                           : report.records.length < 30 
                           ? 10 
                           : report.records.length < 100 
