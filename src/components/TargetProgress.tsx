@@ -1,5 +1,5 @@
 import React from "react";
-import { Card, Progress, Typography, Tooltip } from "antd";
+import { Card, Progress, Typography, Tooltip, Empty } from "antd";
 import { AimOutlined, TrophyOutlined, CheckCircleOutlined } from "@ant-design/icons";
 import { WeightStats, Milestone } from "../types";
 import dayjs from "dayjs";
@@ -28,9 +28,20 @@ export const TargetProgress: React.FC<TargetProgressProps> = ({
         }
         style={{ marginBottom: 0 }}
       >
-        <div style={{ textAlign: "center", padding: "20px 0" }}>
-          <Text type="secondary">请在设置中配置目标体重</Text>
-        </div>
+        <Empty
+          image={Empty.PRESENTED_IMAGE_SIMPLE}
+          description={
+            <div>
+              <div style={{ fontSize: 15, color: "#666", marginBottom: 8 }}>
+                还未设置目标体重
+              </div>
+              <div style={{ fontSize: 13, color: "#999" }}>
+                在下方"阶段目标"中添加目标，开启健康之旅
+              </div>
+            </div>
+          }
+          style={{ padding: "20px 0" }}
+        />
       </Card>
     );
   }

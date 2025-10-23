@@ -257,24 +257,37 @@ export const MonthView: React.FC<MonthViewProps> = ({
                 background: isCurrentMonth
                   ? "#e6f7ff"
                   : hasRecords
-                  ? "#f6ffed"
+                  ? "#f0f5ff"
                   : "#fff",
                 border: `1px solid ${
                   isCurrentMonth
                     ? "#1677ff"
                     : hasRecords
-                    ? "#52c41a"
+                    ? "#d6e4ff"
                     : "#f0f0f0"
                 }`,
                 color: isCurrentMonth
                   ? "#1677ff"
                   : hasRecords
-                  ? "#389e0d"
+                  ? "#1890ff"
                   : "#666",
                 fontWeight: isCurrentMonth || hasRecords ? 600 : 400,
                 cursor: "pointer",
                 transition: "all 0.2s ease",
                 fontSize: 14,
+                boxShadow: isCurrentMonth ? "0 2px 8px rgba(24, 144, 255, 0.2)" : "none",
+              }}
+              onMouseEnter={(e) => {
+                if (!isCurrentMonth) {
+                  e.currentTarget.style.backgroundColor = "#f5f5f5";
+                  e.currentTarget.style.transform = "translateY(-2px)";
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isCurrentMonth) {
+                  e.currentTarget.style.backgroundColor = hasRecords ? "#f0f5ff" : "#fff";
+                  e.currentTarget.style.transform = "translateY(0)";
+                }
               }}
             >
               {month.format("MMM")}

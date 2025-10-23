@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Layout, Typography, message, Tabs, Card } from "antd";
+import { Layout, Typography, message, Tabs, Card, Skeleton } from "antd";
 import { DashboardOutlined, BarChartOutlined } from "@ant-design/icons";
 import {
   UserProfile,
@@ -62,11 +62,22 @@ function App() {
   const [canGoNextWeek, setCanGoNextWeek] = useState(false);
   const [canGoPreviousMonth, setCanGoPreviousMonth] = useState(false);
   const [canGoNextMonth, setCanGoNextMonth] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
 
   useEffect(() => {
-    loadData();
-    loadAvailableDates();
-    loadAllTimeReport();
+    const initializeApp = async () => {
+      setInitialLoading(true);
+      try {
+        await Promise.all([
+          loadData(),
+          loadAvailableDates(),
+          loadAllTimeReport()
+        ]);
+      } finally {
+        setInitialLoading(false);
+      }
+    };
+    initializeApp();
   }, []);
 
   useEffect(() => {
@@ -319,112 +330,141 @@ function App() {
 
       <Content style={{ padding: 0, background: "#f5f5f5" }}>
         <div className="main-content">
-          {/* 体重输入 */}
-          <WeightInput
-            onAdd={handleAddRecord}
-            onExerciseChange={handleExerciseChange}
-            calendarData={calendarData}
-          />
+          {initialLoading ? (
+            // 加载骨架屏
+            <>
+              {/* 体重输入骨架屏 */}
+              <Card style={{ marginBottom: 24, borderRadius: 12 }}>
+                <div style={{ display: "flex", gap: 20 }}>
+                  <div style={{ flex: 1 }}>
+                    <Skeleton active paragraph={{ rows: 8 }} />
+                  </div>
+                  <div style={{ width: 260 }}>
+                    <Skeleton active paragraph={{ rows: 6 }} />
+                  </div>
+                </div>
+              </Card>
 
-          {/* 目标进度 - 使用最小的阶段目标作为最终目标 */}
-          {stats.current > 0 && profile.milestones && profile.milestones.length > 0 && (
-            <TargetProgress 
-              stats={stats} 
-              targetWeight={Math.min(...profile.milestones.map(m => m.targetWeight))}
-              milestones={profile.milestones}
-            />
+              {/* 目标进度骨架屏 */}
+              <Card style={{ marginBottom: 24, borderRadius: 12 }}>
+                <Skeleton active paragraph={{ rows: 2 }} />
+              </Card>
+
+              {/* 报告骨架屏 */}
+              <Card style={{ marginBottom: 24, borderRadius: 12 }}>
+                <Skeleton active paragraph={{ rows: 10 }} />
+              </Card>
+            </>
+          ) : (
+            <>
+              {/* 体重输入 */}
+              <WeightInput
+                onAdd={handleAddRecord}
+                onExerciseChange={handleExerciseChange}
+                calendarData={calendarData}
+              />
+
+              {/* 目标进度 - 使用最小的阶段目标作为最终目标 */}
+              {stats.current > 0 && profile.milestones && profile.milestones.length > 0 && (
+                <TargetProgress 
+                  stats={stats} 
+                  targetWeight={Math.min(...profile.milestones.map(m => m.targetWeight))}
+                  milestones={profile.milestones}
+                />
+              )}
+
+              {/* 阶段目标 */}
+              {stats.current > 0 && (
+                <MilestonesCard
+                  currentWeight={stats.current}
+                  onMilestoneChange={async () => {
+                    await Promise.all([
+                      loadData(),
+                      loadAvailableDates(),
+                      loadAllTimeReport(),
+                    ]);
+                  }}
+                />
+              )}
+
+              {/* 报告标签页 */}
+              <Card style={{ marginBottom: 8 }}>
+                <Tabs
+                  defaultActiveKey="all-time"
+                  tabBarExtraContent={{
+                    left: (
+                      <span style={{ marginRight: 16, fontSize: 16, fontWeight: 500 }}>
+                        <BarChartOutlined /> 数据报告
+                      </span>
+                    ),
+                  }}
+                  items={[
+                    {
+                      key: "all-time",
+                      label: "📊 全部历史",
+                      children: allTimeReport && (
+                        <UnifiedReportPanel
+                          report={allTimeReport}
+                          loading={reportsLoading}
+                          height={profile.height}
+                        />
+                      ),
+                    },
+                    {
+                      key: "monthly",
+                      label: "📅 月报",
+                      children: monthlyReport && (
+                        <UnifiedReportPanel
+                          report={monthlyReport}
+                          loading={reportsLoading}
+                          onPrevious={handlePreviousMonth}
+                          onNext={handleNextMonth}
+                          canGoPrevious={canGoPreviousMonth}
+                          canGoNext={canGoNextMonth}
+                          height={profile.height}
+                        />
+                      ),
+                    },
+                    {
+                      key: "weekly",
+                      label: "📆 周报",
+                      children: weeklyReport && (
+                        <UnifiedReportPanel
+                          report={weeklyReport}
+                          loading={reportsLoading}
+                          onPrevious={handlePreviousWeek}
+                          onNext={handleNextWeek}
+                          canGoPrevious={canGoPreviousWeek}
+                          canGoNext={canGoNextWeek}
+                          height={profile.height}
+                        />
+                      ),
+                    },
+                  ]}
+                />
+              </Card>
+
+              {/* 数据备份 */}
+              <DataBackup
+                onDataChange={async () => {
+                  await Promise.all([
+                    loadData(),
+                    loadAvailableDates(),
+                    loadAllTimeReport(),
+                  ]);
+                }}
+              />
+
+              {/* 页脚 */}
+              <div className="footer">
+                <Paragraph
+                  style={{ textAlign: "center", color: "#666", marginTop: 32 }}
+                >
+                  数据存储在本地 JSON 文件中，实时同步
+                </Paragraph>
+              </div>
+            </>
           )}
-
-          {/* 阶段目标 */}
-          {stats.current > 0 && (
-            <MilestonesCard
-              currentWeight={stats.current}
-              onMilestoneChange={async () => {
-                await Promise.all([
-                  loadData(),
-                  loadAvailableDates(),
-                  loadAllTimeReport(),
-                ]);
-              }}
-            />
-          )}
-
-          {/* 报告标签页 */}
-          <Card style={{ marginBottom: 8 }}>
-            <Tabs
-              defaultActiveKey="all-time"
-              tabBarExtraContent={{
-                left: (
-                  <span style={{ marginRight: 16, fontSize: 16, fontWeight: 500 }}>
-                    <BarChartOutlined /> 数据报告
-                  </span>
-                ),
-              }}
-              items={[
-                {
-                  key: "all-time",
-                  label: "📊 全部历史",
-                  children: allTimeReport && (
-                    <UnifiedReportPanel
-                      report={allTimeReport}
-                      loading={reportsLoading}
-                      height={profile.height}
-                    />
-                  ),
-                },
-                {
-                  key: "monthly",
-                  label: "📅 月报",
-                  children: monthlyReport && (
-                    <UnifiedReportPanel
-                      report={monthlyReport}
-                      loading={reportsLoading}
-                      onPrevious={handlePreviousMonth}
-                      onNext={handleNextMonth}
-                      canGoPrevious={canGoPreviousMonth}
-                      canGoNext={canGoNextMonth}
-                      height={profile.height}
-                    />
-                  ),
-                },
-                {
-                  key: "weekly",
-                  label: "📆 周报",
-                  children: weeklyReport && (
-                    <UnifiedReportPanel
-                      report={weeklyReport}
-                      loading={reportsLoading}
-                      onPrevious={handlePreviousWeek}
-                      onNext={handleNextWeek}
-                      canGoPrevious={canGoPreviousWeek}
-                      canGoNext={canGoNextWeek}
-                      height={profile.height}
-                    />
-                  ),
-                },
-              ]}
-            />
-          </Card>
-
-          {/* 数据备份 */}
-          <DataBackup
-            onDataChange={async () => {
-              await Promise.all([
-                loadData(),
-                loadAvailableDates(),
-                loadAllTimeReport(),
-              ]);
-            }}
-          />
-
-          {/* 页脚 */}
-          <div className="footer">
-            <Paragraph
-              style={{ textAlign: "center", color: "#666", marginTop: 32 }}
-            >
-              数据存储在本地 JSON 文件中，实时同步
-            </Paragraph>
-          </div>
         </div>
       </Content>
     </Layout>

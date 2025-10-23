@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Card, Button, List, Tag, Modal, Form, InputNumber, Input, message, Popconfirm } from "antd";
+import { Card, Button, List, Tag, Modal, Form, InputNumber, Input, message, Popconfirm, Empty } from "antd";
 import { PlusOutlined, TrophyOutlined, EditOutlined, DeleteOutlined, CheckCircleOutlined } from "@ant-design/icons";
 import { Milestone } from "../types";
 import { getMilestones, addMilestone, updateMilestone, deleteMilestone } from "../utils/milestones-api";
@@ -128,7 +128,24 @@ export const MilestonesCard: React.FC<MilestonesCardProps> = ({
         <List
           loading={loading}
           dataSource={sortedMilestones}
-          locale={{ emptyText: "还没有设置阶段目标，点击上方按钮添加" }}
+          locale={{
+            emptyText: (
+              <Empty
+                image={Empty.PRESENTED_IMAGE_SIMPLE}
+                description={
+                  <div>
+                    <div style={{ fontSize: 15, color: "#666", marginBottom: 8 }}>
+                      还没有设置阶段目标
+                    </div>
+                    <div style={{ fontSize: 13, color: "#999" }}>
+                      点击上方 "添加目标" 按钮创建你的第一个目标
+                    </div>
+                  </div>
+                }
+                style={{ padding: "20px 0" }}
+              />
+            ),
+          }}
           renderItem={(milestone) => {
             const isAchieved = !!milestone.achievedDate;
             const progress = currentWeight <= milestone.targetWeight;

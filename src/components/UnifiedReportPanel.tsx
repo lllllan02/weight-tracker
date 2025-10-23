@@ -229,9 +229,20 @@ export const UnifiedReportPanel: React.FC<UnifiedReportPanelProps> = ({
   if (!report || report.records.length === 0) {
     return (
       <Card>
-        <div style={{ textAlign: "center", padding: "40px 0", color: "#999" }}>
-          暂无数据
-        </div>
+        <Empty
+          image={Empty.PRESENTED_IMAGE_SIMPLE}
+          description={
+            <div>
+              <div style={{ fontSize: 16, color: "#666", marginBottom: 8 }}>
+                暂无数据
+              </div>
+              <div style={{ fontSize: 14, color: "#999" }}>
+                开始记录体重，查看健康趋势
+              </div>
+            </div>
+          }
+          style={{ padding: "60px 0" }}
+        />
       </Card>
     );
   }

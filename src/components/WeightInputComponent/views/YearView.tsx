@@ -259,9 +259,9 @@ export const YearView: React.FC<YearViewProps> = ({
                 background: isCurrentYear
                   ? "#e6f7ff"
                   : isSelectedYear
-                  ? "#f0f8ff"
+                  ? "#f0f5ff"
                   : hasRecords
-                  ? "#f6ffed"
+                  ? "#f0f5ff"
                   : "#fff",
                 border: `1px solid ${
                   isCurrentYear
@@ -269,7 +269,7 @@ export const YearView: React.FC<YearViewProps> = ({
                     : isSelectedYear
                     ? "#91d5ff"
                     : hasRecords
-                    ? "#52c41a"
+                    ? "#d6e4ff"
                     : "#f0f0f0"
                 }`,
                 color: isCurrentYear
@@ -277,7 +277,7 @@ export const YearView: React.FC<YearViewProps> = ({
                   : isSelectedYear
                   ? "#1677ff"
                   : hasRecords
-                  ? "#389e0d"
+                  ? "#1890ff"
                   : "#666",
                 fontWeight:
                   isCurrentYear || isSelectedYear || hasRecords ? 600 : 400,
@@ -285,6 +285,20 @@ export const YearView: React.FC<YearViewProps> = ({
                 transition: "all 0.2s ease",
                 fontSize: 14,
                 position: "relative",
+                boxShadow: isCurrentYear ? "0 2px 8px rgba(24, 144, 255, 0.2)" : "none",
+              }}
+              onMouseEnter={(e) => {
+                if (!isCurrentYear) {
+                  e.currentTarget.style.backgroundColor = "#f5f5f5";
+                  e.currentTarget.style.transform = "translateY(-2px)";
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isCurrentYear) {
+                  const bg = isSelectedYear || hasRecords ? "#f0f5ff" : "#fff";
+                  e.currentTarget.style.backgroundColor = bg;
+                  e.currentTarget.style.transform = "translateY(0)";
+                }
               }}
             >
               {year}
