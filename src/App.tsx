@@ -127,7 +127,10 @@ function App() {
 
   const getWeekStartKey = (date: Date) => {
     const weekStart = new Date(date);
-    weekStart.setDate(date.getDate() - date.getDay());
+    // 计算到周一的天数（周一为一周的开始）
+    const dayOfWeek = date.getDay();
+    const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    weekStart.setDate(date.getDate() - daysToMonday);
     weekStart.setHours(0, 0, 0, 0);
     // 使用本地日期格式，避免时区问题
     const year = weekStart.getFullYear();

@@ -40,7 +40,10 @@ router.get('/available-weeks', (req, res) => {
     data.records.forEach(record => {
       const date = new Date(record.date);
       const weekStart = new Date(date);
-      weekStart.setDate(date.getDate() - date.getDay());
+      // 计算到周一的天数（周一为一周的开始）
+      const dayOfWeek = date.getDay();
+      const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+      weekStart.setDate(date.getDate() - daysToMonday);
       weekStart.setHours(0, 0, 0, 0);
       // 使用本地日期格式，避免时区问题
       const year = weekStart.getFullYear();
@@ -214,7 +217,10 @@ router.get('/monthly', (req, res) => {
 // 生成指定日期的周报
 function generateWeeklyReportForDate(records, profile, targetDate, exerciseRecords = []) {
   const weekStart = new Date(targetDate);
-  weekStart.setDate(targetDate.getDate() - targetDate.getDay());
+  // 计算到周一的天数（周一为一周的开始）
+  const dayOfWeek = targetDate.getDay();
+  const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+  weekStart.setDate(targetDate.getDate() - daysToMonday);
   weekStart.setHours(0, 0, 0, 0);
   const weekEnd = new Date(weekStart);
   weekEnd.setDate(weekStart.getDate() + 6);
