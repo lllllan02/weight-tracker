@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Card, Button, Form, InputNumber, Select, message, Space, Divider, Statistic } from "antd";
+import { Card, Button, Form, InputNumber, Select, message, Space, Divider } from "antd";
 import { SettingOutlined, UserOutlined, FireOutlined, ArrowRightOutlined } from "@ant-design/icons";
 import { UserProfile, WeightStats, Milestone } from "../types";
 import { getProfile, updateProfile } from "../utils/api";
@@ -28,12 +28,14 @@ export const ProfileSettingsCard: React.FC<ProfileSettingsCardProps> = ({
   useEffect(() => {
     loadProfile();
     loadNextMilestone();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     if (stats?.current) {
       loadNextMilestone();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stats?.current]);
 
   const loadProfile = async () => {

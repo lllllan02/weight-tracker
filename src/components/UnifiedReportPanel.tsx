@@ -28,7 +28,7 @@ import {
 } from "chart.js";
 import "chartjs-adapter-date-fns";
 import { Chart } from "react-chartjs-2";
-import { Report, AIAnalysis } from "../types";
+import { Report, AIAnalysis, TargetPrediction } from "../types";
 import {
   generateWeeklyAIAnalysis,
   generateMonthlyAIAnalysis,
@@ -58,6 +58,8 @@ interface UnifiedReportPanelProps {
   canGoPrevious?: boolean;
   canGoNext?: boolean;
   height?: number; // 用户身高，用于计算 BMI
+  targetPrediction?: TargetPrediction; // 趋势预测数据
+  targetWeight?: number; // 目标体重
 }
 
 export const UnifiedReportPanel: React.FC<UnifiedReportPanelProps> = ({
@@ -68,6 +70,8 @@ export const UnifiedReportPanel: React.FC<UnifiedReportPanelProps> = ({
   canGoPrevious = true,
   canGoNext = true,
   height = 170, // 默认身高
+  targetPrediction,
+  targetWeight,
 }) => {
   const [aiAnalysis, setAiAnalysis] = useState<AIAnalysis | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
@@ -203,76 +207,80 @@ export const UnifiedReportPanel: React.FC<UnifiedReportPanelProps> = ({
       { x: chartMaxTime, y: 0 },
     ];
 
+    // 准备数据集
+    const datasets: any[] = [
+      {
+        type: "line" as const,
+        label: "体重 (kg)",
+        data: weightData,
+        borderColor: "#1890ff",
+        backgroundColor: "rgba(24, 144, 255, 0.1)",
+        tension: 0.4,
+        fill: true,
+        pointRadius: 4,
+        pointHoverRadius: 6,
+        yAxisID: "y",
+        order: 2,
+      },
+      {
+        type: "line" as const,
+        label: "7日移动平均",
+        data: movingAverageData,
+        borderColor: "#722ed1",
+        backgroundColor: "transparent",
+        borderWidth: 2,
+        borderDash: [8, 4],
+        tension: 0.4,
+        fill: false,
+        pointRadius: 0,
+        pointHoverRadius: 4,
+        yAxisID: "y",
+        order: 3,
+      },
+      {
+        type: "scatter" as const,
+        label: "异常波动",
+        data: anomalyPoints,
+        backgroundColor: "#ff4d4f",
+        borderColor: "#fff",
+        borderWidth: 2,
+        pointRadius: 8,
+        pointHoverRadius: 10,
+        pointStyle: "triangle",
+        yAxisID: "y",
+        order: 1,
+      },
+      {
+        type: "bar" as const,
+        label: "体重变化",
+        data: changeData,
+        backgroundColor: changeColors,
+        borderColor: changeColors.map((color) => color.replace("0.6", "1")),
+        borderWidth: 1,
+        yAxisID: "y2",
+        order: 4,
+      },
+      {
+        type: "line" as const,
+        label: "零线 (无变化)",
+        data: zeroLineData,
+        borderColor: "#f59e0b",
+        backgroundColor: "transparent",
+        borderWidth: 2,
+        borderDash: [5, 5],
+        tension: 0,
+        fill: false,
+        yAxisID: "y2",
+        pointRadius: 0,
+        pointHoverRadius: 0,
+        order: 5,
+      },
+    ];
+
+
     return {
       chartData: {
-        datasets: [
-          {
-            type: "line" as const,
-            label: "体重 (kg)",
-            data: weightData,
-            borderColor: "#1890ff",
-            backgroundColor: "rgba(24, 144, 255, 0.1)",
-            tension: 0.4,
-            fill: true,
-            pointRadius: 4,
-            pointHoverRadius: 6,
-            yAxisID: "y",
-            order: 2,
-          },
-          {
-            type: "line" as const,
-            label: "7日移动平均",
-            data: movingAverageData,
-            borderColor: "#722ed1",
-            backgroundColor: "transparent",
-            borderWidth: 2,
-            borderDash: [8, 4],
-            tension: 0.4,
-            fill: false,
-            pointRadius: 0,
-            pointHoverRadius: 4,
-            yAxisID: "y",
-            order: 3,
-          },
-          {
-            type: "scatter" as const,
-            label: "异常波动",
-            data: anomalyPoints,
-            backgroundColor: "#ff4d4f",
-            borderColor: "#fff",
-            borderWidth: 2,
-            pointRadius: 8,
-            pointHoverRadius: 10,
-            pointStyle: "triangle",
-            yAxisID: "y",
-            order: 1,
-          },
-          {
-            type: "bar" as const,
-            label: "体重变化",
-            data: changeData,
-            backgroundColor: changeColors,
-            borderColor: changeColors.map((color) => color.replace("0.6", "1")),
-            borderWidth: 1,
-            yAxisID: "y2",
-            order: 4,
-          },
-          {
-            type: "line" as const,
-            label: "零线 (无变化)",
-            data: zeroLineData,
-            borderColor: "#f59e0b",
-            backgroundColor: "transparent",
-            borderWidth: 2,
-            borderDash: [5, 5],
-            tension: 0,
-            fill: false,
-            yAxisID: "y2",
-            pointRadius: 0,
-            pointHoverRadius: 0,
-            order: 5,
-          },
-        ],
+        datasets,
       },
       timeRange: { min: chartMinTime, max: chartMaxTime },
       anomalyCount: anomalyPoints.length,
@@ -472,6 +480,13 @@ export const UnifiedReportPanel: React.FC<UnifiedReportPanelProps> = ({
                     legend: {
                       display: true,
                       position: "top",
+                      labels: {
+                        filter: function(item: any, chart: any) {
+                          // 只显示有数据的数据集
+                          const dataset = chart.datasets[item.datasetIndex];
+                          return dataset && dataset.data && dataset.data.length > 0;
+                        }
+                      }
                     },
                     tooltip: {
                       mode: "index",

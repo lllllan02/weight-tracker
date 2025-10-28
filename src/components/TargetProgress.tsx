@@ -1,10 +1,8 @@
 import React from "react";
-import { Card, Progress, Typography, Tooltip, Empty } from "antd";
+import { Card, Progress, Tooltip, Empty } from "antd";
 import { AimOutlined, TrophyOutlined, CheckCircleOutlined } from "@ant-design/icons";
 import { WeightStats, Milestone } from "../types";
 import dayjs from "dayjs";
-
-const { Text } = Typography;
 
 interface TargetProgressProps {
   stats: WeightStats;

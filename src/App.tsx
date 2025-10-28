@@ -23,6 +23,7 @@ import { UnifiedReportPanel } from "./components/UnifiedReportPanel";
 import { DataBackup } from "./components/DataBackup";
 import { MilestonesCard } from "./components/MilestonesCard";
 import { ProfileSettingsCard } from "./components/ProfileSettingsCard";
+import { PredictionCard } from "./components/PredictionCard";
 
 const { Header, Content } = Layout;
 const { Title, Paragraph } = Typography;
@@ -422,6 +423,10 @@ function App() {
                               report={allTimeReport}
                               loading={reportsLoading}
                               height={profile.height}
+                              targetPrediction={stats.targetPrediction}
+                              targetWeight={profile.milestones && profile.milestones.length > 0 
+                                ? Math.min(...profile.milestones.map(m => m.targetWeight))
+                                : undefined}
                             />
                           ),
                         },
@@ -475,16 +480,26 @@ function App() {
                 <div className="sidebar-column" style={{ width: 360, flexShrink: 0 }}>
                   {/* 阶段目标 */}
                   {stats.current > 0 && (
-                    <MilestonesCard
-                      currentWeight={stats.current}
-                      profile={profile}
-                      onMilestoneChange={async () => {
-                        await Promise.all([
-                          loadData(),
-                          loadAvailableDates(),
-                          loadAllTimeReport(),
-                        ]);
-                      }}
+                    <div style={{ marginBottom: 12 }}>
+                      <MilestonesCard
+                        currentWeight={stats.current}
+                        profile={profile}
+                        onMilestoneChange={async () => {
+                          await Promise.all([
+                            loadData(),
+                            loadAvailableDates(),
+                            loadAllTimeReport(),
+                          ]);
+                        }}
+                      />
+                    </div>
+                  )}
+                  
+                  {/* 趋势预测 */}
+                  {stats.current > 0 && profile.milestones && profile.milestones.length > 0 && (
+                    <PredictionCard
+                      targetPrediction={stats.targetPrediction}
+                      targetWeight={Math.min(...profile.milestones.map(m => m.targetWeight))}
                     />
                   )}
                 </div>

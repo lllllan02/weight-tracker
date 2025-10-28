@@ -28,6 +28,48 @@ export interface UserProfile {
   gender?: "male" | "female"; // 性别
 }
 
+export interface PredictionMethod {
+  method: string;
+  methodKey: 'linear' | 'exponentialDecay' | 'dynamicBMR';
+  daysRemaining: number;
+  predictedDate: string;
+  dailyChange: number;
+  confidence: 'low' | 'medium' | 'high';
+  avgCalorieDeficit?: number; // 平均每日热量赤字（仅dynamicBMR）
+  decayFactor?: number; // 衰减系数（仅exponentialDecay）
+  description?: string; // 模型描述
+}
+
+export interface PredictionPoint {
+  day: number;
+  weight: number;
+}
+
+export interface PredictionResult {
+  method: string;
+  predictions: PredictionPoint[];
+  dailyChange: number;
+  slope?: number;
+  intercept?: number;
+  windowSize?: number;
+  decayFactor?: number; // 指数衰减系数
+  initialRate?: number; // 初始速率
+  avgCalorieDeficit?: number; // 平均每日热量赤字
+}
+
+export interface TargetPrediction {
+  achieved: boolean;
+  currentWeight?: number;
+  targetWeight?: number;
+  weightDifference?: number;
+  daysRemaining?: number;
+  predictedDate?: string;
+  predictions?: PredictionMethod[];
+  linearPrediction?: PredictionResult;
+  exponentialDecayPrediction?: PredictionResult;
+  dynamicBMRPrediction?: PredictionResult;
+}
+
 export interface WeightStats {
   current: number;
   average: number;
@@ -43,6 +85,7 @@ export interface WeightStats {
   initialWeight: number;
   currentBMR?: number; // 当前体重的基础代谢
   targetBMR?: number; // 目标体重的基础代谢
+  targetPrediction?: TargetPrediction; // 目标达成预测
 }
 
 export interface TimeSlot {

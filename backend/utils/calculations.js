@@ -140,6 +140,12 @@ function calculateStats(records, profile) {
     }
   }
 
+  // 计算趋势预测
+  let targetPrediction = null;
+  if (targetWeight && targetWeight > 0) {
+    targetPrediction = predictTargetDate(records, targetWeight, safeProfile);
+  }
+
   return {
     current,
     average,
@@ -154,7 +160,8 @@ function calculateStats(records, profile) {
     targetRemaining,
     initialWeight: records.length > 0 ? sortedRecords[0].weight : 0,
     currentBMR,
-    targetBMR
+    targetBMR,
+    targetPrediction
   };
 }
 
@@ -216,6 +223,329 @@ function calculateChartData(records, profile) {
   };
 }
 
+// 线性回归预测
+function linearRegression(records, daysToPredict = 30) {
+  if (records.length < 2) return null;
+
+  const sortedRecords = [...records].sort((a, b) => 
+    new Date(a.date).getTime() - new Date(b.date).getTime()
+  );
+
+  // 使用最近30条记录或全部记录（取较小值）
+  const recentRecords = sortedRecords.slice(-Math.min(30, sortedRecords.length));
+  
+  if (recentRecords.length < 2) return null;
+
+  const startDate = new Date(recentRecords[0].date).getTime();
+  
+  // 转换为天数和体重数组
+  const data = recentRecords.map(record => ({
+    day: (new Date(record.date).getTime() - startDate) / (1000 * 60 * 60 * 24),
+    weight: record.weight
+  }));
+
+  // 计算线性回归参数
+  const n = data.length;
+  const sumX = data.reduce((sum, point) => sum + point.day, 0);
+  const sumY = data.reduce((sum, point) => sum + point.weight, 0);
+  const sumXY = data.reduce((sum, point) => sum + point.day * point.weight, 0);
+  const sumX2 = data.reduce((sum, point) => sum + point.day * point.day, 0);
+
+  const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+  const intercept = (sumY - slope * sumX) / n;
+
+  // 生成预测数据
+  const lastDay = data[data.length - 1].day;
+  const predictions = [];
+  
+  for (let i = 1; i <= daysToPredict; i++) {
+    const day = lastDay + i;
+    const predictedWeight = slope * day + intercept;
+    predictions.push({
+      day,
+      weight: Number(predictedWeight.toFixed(1))
+    });
+  }
+
+  return {
+    method: 'linear',
+    slope,
+    intercept,
+    predictions,
+    dailyChange: Number(slope.toFixed(3)) // 每日平均变化
+  };
+}
+
+// 指数衰减预测（考虑减重速度逐渐放缓）
+function exponentialDecayPredict(records, daysToPredict = 30) {
+  if (records.length < 5) return null;
+
+  const sortedRecords = [...records].sort((a, b) => 
+    new Date(a.date).getTime() - new Date(b.date).getTime()
+  );
+
+  const recentRecords = sortedRecords.slice(-Math.min(30, sortedRecords.length));
+  if (recentRecords.length < 5) return null;
+
+  const startDate = new Date(recentRecords[0].date).getTime();
+  
+  // 计算每日变化率
+  const dailyChanges = [];
+  for (let i = 1; i < recentRecords.length; i++) {
+    const daysDiff = (new Date(recentRecords[i].date).getTime() - new Date(recentRecords[i-1].date).getTime()) / (1000 * 60 * 60 * 24);
+    if (daysDiff > 0) {
+      const change = (recentRecords[i].weight - recentRecords[i-1].weight) / daysDiff;
+      dailyChanges.push(change);
+    }
+  }
+
+  if (dailyChanges.length < 2) return null;
+
+  // 计算初始速率和衰减系数
+  const initialRate = dailyChanges.slice(0, Math.ceil(dailyChanges.length / 3)).reduce((sum, c) => sum + c, 0) / Math.ceil(dailyChanges.length / 3);
+  const recentRate = dailyChanges.slice(-Math.ceil(dailyChanges.length / 3)).reduce((sum, c) => sum + c, 0) / Math.ceil(dailyChanges.length / 3);
+  
+  // 估算衰减系数（越接近1表示衰减越慢）
+  const decayFactor = Math.abs(recentRate / initialRate);
+  const adjustedDecayFactor = Math.max(0.85, Math.min(0.98, decayFactor)); // 限制在合理范围内
+
+  // 生成预测数据
+  const lastWeight = recentRecords[recentRecords.length - 1].weight;
+  const lastDay = (new Date(recentRecords[recentRecords.length - 1].date).getTime() - startDate) / (1000 * 60 * 60 * 24);
+  const predictions = [];
+  
+  let currentWeight = lastWeight;
+  let currentRate = recentRate;
+
+  for (let i = 1; i <= daysToPredict; i++) {
+    // 每天应用衰减因子
+    currentRate = currentRate * adjustedDecayFactor;
+    currentWeight += currentRate;
+    
+    predictions.push({
+      day: lastDay + i,
+      weight: Number(currentWeight.toFixed(1))
+    });
+  }
+
+  return {
+    method: 'exponentialDecay',
+    predictions,
+    dailyChange: Number(recentRate.toFixed(3)),
+    decayFactor: Number(adjustedDecayFactor.toFixed(3)),
+    initialRate: Number(initialRate.toFixed(3))
+  };
+}
+
+// 动态BMR模型预测（考虑体重变化导致的代谢率变化）
+function dynamicBMRPredict(records, profile, targetWeight, daysToPredict = 365) {
+  if (records.length < 2 || !profile || !profile.birthYear || !profile.gender || !profile.height) {
+    return null;
+  }
+
+  const sortedRecords = [...records].sort((a, b) => 
+    new Date(a.date).getTime() - new Date(b.date).getTime()
+  );
+
+  const recentRecords = sortedRecords.slice(-Math.min(30, sortedRecords.length));
+  if (recentRecords.length < 2) return null;
+
+  // 计算历史平均每日热量赤字
+  const totalWeightChange = recentRecords[recentRecords.length - 1].weight - recentRecords[0].weight;
+  const daysDiff = (new Date(recentRecords[recentRecords.length - 1].date).getTime() - 
+                   new Date(recentRecords[0].date).getTime()) / (1000 * 60 * 60 * 24);
+  
+  if (daysDiff <= 0) return null;
+
+  // 1kg脂肪约等于7700kcal
+  const avgDailyCalorieDeficit = (totalWeightChange * 7700) / daysDiff;
+
+  // 如果热量赤字太小（接近维持），则无法预测
+  if (Math.abs(avgDailyCalorieDeficit) < 50) return null;
+
+  const startDate = new Date(recentRecords[0].date).getTime();
+  const lastWeight = recentRecords[recentRecords.length - 1].weight;
+  const lastDay = (new Date(recentRecords[recentRecords.length - 1].date).getTime() - startDate) / (1000 * 60 * 60 * 24);
+  
+  const currentYear = new Date().getFullYear();
+  const age = currentYear - profile.birthYear;
+
+  const predictions = [];
+  let currentWeight = lastWeight;
+
+  // 模拟每天的体重变化
+  for (let i = 1; i <= daysToPredict; i++) {
+    // 计算当前体重的BMR
+    const currentBMR = calculateBMR(currentWeight, profile.height, profile.birthYear, profile.gender);
+    
+    if (!currentBMR) break;
+
+    // 假设活动系数为1.2（轻度活动）
+    const tdee = currentBMR * 1.2;
+    
+    // 计算净热量赤字（考虑TDEE变化）
+    const effectiveDeficit = avgDailyCalorieDeficit;
+    
+    // 计算体重变化（考虑代谢适应，实际效果会打折扣）
+    const metabolicAdaptation = 0.9; // 代谢适应系数，实际消耗会降低约10%
+    const weightChange = (effectiveDeficit * metabolicAdaptation) / 7700;
+    
+    currentWeight += weightChange;
+    
+    // 如果已经接近或超过目标，停止预测
+    if (targetWeight) {
+      const isLosingWeight = avgDailyCalorieDeficit < 0;
+      if ((isLosingWeight && currentWeight <= targetWeight) || 
+          (!isLosingWeight && currentWeight >= targetWeight)) {
+        predictions.push({
+          day: lastDay + i,
+          weight: Number(currentWeight.toFixed(1))
+        });
+        break;
+      }
+    }
+    
+    predictions.push({
+      day: lastDay + i,
+      weight: Number(currentWeight.toFixed(1))
+    });
+  }
+
+  return {
+    method: 'dynamicBMR',
+    predictions,
+    dailyChange: Number((avgDailyCalorieDeficit / 7700).toFixed(3)),
+    avgCalorieDeficit: Math.round(avgDailyCalorieDeficit)
+  };
+}
+
+// 计算达到目标的预计日期
+function predictTargetDate(records, targetWeight, profile) {
+  if (records.length < 2 || !targetWeight || targetWeight <= 0) {
+    return null;
+  }
+
+  const sortedRecords = [...records].sort((a, b) => 
+    new Date(a.date).getTime() - new Date(b.date).getTime()
+  );
+  
+  const currentWeight = sortedRecords[sortedRecords.length - 1].weight;
+  const weightDifference = targetWeight - currentWeight;
+
+  // 如果已经达到目标
+  if (Math.abs(weightDifference) < 0.5) {
+    return {
+      achieved: true,
+      daysRemaining: 0,
+      predictedDate: new Date().toISOString().split('T')[0]
+    };
+  }
+
+  // 1. 线性回归预测（基础模型）
+  const linearPred = linearRegression(records, 365);
+
+  // 2. 指数衰减预测（考虑减重速度放缓）
+  const expPred = exponentialDecayPredict(records, 365);
+
+  // 3. 动态BMR预测（最科学的模型，需要个人资料）
+  const dynamicPred = profile ? dynamicBMRPredict(records, profile, targetWeight, 365) : null;
+
+  const predictions = [];
+
+  // 动态BMR预测（推荐使用，最科学）
+  if (dynamicPred && dynamicPred.predictions && dynamicPred.predictions.length > 0) {
+    const lastPrediction = dynamicPred.predictions[dynamicPred.predictions.length - 1];
+    const daysToTarget = lastPrediction.day - 
+      (new Date(sortedRecords[sortedRecords.length - 1].date).getTime() - new Date(records[0].date).getTime()) / (1000 * 60 * 60 * 24);
+    
+    if (daysToTarget > 0 && daysToTarget < 3650) {
+      const lastDate = new Date(sortedRecords[sortedRecords.length - 1].date);
+      const predictedDate = new Date(lastDate);
+      predictedDate.setDate(lastDate.getDate() + Math.ceil(daysToTarget));
+      
+      predictions.push({
+        method: '动态代谢模型',
+        methodKey: 'dynamicBMR',
+        daysRemaining: Math.ceil(daysToTarget),
+        predictedDate: predictedDate.toISOString().split('T')[0],
+        dailyChange: dynamicPred.dailyChange,
+        confidence: 'high',
+        avgCalorieDeficit: dynamicPred.avgCalorieDeficit,
+        description: '考虑体重变化导致的代谢率变化（最科学）'
+      });
+    }
+  }
+
+  // 指数衰减预测
+  if (expPred && expPred.predictions && expPred.predictions.length > 0) {
+    // 找到最接近目标体重的预测点
+    let closestIndex = -1;
+    let minDiff = Infinity;
+    
+    for (let i = 0; i < expPred.predictions.length; i++) {
+      const diff = Math.abs(expPred.predictions[i].weight - targetWeight);
+      if (diff < minDiff) {
+        minDiff = diff;
+        closestIndex = i;
+      }
+    }
+    
+    if (closestIndex >= 0 && minDiff < 2) { // 找到接近目标的点
+      const daysToTarget = closestIndex + 1;
+      const lastDate = new Date(sortedRecords[sortedRecords.length - 1].date);
+      const predictedDate = new Date(lastDate);
+      predictedDate.setDate(lastDate.getDate() + daysToTarget);
+      
+      predictions.push({
+        method: '指数衰减模型',
+        methodKey: 'exponentialDecay',
+        daysRemaining: daysToTarget,
+        predictedDate: predictedDate.toISOString().split('T')[0],
+        dailyChange: expPred.dailyChange,
+        confidence: 'high',
+        decayFactor: expPred.decayFactor,
+        description: '考虑减重速度逐渐放缓'
+      });
+    }
+  }
+
+  // 线性回归预测
+  if (linearPred && Math.abs(linearPred.dailyChange) > 0.001) {
+    const daysToTarget = weightDifference / linearPred.dailyChange;
+    
+    if (daysToTarget > 0 && daysToTarget < 3650) {
+      const lastDate = new Date(sortedRecords[sortedRecords.length - 1].date);
+      const predictedDate = new Date(lastDate);
+      predictedDate.setDate(lastDate.getDate() + Math.ceil(daysToTarget));
+      
+      predictions.push({
+        method: '线性回归',
+        methodKey: 'linear',
+        daysRemaining: Math.ceil(daysToTarget),
+        predictedDate: predictedDate.toISOString().split('T')[0],
+        dailyChange: linearPred.dailyChange,
+        confidence: 'medium',
+        description: '基于历史趋势线预测'
+      });
+    }
+  }
+
+  if (predictions.length === 0) {
+    return null;
+  }
+
+  return {
+    achieved: false,
+    currentWeight,
+    targetWeight,
+    weightDifference: Number(weightDifference.toFixed(1)),
+    predictions,
+    linearPrediction: linearPred,
+    exponentialDecayPrediction: expPred,
+    dynamicBMRPrediction: dynamicPred
+  };
+}
+
 // 计算日历数据
 function calculateCalendarData(records, exerciseRecords = []) {
   const timeSlots = [
@@ -265,5 +595,9 @@ module.exports = {
   formatDate,
   calculateStats,
   calculateChartData,
-  calculateCalendarData
+  calculateCalendarData,
+  linearRegression,
+  exponentialDecayPredict,
+  dynamicBMRPredict,
+  predictTargetDate
 }; 
