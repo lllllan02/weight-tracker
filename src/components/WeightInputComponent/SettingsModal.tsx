@@ -1,7 +1,9 @@
 import React from "react";
-import { Modal, Form, InputNumber } from "antd";
+import { Modal, Form, InputNumber, Select } from "antd";
 import { SettingOutlined } from "@ant-design/icons";
 import { UserProfile } from "../../types";
+
+const { Option } = Select;
 
 interface SettingsModalProps {
   isVisible: boolean;
@@ -37,6 +39,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         layout="vertical"
         initialValues={{
           height: profile.height,
+          birthYear: profile.birthYear,
+          gender: profile.gender,
         }}
       >
         <Form.Item
@@ -59,7 +63,41 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             max={250}
           />
         </Form.Item>
+
+        <Form.Item
+          name="birthYear"
+          label="出生年份"
+          rules={[
+            {
+              type: "number",
+              min: 1900,
+              max: new Date().getFullYear(),
+              message: `出生年份范围应在1900-${new Date().getFullYear()}之间`,
+            },
+          ]}
+        >
+          <InputNumber
+            placeholder="例如: 1990"
+            style={{ width: "100%" }}
+            min={1900}
+            max={new Date().getFullYear()}
+          />
+        </Form.Item>
+
+        <Form.Item
+          name="gender"
+          label="性别"
+        >
+          <Select placeholder="请选择性别" allowClear>
+            <Option value="male">男性</Option>
+            <Option value="female">女性</Option>
+          </Select>
+        </Form.Item>
+
         <div style={{ color: "#999", fontSize: 14, marginTop: -8 }}>
+          💡 提示：出生年份和性别用于计算基础代谢率（BMR）
+        </div>
+        <div style={{ color: "#999", fontSize: 14, marginTop: 8 }}>
           💡 提示：请在下方"阶段目标"中设置减重目标
         </div>
       </Form>

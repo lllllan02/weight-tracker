@@ -4,6 +4,34 @@ function calculateBMI(weight, height) {
   return Number((weight / (heightInMeters * heightInMeters)).toFixed(1));
 }
 
+// 计算基础代谢率 (BMR)
+// 使用 Mifflin-St Jeor 公式
+// 男性：BMR = 10 × 体重(kg) + 6.25 × 身高(cm) - 5 × 年龄(岁) + 5
+// 女性：BMR = 10 × 体重(kg) + 6.25 × 身高(cm) - 5 × 年龄(岁) - 161
+function calculateBMR(weight, height, birthYear, gender) {
+  if (!birthYear || birthYear <= 0) {
+    return null; // 如果没有出生年份信息，返回 null
+  }
+  
+  // 根据出生年份计算当前年龄
+  const currentYear = new Date().getFullYear();
+  const age = currentYear - birthYear;
+  
+  if (age <= 0 || age > 150) {
+    return null; // 年龄不合理
+  }
+  
+  const baseBMR = 10 * weight + 6.25 * height - 5 * age;
+  
+  if (gender === 'male') {
+    return Math.round(baseBMR + 5);
+  } else if (gender === 'female') {
+    return Math.round(baseBMR - 161);
+  }
+  
+  return null; // 如果没有性别信息，返回 null
+}
+
 // 格式化日期
 function formatDate(dateString) {
   const date = new Date(dateString);
@@ -100,6 +128,18 @@ function calculateStats(records, profile) {
     targetRemaining = Number((targetWeight - current).toFixed(1));
   }
 
+  // 计算当前体重和目标体重的基础代谢率
+  let currentBMR = null;
+  let targetBMR = null;
+  
+  if (safeProfile.birthYear && safeProfile.gender) {
+    currentBMR = calculateBMR(current, safeProfile.height, safeProfile.birthYear, safeProfile.gender);
+    
+    if (targetWeight && targetWeight > 0) {
+      targetBMR = calculateBMR(targetWeight, safeProfile.height, safeProfile.birthYear, safeProfile.gender);
+    }
+  }
+
   return {
     current,
     average,
@@ -112,7 +152,9 @@ function calculateStats(records, profile) {
     thisWeek,
     targetProgress: Number(targetProgress.toFixed(1)),
     targetRemaining,
-    initialWeight: records.length > 0 ? sortedRecords[0].weight : 0
+    initialWeight: records.length > 0 ? sortedRecords[0].weight : 0,
+    currentBMR,
+    targetBMR
   };
 }
 
@@ -219,6 +261,7 @@ function calculateCalendarData(records, exerciseRecords = []) {
 
 module.exports = {
   calculateBMI,
+  calculateBMR,
   formatDate,
   calculateStats,
   calculateChartData,

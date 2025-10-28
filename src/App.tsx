@@ -22,6 +22,7 @@ import { TargetProgress } from "./components/TargetProgress";
 import { UnifiedReportPanel } from "./components/UnifiedReportPanel";
 import { DataBackup } from "./components/DataBackup";
 import { MilestonesCard } from "./components/MilestonesCard";
+import { ProfileSettingsCard } from "./components/ProfileSettingsCard";
 
 const { Header, Content } = Layout;
 const { Title, Paragraph } = Typography;
@@ -337,7 +338,7 @@ function App() {
             // 加载骨架屏
             <>
               {/* 体重输入骨架屏 */}
-              <Card style={{ marginBottom: 24, borderRadius: 12 }}>
+              <Card style={{ marginBottom: 12, borderRadius: 12 }}>
                 <div style={{ display: "flex", gap: 20 }}>
                   <div style={{ flex: 1 }}>
                     <Skeleton active paragraph={{ rows: 8 }} />
@@ -349,114 +350,145 @@ function App() {
               </Card>
 
               {/* 目标进度骨架屏 */}
-              <Card style={{ marginBottom: 24, borderRadius: 12 }}>
+              <Card style={{ marginBottom: 12, borderRadius: 12 }}>
                 <Skeleton active paragraph={{ rows: 2 }} />
               </Card>
 
               {/* 报告骨架屏 */}
-              <Card style={{ marginBottom: 24, borderRadius: 12 }}>
+              <Card style={{ marginBottom: 12, borderRadius: 12 }}>
                 <Skeleton active paragraph={{ rows: 10 }} />
               </Card>
             </>
           ) : (
             <>
-              {/* 体重输入 */}
-              <WeightInput
-                onAdd={handleAddRecord}
-                onExerciseChange={handleExerciseChange}
-                calendarData={calendarData}
-              />
+              {/* 上部区域 - 日历、个人资料和当天记录 */}
+              <div className="top-section-layout" style={{ display: "flex", gap: 16, alignItems: "stretch", marginBottom: 12 }}>
+                {/* 左侧：个人资料设置 */}
+                <div className="profile-column" style={{ width: 300, flexShrink: 0, display: "flex", flexDirection: "column" }}>
+                  <ProfileSettingsCard
+                    stats={stats}
+                    onProfileChange={async () => {
+                      await Promise.all([
+                        loadData(),
+                        loadAvailableDates(),
+                        loadAllTimeReport(),
+                      ]);
+                    }}
+                  />
+                </div>
+
+                {/* 中间和右侧：体重输入（日历+当天记录） */}
+                <div style={{ flex: 1, minWidth: 0, display: "flex" }}>
+                  <WeightInput
+                    onAdd={handleAddRecord}
+                    onExerciseChange={handleExerciseChange}
+                    calendarData={calendarData}
+                  />
+                </div>
+              </div>
 
               {/* 目标进度 - 使用最小的阶段目标作为最终目标 */}
               {stats.current > 0 && profile.milestones && profile.milestones.length > 0 && (
-                <TargetProgress 
-                  stats={stats} 
-                  targetWeight={Math.min(...profile.milestones.map(m => m.targetWeight))}
-                  milestones={profile.milestones}
-                />
+                <div style={{ marginBottom: 12 }}>
+                  <TargetProgress 
+                    stats={stats} 
+                    targetWeight={Math.min(...profile.milestones.map(m => m.targetWeight))}
+                    milestones={profile.milestones}
+                  />
+                </div>
               )}
 
-              {/* 阶段目标 */}
-              {stats.current > 0 && (
-                <MilestonesCard
-                  currentWeight={stats.current}
-                  onMilestoneChange={async () => {
-                    await Promise.all([
-                      loadData(),
-                      loadAvailableDates(),
-                      loadAllTimeReport(),
-                    ]);
-                  }}
-                />
-              )}
+              {/* 主要内容区域 - 两栏布局 */}
+              <div className="two-column-layout" style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
+                {/* 左侧主要内容 */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  {/* 报告标签页 */}
+                  <Card style={{ marginBottom: 12 }}>
+                    <Tabs
+                      defaultActiveKey="all-time"
+                      tabBarExtraContent={{
+                        left: (
+                          <span style={{ marginRight: 16, fontSize: 16, fontWeight: 500 }}>
+                            <BarChartOutlined /> 数据报告
+                          </span>
+                        ),
+                      }}
+                      items={[
+                        {
+                          key: "all-time",
+                          label: "📊 全部历史",
+                          children: allTimeReport && (
+                            <UnifiedReportPanel
+                              report={allTimeReport}
+                              loading={reportsLoading}
+                              height={profile.height}
+                            />
+                          ),
+                        },
+                        {
+                          key: "monthly",
+                          label: "📅 月报",
+                          children: monthlyReport && (
+                            <UnifiedReportPanel
+                              report={monthlyReport}
+                              loading={reportsLoading}
+                              onPrevious={handlePreviousMonth}
+                              onNext={handleNextMonth}
+                              canGoPrevious={canGoPreviousMonth}
+                              canGoNext={canGoNextMonth}
+                              height={profile.height}
+                            />
+                          ),
+                        },
+                        {
+                          key: "weekly",
+                          label: "📆 周报",
+                          children: weeklyReport && (
+                            <UnifiedReportPanel
+                              report={weeklyReport}
+                              loading={reportsLoading}
+                              onPrevious={handlePreviousWeek}
+                              onNext={handleNextWeek}
+                              canGoPrevious={canGoPreviousWeek}
+                              canGoNext={canGoNextWeek}
+                              height={profile.height}
+                            />
+                          ),
+                        },
+                      ]}
+                    />
+                  </Card>
 
-              {/* 报告标签页 */}
-              <Card style={{ marginBottom: 8 }}>
-                <Tabs
-                  defaultActiveKey="all-time"
-                  tabBarExtraContent={{
-                    left: (
-                      <span style={{ marginRight: 16, fontSize: 16, fontWeight: 500 }}>
-                        <BarChartOutlined /> 数据报告
-                      </span>
-                    ),
-                  }}
-                  items={[
-                    {
-                      key: "all-time",
-                      label: "📊 全部历史",
-                      children: allTimeReport && (
-                        <UnifiedReportPanel
-                          report={allTimeReport}
-                          loading={reportsLoading}
-                          height={profile.height}
-                        />
-                      ),
-                    },
-                    {
-                      key: "monthly",
-                      label: "📅 月报",
-                      children: monthlyReport && (
-                        <UnifiedReportPanel
-                          report={monthlyReport}
-                          loading={reportsLoading}
-                          onPrevious={handlePreviousMonth}
-                          onNext={handleNextMonth}
-                          canGoPrevious={canGoPreviousMonth}
-                          canGoNext={canGoNextMonth}
-                          height={profile.height}
-                        />
-                      ),
-                    },
-                    {
-                      key: "weekly",
-                      label: "📆 周报",
-                      children: weeklyReport && (
-                        <UnifiedReportPanel
-                          report={weeklyReport}
-                          loading={reportsLoading}
-                          onPrevious={handlePreviousWeek}
-                          onNext={handleNextWeek}
-                          canGoPrevious={canGoPreviousWeek}
-                          canGoNext={canGoNextWeek}
-                          height={profile.height}
-                        />
-                      ),
-                    },
-                  ]}
-                />
-              </Card>
+                  {/* 数据备份 */}
+                  <DataBackup
+                    onDataChange={async () => {
+                      await Promise.all([
+                        loadData(),
+                        loadAvailableDates(),
+                        loadAllTimeReport(),
+                      ]);
+                    }}
+                  />
+                </div>
 
-              {/* 数据备份 */}
-              <DataBackup
-                onDataChange={async () => {
-                  await Promise.all([
-                    loadData(),
-                    loadAvailableDates(),
-                    loadAllTimeReport(),
-                  ]);
-                }}
-              />
+                {/* 右侧边栏 */}
+                <div className="sidebar-column" style={{ width: 360, flexShrink: 0 }}>
+                  {/* 阶段目标 */}
+                  {stats.current > 0 && (
+                    <MilestonesCard
+                      currentWeight={stats.current}
+                      profile={profile}
+                      onMilestoneChange={async () => {
+                        await Promise.all([
+                          loadData(),
+                          loadAvailableDates(),
+                          loadAllTimeReport(),
+                        ]);
+                      }}
+                    />
+                  )}
+                </div>
+              </div>
 
               {/* 页脚 */}
               <div className="footer">

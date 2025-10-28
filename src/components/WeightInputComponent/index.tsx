@@ -140,10 +140,10 @@ export const WeightInput: React.FC<WeightInputProps> = ({
   };
 
   return (
-    <div style={{ marginBottom: 24 }}>
-      <div style={{ display: "flex", gap: 20, alignItems: "stretch" }}>
+    <div style={{ width: "100%", height: "100%", display: "flex" }}>
+      <div style={{ width: "100%", display: "flex", gap: 20, alignItems: "stretch" }}>
         {/* 左侧日历 */}
-        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
+        <div style={{ flex: 1, minWidth: 450, display: "flex", flexDirection: "column" }}>
           <Card
             style={{ 
               borderRadius: 12, 
@@ -166,7 +166,7 @@ export const WeightInput: React.FC<WeightInputProps> = ({
         </div>
 
         {/* 右侧当天记录 */}
-        <div style={{ width: 260, flexShrink: 0, display: "flex", flexDirection: "column" }}>
+        <div style={{ width: 300, flexShrink: 0, display: "flex", flexDirection: "column" }}>
           <DayRecordCard
             selectedDate={selectedDate}
             calendarData={calendarData}

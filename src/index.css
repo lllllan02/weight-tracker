@@ -21,7 +21,7 @@ code {
 }
 
 .main-content {
-  max-width: 900px;
+  max-width: 1400px;
   margin: 0 auto;
   padding: 32px 16px 0 16px;
   display: flex;
@@ -76,10 +76,46 @@ code {
   font-size: 14px;
 }
 
-@media (max-width: 800px) {
+/* 响应式布局 */
+@media (max-width: 1200px) {
   .main-content {
     max-width: 100%;
-    padding: 16px 4px 0 4px;
+    padding: 24px 12px 0 12px;
+  }
+}
+
+@media (max-width: 1100px) {
+  /* 中等屏幕下调整两栏布局 */
+  .two-column-layout {
+    flex-direction: column !important;
+  }
+  
+  .sidebar-column {
+    width: 100% !important;
+  }
+}
+
+@media (max-width: 1200px) {
+  /* 上部区域改为垂直布局 */
+  .top-section-layout {
+    flex-direction: column !important;
+  }
+  
+  .profile-column {
+    width: 100% !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .main-content {
+    max-width: 100%;
+    padding: 16px 8px 0 8px;
+  }
+}
+
+@media (max-width: 700px) {
+  .main-content {
+    padding: 12px 4px 0 4px;
   }
 }
 

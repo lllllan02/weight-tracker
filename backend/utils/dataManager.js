@@ -97,6 +97,21 @@ function validateProfile(profile) {
     return false;
   }
   
+  // 验证出生年份（可选字段）
+  if (profile.birthYear !== undefined && profile.birthYear !== null) {
+    const currentYear = new Date().getFullYear();
+    if (typeof profile.birthYear !== 'number' || profile.birthYear < 1900 || profile.birthYear > currentYear) {
+      return false;
+    }
+  }
+  
+  // 验证性别（可选字段）
+  if (profile.gender !== undefined && profile.gender !== null) {
+    if (profile.gender !== 'male' && profile.gender !== 'female') {
+      return false;
+    }
+  }
+  
   return true;
 }
 

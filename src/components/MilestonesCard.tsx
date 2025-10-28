@@ -1,18 +1,20 @@
 import React, { useState, useEffect } from "react";
 import { Card, Button, List, Tag, Modal, Form, InputNumber, Input, message, Popconfirm, Empty } from "antd";
-import { PlusOutlined, TrophyOutlined, EditOutlined, DeleteOutlined, CheckCircleOutlined } from "@ant-design/icons";
-import { Milestone } from "../types";
+import { PlusOutlined, TrophyOutlined, EditOutlined, DeleteOutlined, CheckCircleOutlined, FireOutlined } from "@ant-design/icons";
+import { Milestone, UserProfile } from "../types";
 import { getMilestones, addMilestone, updateMilestone, deleteMilestone } from "../utils/milestones-api";
 import dayjs from "dayjs";
 
 interface MilestonesCardProps {
   currentWeight: number;
   onMilestoneChange: () => void;
+  profile?: UserProfile;
 }
 
 export const MilestonesCard: React.FC<MilestonesCardProps> = ({
   currentWeight,
   onMilestoneChange,
+  profile,
 }) => {
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [loading, setLoading] = useState(false);
@@ -97,6 +99,32 @@ export const MilestonesCard: React.FC<MilestonesCardProps> = ({
   const achievedCount = milestones.filter((m) => m.achievedDate).length;
   const totalCount = milestones.length;
 
+  // 计算目标体重的基础代谢率
+  const calculateTargetBMR = (targetWeight: number): number | null => {
+    if (!profile?.birthYear || !profile?.gender || !profile?.height) {
+      return null;
+    }
+
+    // 根据出生年份计算当前年龄
+    const currentYear = new Date().getFullYear();
+    const age = currentYear - profile.birthYear;
+
+    if (age <= 0 || age > 150) {
+      return null;
+    }
+
+    // 使用 Mifflin-St Jeor 公式
+    const baseBMR = 10 * targetWeight + 6.25 * profile.height - 5 * age;
+
+    if (profile.gender === 'male') {
+      return Math.round(baseBMR + 5);
+    } else if (profile.gender === 'female') {
+      return Math.round(baseBMR - 161);
+    }
+
+    return null;
+  };
+
   return (
     <>
       <Card
@@ -122,7 +150,7 @@ export const MilestonesCard: React.FC<MilestonesCardProps> = ({
         style={{
           borderRadius: 12,
           boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
-          marginBottom: 24,
+          minWidth: 300,
         }}
       >
         <List
@@ -149,6 +177,7 @@ export const MilestonesCard: React.FC<MilestonesCardProps> = ({
           renderItem={(milestone) => {
             const isAchieved = !!milestone.achievedDate;
             const progress = currentWeight <= milestone.targetWeight;
+            const targetBMR = calculateTargetBMR(milestone.targetWeight);
 
             return (
               <List.Item
@@ -158,29 +187,41 @@ export const MilestonesCard: React.FC<MilestonesCardProps> = ({
                   marginBottom: 8,
                   borderRadius: 8,
                   border: isAchieved ? "2px solid #52c41a" : "1px solid #f0f0f0",
+                  position: "relative",
                 }}
-                actions={
-                  !isAchieved
-                    ? [
-                        <Button
-                          type="text"
-                          icon={<EditOutlined />}
-                          onClick={() => handleEdit(milestone)}
-                          key="edit"
-                        />,
-                        <Popconfirm
-                          title="确定删除这个目标吗？"
-                          onConfirm={() => handleDelete(milestone.id)}
-                          okText="确定"
-                          cancelText="取消"
-                          key="delete"
-                        >
-                          <Button type="text" danger icon={<DeleteOutlined />} />
-                        </Popconfirm>,
-                      ]
-                    : []
-                }
               >
+                {/* 右上角操作按钮 */}
+                {!isAchieved && (
+                  <div style={{ 
+                    position: "absolute", 
+                    top: 12, 
+                    right: 12, 
+                    display: "flex", 
+                    gap: 4,
+                    zIndex: 1
+                  }}>
+                    <Button
+                      type="text"
+                      size="small"
+                      icon={<EditOutlined />}
+                      onClick={() => handleEdit(milestone)}
+                    />
+                    <Popconfirm
+                      title="确定删除这个目标吗？"
+                      onConfirm={() => handleDelete(milestone.id)}
+                      okText="确定"
+                      cancelText="取消"
+                    >
+                      <Button 
+                        type="text" 
+                        size="small"
+                        danger 
+                        icon={<DeleteOutlined />} 
+                      />
+                    </Popconfirm>
+                  </div>
+                )}
+
                 <List.Item.Meta
                   avatar={
                     isAchieved ? (
@@ -197,7 +238,12 @@ export const MilestonesCard: React.FC<MilestonesCardProps> = ({
                     )
                   }
                   title={
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <div style={{ 
+                      display: "flex", 
+                      alignItems: "center", 
+                      gap: 8,
+                      paddingRight: isAchieved ? 0 : 80  // 为右上角按钮留出空间
+                    }}>
                       <span style={{ fontSize: 18, fontWeight: 600 }}>
                         {milestone.targetWeight} kg
                       </span>
@@ -212,12 +258,28 @@ export const MilestonesCard: React.FC<MilestonesCardProps> = ({
                     </div>
                   }
                   description={
-                    <div style={{ fontSize: 14, color: "#666" }}>
-                      {milestone.note && <div>{milestone.note}</div>}
+                    <div style={{ fontSize: 14, color: "#666", wordBreak: "keep-all", whiteSpace: "normal" }}>
+                      {milestone.note && <div style={{ marginBottom: 4 }}>{milestone.note}</div>}
                       {!isAchieved && (
                         <div style={{ marginTop: 4 }}>
-                          距离目标：
-                          {Math.abs(currentWeight - milestone.targetWeight).toFixed(1)} kg
+                          距离目标：{Math.abs(currentWeight - milestone.targetWeight).toFixed(1)} kg
+                        </div>
+                      )}
+                      {targetBMR && (
+                        <div style={{ 
+                          marginTop: 8, 
+                          padding: "6px 10px",
+                          background: "#fff7e6",
+                          borderRadius: 6,
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 6,
+                          whiteSpace: "nowrap"
+                        }}>
+                          <FireOutlined style={{ color: "#fa8c16", fontSize: 14 }} />
+                          <span style={{ color: "#fa8c16", fontWeight: 600 }}>
+                            基础代谢：{targetBMR} kcal/天
+                          </span>
                         </div>
                       )}
                     </div>

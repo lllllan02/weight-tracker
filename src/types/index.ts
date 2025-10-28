@@ -24,6 +24,8 @@ export interface UserProfile {
   targetWeight?: number;
   theme: "light" | "dark";
   milestones?: Milestone[]; // 阶段目标列表
+  birthYear?: number; // 出生年份
+  gender?: "male" | "female"; // 性别
 }
 
 export interface WeightStats {
@@ -39,6 +41,8 @@ export interface WeightStats {
   targetProgress: number;
   targetRemaining: number;
   initialWeight: number;
+  currentBMR?: number; // 当前体重的基础代谢
+  targetBMR?: number; // 目标体重的基础代谢
 }
 
 export interface TimeSlot {

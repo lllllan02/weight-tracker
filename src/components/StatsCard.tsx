@@ -104,6 +104,45 @@ export const StatsCard: React.FC<StatsCardProps> = ({ stats, height }) => {
           最低 - 最高
         </div>
       </Card>
+
+      {/* 当前基础代谢 */}
+      {stats.currentBMR && (
+        <Card
+          style={{ marginBottom: 0, padding: 0 }}
+          styles={{ body: { padding: 16 } }}
+        >
+          <Statistic
+            title="当前基础代谢"
+            value={stats.currentBMR}
+            suffix="kcal/天"
+            valueStyle={{ color: "#fa8c16" }}
+          />
+          <div style={{ marginTop: 8, fontSize: 12, color: "#8c8c8c" }}>
+            静息消耗热量
+          </div>
+        </Card>
+      )}
+
+      {/* 目标基础代谢 */}
+      {stats.targetBMR && (
+        <Card
+          style={{ marginBottom: 0, padding: 0 }}
+          styles={{ body: { padding: 16 } }}
+        >
+          <Statistic
+            title="目标基础代谢"
+            value={stats.targetBMR}
+            suffix="kcal/天"
+            valueStyle={{ color: "#52c41a" }}
+          />
+          <div style={{ marginTop: 8, fontSize: 12, color: "#8c8c8c" }}>
+            {stats.currentBMR && stats.targetBMR ? 
+              `相差 ${Math.abs(stats.currentBMR - stats.targetBMR)} kcal` : 
+              '目标状态'
+            }
+          </div>
+        </Card>
+      )}
     </div>
   );
 };

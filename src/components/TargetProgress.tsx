@@ -26,7 +26,6 @@ export const TargetProgress: React.FC<TargetProgressProps> = ({
             目标进度
           </span>
         }
-        style={{ marginBottom: 0 }}
       >
         <Empty
           image={Empty.PRESENTED_IMAGE_SIMPLE}
@@ -94,7 +93,7 @@ export const TargetProgress: React.FC<TargetProgressProps> = ({
           </span>
         </div>
       }
-      style={{ marginBottom: 0, padding: 0 }}
+      style={{ padding: 0 }}
       styles={{ body: { padding: 16 } }}
     >
       <div>
