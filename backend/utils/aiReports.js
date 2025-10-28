@@ -49,6 +49,78 @@ function formatDate(dateStr) {
   return `${date.getMonth() + 1}月${date.getDate()}日`;
 }
 
+// 分析体重波动
+function analyzeFluctuations(records) {
+  if (!records || records.length === 0) {
+    return null;
+  }
+
+  const sortedRecords = [...records].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+  // 周末 vs 工作日分析
+  const weekendWeights = [];
+  const weekdayWeights = [];
+  
+  sortedRecords.forEach(record => {
+    const date = new Date(record.date);
+    const dayOfWeek = date.getDay();
+    if (dayOfWeek === 0 || dayOfWeek === 6) {
+      weekendWeights.push(record.weight);
+    } else {
+      weekdayWeights.push(record.weight);
+    }
+  });
+
+  let weekendAvg = 0;
+  let weekdayAvg = 0;
+  let weekendPattern = '';
+
+  if (weekendWeights.length > 0 && weekdayWeights.length > 0) {
+    weekendAvg = (weekendWeights.reduce((sum, w) => sum + w, 0) / weekendWeights.length).toFixed(1);
+    weekdayAvg = (weekdayWeights.reduce((sum, w) => sum + w, 0) / weekdayWeights.length).toFixed(1);
+    
+    const diff = weekendAvg - weekdayAvg;
+    if (Math.abs(diff) > 0.3) {
+      if (diff > 0) {
+        weekendPattern = `周末体重平均比工作日高 ${diff.toFixed(1)}kg`;
+      } else {
+        weekendPattern = `工作日体重平均比周末高 ${Math.abs(diff).toFixed(1)}kg`;
+      }
+    }
+  }
+
+  // 异常波动统计
+  const anomalyDetails = [];
+  let maxIncrease = 0;
+  let maxDecrease = 0;
+  
+  for (let i = 1; i < sortedRecords.length; i++) {
+    const change = sortedRecords[i].weight - sortedRecords[i - 1].weight;
+    
+    // 记录异常波动
+    if (Math.abs(change) > 2) {
+      anomalyDetails.push({
+        date: sortedRecords[i].date,
+        change: change,
+      });
+    }
+    
+    // 记录最大变化
+    if (change > maxIncrease) maxIncrease = change;
+    if (change < maxDecrease) maxDecrease = change;
+  }
+
+  return {
+    weekendPattern,
+    weekendAvg,
+    weekdayAvg,
+    anomalyCount: anomalyDetails.length,
+    anomalyDetails,
+    maxIncrease,
+    maxDecrease: Math.abs(maxDecrease),
+  };
+}
+
 // 提取运动数据（周报）
 function extractWeeklyExerciseData(exerciseRecords, report) {
   const weekStart = new Date(report.period.split(' - ')[0]);
@@ -166,25 +238,6 @@ function formatAllWeightRecords(records) {
   ).join('\n');
 }
 
-// 格式化体重记录（前后各10条）
-function formatLimitedWeightRecords(records) {
-  const first10 = records.slice(0, 10).map(r => 
-    `- ${formatDateTime(r.date)} ${r.weight}kg (${r.fasting})`
-  ).join('\n');
-  
-  if (records.length <= 10) {
-    return first10;
-  }
-  
-  const last10 = records.slice(-10).map(r => 
-    `- ${formatDateTime(r.date)} ${r.weight}kg (${r.fasting})`
-  ).join('\n');
-  
-  const omitted = records.length > 20 ? `\n... (中间省略 ${records.length - 20} 条记录) ...\n` : '\n';
-  
-  return first10 + omitted + last10;
-}
-
 // 通用提示词模板生成器
 function generatePromptTemplate(reportType, report, profile, exerciseData) {
   // 报告类型的中文名称和时间范围描述
@@ -195,6 +248,44 @@ function generatePromptTemplate(reportType, report, profile, exerciseData) {
   };
   
   const config = typeConfig[reportType];
+  
+  // 计算波动分析数据
+  const fluctuationData = analyzeFluctuations(report.records);
+  
+  // 构建波动分析文本
+  let fluctuationText = '';
+  if (fluctuationData) {
+    fluctuationText = `\n\n=== 【体重波动分析】（重要数据，必须在分析中体现） ===`;
+    
+    // 异常波动
+    fluctuationText += `\n📊 异常波动次数：${fluctuationData.anomalyCount}次（单日变化>2kg）`;
+    if (fluctuationData.anomalyDetails.length > 0) {
+      fluctuationText += `\n   详情：${fluctuationData.anomalyDetails.map(a => `${formatDate(a.date)}变化${a.change > 0 ? '+' : ''}${a.change.toFixed(1)}kg`).join('、')}`;
+      fluctuationText += `\n   ⚠️ 请在洞察中分析异常波动的可能原因！`;
+    }
+    
+    // 周期性规律
+    if (fluctuationData.weekendPattern) {
+      fluctuationText += `\n\n📅 周期性规律发现：${fluctuationData.weekendPattern}`;
+      fluctuationText += `\n   · 工作日平均体重：${fluctuationData.weekdayAvg}kg`;
+      fluctuationText += `\n   · 周末平均体重：${fluctuationData.weekendAvg}kg`;
+      fluctuationText += `\n   · 差值：${Math.abs(fluctuationData.weekendAvg - fluctuationData.weekdayAvg).toFixed(1)}kg`;
+      fluctuationText += `\n   ⚠️ 请在洞察和建议中针对这个周期性规律给出具体建议！`;
+    }
+    
+    // 最大波动幅度
+    if (fluctuationData.maxIncrease > 0 || fluctuationData.maxDecrease > 0) {
+      fluctuationText += `\n\n📈 波动幅度统计：`;
+      if (fluctuationData.maxIncrease > 0) {
+        fluctuationText += `\n   · 最大单日增幅：+${fluctuationData.maxIncrease.toFixed(1)}kg`;
+      }
+      if (fluctuationData.maxDecrease > 0) {
+        fluctuationText += `\n   · 最大单日降幅：-${fluctuationData.maxDecrease.toFixed(1)}kg`;
+      }
+    }
+    
+    fluctuationText += `\n===============================================\n`;
+  }
   
   // 构建基本信息
   let basicInfo = `【基本信息】
@@ -231,49 +322,48 @@ ${profile.targetWeight ? `- 目标体重: ${profile.targetWeight}kg` : ''}`;
 - 体重变化：${report.stats.change}kg
 - 平均体重：${report.stats.average}kg
 - 最高体重：${report.stats.max}kg
-- 最低体重：${report.stats.min}kg`;
+- 最低体重：${report.stats.min}kg${fluctuationText}`;
 
   // 月报添加每周平均
   if (reportType === 'monthly' && report.stats.weeklyAverages) {
     weightData += `\n- 每周平均体重：${report.stats.weeklyAverages.map((w, i) => `第${i+1}周: ${w > 0 ? w + 'kg' : '无数据'}`).join(', ')}`;
   }
   
-  // 构建体重记录详情
-  let weightRecords = '';
-  if (reportType === 'weekly') {
-    weightRecords = `【体重记录详情】
+  // 构建体重记录详情 - 所有报告都显示对应时间段内的全部数据
+  const weightRecords = `【体重记录详情】
 ${formatAllWeightRecords(report.records)}`;
-  } else if (reportType === 'all-time') {
-    weightRecords = `【体重记录详情（仅显示前10条和后10条）】
-前10条:
-${report.records.slice(0, 10).map(r => `- ${formatDateTime(r.date)} ${r.weight}kg (${r.fasting})`).join('\n')}
-
-后10条:
-${report.records.slice(-10).map(r => `- ${formatDateTime(r.date)} ${r.weight}kg (${r.fasting})`).join('\n')}`;
-  } else {
-    weightRecords = `【体重记录详情】（仅显示前10条和后10条）
-${formatLimitedWeightRecords(report.records)}`;
-  }
   
   // 构建分析要求
   const analysisPoints = reportType === 'monthly'
     ? `1. ${config.period}体重变化总结（${config.summaryLength}）
 2. 体重与运动关联分析（体重变化与运动量的关系，运动效果评估）
 3. 趋势分析（分析每周体重变化趋势，是否稳定）
-4. 目标进度（如果设置了目标体重，评估完成进度）
-5. 亮点分析（${config.period}做得好的地方，包括体重和运动方面）
-6. 具体建议（${config.suggestions}，结合体重和运动数据，包括饮食、运动强度/频率/类型、作息、心理等方面）`
+4. **波动分析（必须包含）**：
+   - 如果有异常波动（单日变化>2kg），明确指出次数、日期和可能原因
+   - 如果有周末vs工作日差异，明确指出具体数值和建议
+   - 如果有最大增减幅，分析是否正常
+5. 目标进度（如果设置了目标体重，评估完成进度）
+6. 亮点分析（${config.period}做得好的地方，包括体重和运动方面）
+7. 具体建议（${config.suggestions}，结合体重、运动和波动数据，包括饮食、运动强度/频率/类型、作息、心理等方面）`
     : reportType === 'all-time'
     ? `1. 总体评价（${config.summaryLength}）
 2. 体重与运动关联分析（长期体重变化与运动的关系）
 3. 趋势分析（整体变化趋势是否健康、有什么阶段性特点）
-4. 目标完成度评价（如果设置了目标体重）
-5. 具体建议（${config.suggestions}，结合体重和运动数据，包括饮食、运动强度/频率、作息等方面）`
+4. **波动分析（必须包含）**：
+   - 如果有异常波动，明确指出并分析
+   - 如果有周期性规律（如周末体重变化），明确指出并给建议
+   - 长期波动幅度是否合理
+5. 目标完成度评价（如果设置了目标体重）
+6. 具体建议（${config.suggestions}，结合体重、运动和波动数据，包括饮食、运动强度/频率、作息等方面）`
     : `1. ${config.period}体重变化总结（${config.summaryLength}）
 2. 体重与运动关联分析（体重变化与运动量的关系）
 3. 趋势分析（体重变化是否符合健康标准）
-4. 目标进度（如果设置了目标体重）
-5. 具体建议（${config.suggestions}，结合体重和运动数据，包括饮食、运动强度/频率、作息等方面）`;
+4. **波动分析（必须包含）**：
+   - 如果有异常波动（>2kg），明确说明
+   - 如果有周末工作日差异，明确指出并建议
+   - 最大增减幅是否需要关注
+5. 目标进度（如果设置了目标体重）
+6. 具体建议（${config.suggestions}，结合体重、运动和波动数据，包括饮食、运动强度/频率、作息等方面）`;
   
   // 组装完整提示词
   return `你是一位专业的健康管理顾问，请根据以下体重和运动数据生成一份详细的${config.name}分析。
@@ -296,6 +386,8 @@ ${analysisPoints}
 - 使用中文
 - **重要**：综合体重和运动数据进行${reportType === 'all-time' ? '长期' : ''}分析${reportType === 'monthly' ? '，给出运动效果评估和优化建议' : '，给出运动与体重变化的关联性洞察'}
 - **重要**：基于现有数据进行分析，不要批评或提及数据缺失、时间范围不完整、记录频率不够${reportType === 'monthly' ? '、首尾周无数据' : ''}等问题
+- **重要**：如果【体重波动分析】中有异常波动或周期性规律数据，必须在"洞察"中明确提及并分析原因
+- **重要**：如果发现周末体重与工作日体重有差异，必须在"洞察"和"建议"中明确指出并给出针对性建议
 - 专注于已有数据的趋势和建议，而不是数据本身的完整性
 - **必须**以纯JSON格式返回，不要包含任何其他文字说明，只返回JSON对象
 - JSON格式如下：
@@ -307,7 +399,7 @@ ${analysisPoints}
 }
 
 // 通用的系统消息
-const COMMON_SYSTEM_MESSAGE = '你是一位专业的健康管理顾问，擅长综合分析体重和运动数据并提供科学的健康建议。你的回复必须是纯JSON格式，不包含任何其他说明文字。重要：综合体重和运动数据进行深度关联分析，评估运动效果，只基于现有数据进行正面分析，绝不批评数据的完整性、记录频率或时间范围等问题。';
+const COMMON_SYSTEM_MESSAGE = '你是一位专业的健康管理顾问，擅长综合分析体重和运动数据并提供科学的健康建议。你的回复必须是纯JSON格式，不包含任何其他说明文字。重要：综合体重和运动数据进行深度关联分析，评估运动效果，只基于现有数据进行正面分析，绝不批评数据的完整性、记录频率或时间范围等问题。特别注意：如果数据中包含【体重波动分析】信息（异常波动、周期性规律等），必须在洞察中明确提及并给出具体建议。';
 
 // 报告类型配置（简化版）
 const reportTypeConfigs = {

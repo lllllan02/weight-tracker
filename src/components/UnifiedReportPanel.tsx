@@ -125,6 +125,30 @@ export const UnifiedReportPanel: React.FC<UnifiedReportPanelProps> = ({
       return "rgba(140, 140, 140, 0.6)"; // 灰色
     });
 
+    // 计算7日移动平均线
+    const movingAverageData = sortedRecords.map((record, index) => {
+      const startIndex = Math.max(0, index - 6);
+      const recentRecords = sortedRecords.slice(startIndex, index + 1);
+      const average = recentRecords.reduce((sum, r) => sum + r.weight, 0) / recentRecords.length;
+      return {
+        x: new Date(record.date).getTime(),
+        y: Number(average.toFixed(1)),
+      };
+    });
+
+    // 识别异常波动点（单日变化 > 2kg）
+    const anomalyPoints: Array<{ x: number; y: number; change: number }> = [];
+    for (let i = 1; i < sortedRecords.length; i++) {
+      const change = Math.abs(sortedRecords[i].weight - sortedRecords[i - 1].weight);
+      if (change > 2) {
+        anomalyPoints.push({
+          x: new Date(sortedRecords[i].date).getTime(),
+          y: sortedRecords[i].weight,
+          change: change,
+        });
+      }
+    }
+
     // 计算时间范围
     let chartMinTime: number;
     let chartMaxTime: number;
@@ -180,48 +204,84 @@ export const UnifiedReportPanel: React.FC<UnifiedReportPanelProps> = ({
     ];
 
     return {
-      datasets: [
-        {
-          type: "line" as const,
-          label: "体重 (kg)",
-          data: weightData,
-          borderColor: "#1890ff",
-          backgroundColor: "rgba(24, 144, 255, 0.1)",
-          tension: 0.4,
-          fill: true,
-          pointRadius: 4,
-          pointHoverRadius: 6,
-          yAxisID: "y",
-        },
-        {
-          type: "bar" as const,
-          label: "体重变化",
-          data: changeData,
-          backgroundColor: changeColors,
-          borderColor: changeColors.map((color) => color.replace("0.6", "1")),
-          borderWidth: 1,
-          yAxisID: "y2",
-        },
-        {
-          type: "line" as const,
-          label: "零线 (无变化)",
-          data: zeroLineData,
-          borderColor: "#f59e0b",
-          backgroundColor: "transparent",
-          borderWidth: 2,
-          borderDash: [5, 5],
-          tension: 0,
-          fill: false,
-          yAxisID: "y2",
-          pointRadius: 0,
-          pointHoverRadius: 0,
-        },
-      ],
+      chartData: {
+        datasets: [
+          {
+            type: "line" as const,
+            label: "体重 (kg)",
+            data: weightData,
+            borderColor: "#1890ff",
+            backgroundColor: "rgba(24, 144, 255, 0.1)",
+            tension: 0.4,
+            fill: true,
+            pointRadius: 4,
+            pointHoverRadius: 6,
+            yAxisID: "y",
+            order: 2,
+          },
+          {
+            type: "line" as const,
+            label: "7日移动平均",
+            data: movingAverageData,
+            borderColor: "#722ed1",
+            backgroundColor: "transparent",
+            borderWidth: 2,
+            borderDash: [8, 4],
+            tension: 0.4,
+            fill: false,
+            pointRadius: 0,
+            pointHoverRadius: 4,
+            yAxisID: "y",
+            order: 3,
+          },
+          {
+            type: "scatter" as const,
+            label: "异常波动",
+            data: anomalyPoints,
+            backgroundColor: "#ff4d4f",
+            borderColor: "#fff",
+            borderWidth: 2,
+            pointRadius: 8,
+            pointHoverRadius: 10,
+            pointStyle: "triangle",
+            yAxisID: "y",
+            order: 1,
+          },
+          {
+            type: "bar" as const,
+            label: "体重变化",
+            data: changeData,
+            backgroundColor: changeColors,
+            borderColor: changeColors.map((color) => color.replace("0.6", "1")),
+            borderWidth: 1,
+            yAxisID: "y2",
+            order: 4,
+          },
+          {
+            type: "line" as const,
+            label: "零线 (无变化)",
+            data: zeroLineData,
+            borderColor: "#f59e0b",
+            backgroundColor: "transparent",
+            borderWidth: 2,
+            borderDash: [5, 5],
+            tension: 0,
+            fill: false,
+            yAxisID: "y2",
+            pointRadius: 0,
+            pointHoverRadius: 0,
+            order: 5,
+          },
+        ],
+      },
       timeRange: { min: chartMinTime, max: chartMaxTime },
+      anomalyCount: anomalyPoints.length,
+      anomalyPoints: anomalyPoints,
     };
   };
 
-  const chartData = generateChartData();
+  const chartResult = generateChartData();
+  const chartData = chartResult?.chartData;
 
   const handleGenerateAIAnalysis = async () => {
     setAiLoading(true);
@@ -398,7 +458,7 @@ export const UnifiedReportPanel: React.FC<UnifiedReportPanelProps> = ({
           </div>
         </div>
 
-        {/* 体重趋势图 */}
+        {/* 体重趋势图（包含7日平均线和异常波动标记） */}
         <div style={{ marginBottom: 16, marginTop: 16 }}>
           {chartData ? (
             <div style={{ height: 350 }}>
@@ -428,6 +488,15 @@ export const UnifiedReportPanel: React.FC<UnifiedReportPanelProps> = ({
                               `体重: ${context.parsed.y} kg`,
                               `BMI: ${bmi}`,
                             ];
+                          } else if (dataset.label === "7日移动平均") {
+                            return `7日平均: ${context.parsed.y} kg`;
+                          } else if (dataset.label === "异常波动") {
+                            const point = context.raw;
+                            return [
+                              `⚠️ 异常波动`,
+                              `体重: ${point.y} kg`,
+                              `单日变化: ${point.change?.toFixed(1)} kg`,
+                            ];
                           } else if (dataset.label === "体重变化") {
                             const value = context.parsed.y;
                             return `变化: ${value > 0 ? "+" : ""}${value} kg`;
@@ -450,8 +519,8 @@ export const UnifiedReportPanel: React.FC<UnifiedReportPanelProps> = ({
                         display: true,
                         text: "日期",
                       },
-                      min: (chartData as any)?.timeRange?.min,
-                      max: (chartData as any)?.timeRange?.max,
+                      min: chartResult?.timeRange?.min,
+                      max: chartResult?.timeRange?.max,
                       offset: false,
                       bounds: "ticks",
                       time: {
@@ -550,9 +619,14 @@ export const UnifiedReportPanel: React.FC<UnifiedReportPanelProps> = ({
             marginBottom: 12,
           }}
         >
-          <Title level={5}>
-            <RobotOutlined /> AI 分析
-          </Title>
+          <div>
+            <Title level={5} style={{ marginBottom: 4 }}>
+              <RobotOutlined /> AI 智能分析
+            </Title>
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              AI 会分析体重趋势、运动数据、波动规律等，给出个性化建议
+            </Text>
+          </div>
           <Button
             type="primary"
             icon={<RobotOutlined />}
