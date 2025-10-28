@@ -421,10 +421,20 @@ router.post('/weekly/ai', async (req, res) => {
     const weeklyReport = generateWeeklyReportForDate(data.records, data.profile, targetDate, data.exerciseRecords);
     const reportKey = getReportKey(weeklyReport.period, 'weekly');
     
+    console.log('[周报AI] 请求参数:', { force, date });
+    console.log('[周报AI] 周报数据:', {
+      period: weeklyReport.period,
+      stats: weeklyReport.stats,
+      recordsCount: weeklyReport.records.length
+    });
+    
     // 检查是否已有分析（如果不是强制重新生成）
     if (!force && reportKey && data.aiReports.weekly[reportKey]) {
+      console.log('[周报AI] 使用缓存的分析:', reportKey);
       return res.json(data.aiReports.weekly[reportKey]);
     }
+    
+    console.log('[周报AI] 生成新的AI分析...');
     
     const aiAnalysis = await generateAIWeeklyReport(weeklyReport, data.profile, data.exerciseRecords);
     

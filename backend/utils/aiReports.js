@@ -319,10 +319,19 @@ ${profile.targetWeight ? `- 目标体重: ${profile.targetWeight}kg` : ''}`;
 - 记录次数：${report.records.length}次
 - 起始体重：${report.stats.startWeight}kg
 - 结束体重：${report.stats.endWeight}kg
-- 体重变化：${report.stats.change}kg
+- 体重变化：${report.stats.change}kg（${report.stats.change > 0 ? '增加' : report.stats.change < 0 ? '减少' : '无变化'}）
 - 平均体重：${report.stats.average}kg
 - 最高体重：${report.stats.max}kg
 - 最低体重：${report.stats.min}kg${fluctuationText}`;
+  
+  // 添加日志以便调试
+  console.log(`[AI报告-${reportType}] 体重数据:`, {
+    period: report.period,
+    startWeight: report.stats.startWeight,
+    endWeight: report.stats.endWeight,
+    change: report.stats.change,
+    recordsCount: report.records.length
+  });
 
   // 月报添加每周平均
   if (reportType === 'monthly' && report.stats.weeklyAverages) {
