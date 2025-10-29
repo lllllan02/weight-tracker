@@ -1,8 +1,9 @@
-import React from "react";
-import { Card, Tag, Empty, Descriptions, Alert, Space } from "antd";
-import { RiseOutlined, FallOutlined, CalendarOutlined, LineChartOutlined, DashboardOutlined } from "@ant-design/icons";
-import { TargetPrediction } from "../types";
+import React, { useState } from "react";
+import { Card, Tag, Empty, Descriptions, Alert, Space, Button, Tooltip, message } from "antd";
+import { RiseOutlined, FallOutlined, CalendarOutlined, LineChartOutlined, DashboardOutlined, DownOutlined, UpOutlined, QuestionCircleOutlined, RobotOutlined, ThunderboltOutlined } from "@ant-design/icons";
+import { TargetPrediction, PredictionMethod } from "../types";
 import dayjs from "dayjs";
+import { generateAIPrediction } from "../utils/api";
 
 interface PredictionCardProps {
   targetPrediction?: TargetPrediction;
@@ -13,6 +14,29 @@ export const PredictionCard: React.FC<PredictionCardProps> = ({
   targetPrediction,
   targetWeight,
 }) => {
+  const [showAllModels, setShowAllModels] = useState(false);
+  const [aiPrediction, setAiPrediction] = useState<PredictionMethod | null>(null);
+  const [loadingAI, setLoadingAI] = useState(false);
+
+  // 生成 AI 预测
+  const handleGenerateAIPrediction = async () => {
+    setLoadingAI(true);
+    try {
+      const response = await generateAIPrediction();
+      if (response.success) {
+        setAiPrediction(response.prediction);
+        message.success('AI 预测生成成功！');
+      } else {
+        message.error(response.error || 'AI 预测生成失败');
+      }
+    } catch (error: any) {
+      console.error('AI 预测失败:', error);
+      message.error(error.message || 'AI 预测生成失败，请稍后重试');
+    } finally {
+      setLoadingAI(false);
+    }
+  };
+
   if (!targetPrediction || !targetWeight) {
     return (
       <Card
@@ -89,6 +113,15 @@ export const PredictionCard: React.FC<PredictionCardProps> = ({
   const weightDirection = targetPrediction.weightDifference! > 0 ? "增重" : "减重";
   const isGaining = targetPrediction.weightDifference! > 0;
 
+  const TrendIcon = isGaining ? RiseOutlined : FallOutlined;
+  const trendColor = isGaining ? "#fa8c16" : "#1890ff";
+  
+  // 如果有 AI 预测，将其插入到第一位
+  const allPredictions = aiPrediction ? [aiPrediction, ...predictions] : predictions;
+  
+  // 只显示推荐模型或全部模型
+  const displayedPredictions = showAllModels ? allPredictions : [allPredictions[0]];
+  
   return (
     <Card
       title={
@@ -102,116 +135,121 @@ export const PredictionCard: React.FC<PredictionCardProps> = ({
       }
       style={{ borderRadius: 12, boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}
     >
-      <Space direction="vertical" size="large" style={{ width: "100%" }}>
-        {/* 目标信息 */}
-        <Descriptions column={2} size="small">
-          <Descriptions.Item label="当前体重">
-            {targetPrediction.currentWeight}kg
-          </Descriptions.Item>
-          <Descriptions.Item label="目标体重">
-            {targetPrediction.targetWeight}kg
-          </Descriptions.Item>
-          <Descriptions.Item label={`还需${weightDirection}`} span={2}>
-            <Tag color={isGaining ? "orange" : "blue"} style={{ fontSize: 14 }}>
+      <Space direction="vertical" size="middle" style={{ width: "100%" }}>
+        {/* 紧凑的目标信息 */}
+        <div style={{ 
+          display: "flex", 
+          justifyContent: "space-between", 
+          alignItems: "center",
+          padding: "12px 16px",
+          background: "#fafafa",
+          borderRadius: 8
+        }}>
+          <div>
+            <div style={{ fontSize: 12, color: "#999" }}>还需{weightDirection}</div>
+            <div style={{ fontSize: 20, fontWeight: 600, color: isGaining ? "#fa8c16" : "#1890ff" }}>
               {Math.abs(targetPrediction.weightDifference!)}kg
-            </Tag>
-          </Descriptions.Item>
-        </Descriptions>
-
-        {/* 预测方法对比 */}
-        <div>
-          <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 12, color: "#666" }}>
-            <DashboardOutlined style={{ marginRight: 6 }} />
-            预测模型对比
+            </div>
           </div>
-          <Space direction="vertical" size="middle" style={{ width: "100%" }}>
-            {predictions.map((pred, index) => {
-              const TrendIcon = isGaining ? RiseOutlined : FallOutlined;
-              const trendColor = isGaining ? "#fa8c16" : "#1890ff";
-              
-              return (
-                <Card
-                  key={index}
-                  size="small"
-                  style={{
-                    background: index === 0 ? "#fafafa" : "#fff",
-                    border: index === 0 ? "2px solid #722ed1" : "1px solid #f0f0f0"
-                  }}
-                >
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                    <Space>
+          <div style={{ textAlign: "right" }}>
+            <div style={{ fontSize: 12, color: "#999" }}>
+              {targetPrediction.currentWeight}kg → {targetPrediction.targetWeight}kg
+            </div>
+          </div>
+        </div>
+
+        {/* 预测模型 */}
+        <Space direction="vertical" size="small" style={{ width: "100%" }}>
+          {displayedPredictions.map((pred, index) => {
+            const isAI = pred.methodKey === 'ai';
+            return (
+              <Card
+                key={index}
+                size="small"
+                style={{
+                  background: index === 0 ? "#fafafa" : "#fff",
+                  border: index === 0 ? "2px solid #722ed1" : "1px solid #f0f0f0"
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                      {isAI && <RobotOutlined style={{ color: "#722ed1", fontSize: 16 }} />}
                       <Tag color={index === 0 ? "purple" : "default"}>
                         {pred.method}
                       </Tag>
                       {index === 0 && <Tag color="purple">推荐</Tag>}
-                    </Space>
-                    <TrendIcon style={{ fontSize: 16, color: trendColor }} />
-                  </div>
+                      {isAI && <Tag color="gold">智能</Tag>}
+                      {pred.description && (
+                        <Tooltip title={pred.description}>
+                          <QuestionCircleOutlined style={{ color: "#999", fontSize: 14 }} />
+                        </Tooltip>
+                      )}
+                    </div>
                   
-                  <Space direction="vertical" size="small" style={{ width: "100%" }}>
-                    {pred.description && (
-                      <div style={{ fontSize: 12, color: "#8c8c8c", fontStyle: "italic", marginBottom: 4 }}>
-                        💡 {pred.description}
-                      </div>
-                    )}
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                     <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <span style={{ color: "#666" }}>
+                      <span style={{ color: "#666", fontSize: 13 }}>
                         <CalendarOutlined style={{ marginRight: 4 }} />
-                        预计达成日期：
+                        预计达成：
                       </span>
-                      <span style={{ fontWeight: 600, color: "#722ed1" }}>
-                        {dayjs(pred.predictedDate).format("YYYY年MM月DD日")}
+                      <span style={{ fontWeight: 600, color: "#722ed1", fontSize: 13 }}>
+                        {dayjs(pred.predictedDate).format("YYYY-MM-DD")}
                       </span>
                     </div>
                     <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <span style={{ color: "#666" }}>预计天数：</span>
-                      <span style={{ fontWeight: 600 }}>
+                      <span style={{ color: "#666", fontSize: 13 }}>还需天数：</span>
+                      <span style={{ fontWeight: 600, fontSize: 13 }}>
                         {pred.daysRemaining}天
                       </span>
                     </div>
                     <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <span style={{ color: "#666" }}>平均每日变化：</span>
-                      <span style={{ fontWeight: 600, color: trendColor }}>
+                      <span style={{ color: "#666", fontSize: 13 }}>每日变化：</span>
+                      <span style={{ fontWeight: 600, color: trendColor, fontSize: 13 }}>
                         {pred.dailyChange > 0 ? "+" : ""}{pred.dailyChange}kg
                       </span>
                     </div>
-                    {pred.avgCalorieDeficit && (
-                      <div style={{ display: "flex", justifyContent: "space-between" }}>
-                        <span style={{ color: "#666" }}>平均热量赤字：</span>
-                        <span style={{ fontWeight: 600, color: "#fa8c16" }}>
-                          {pred.avgCalorieDeficit > 0 ? "+" : ""}{pred.avgCalorieDeficit} kcal/天
-                        </span>
-                      </div>
-                    )}
-                    {pred.decayFactor && (
-                      <div style={{ display: "flex", justifyContent: "space-between" }}>
-                        <span style={{ color: "#666" }}>速度衰减系数：</span>
-                        <span style={{ fontWeight: 600 }}>
-                          {(pred.decayFactor * 100).toFixed(1)}%
-                        </span>
-                      </div>
-                    )}
-                  </Space>
-                </Card>
-              );
-            })}
-          </Space>
-        </div>
+                  </div>
+                </div>
+                <TrendIcon style={{ fontSize: 16, color: trendColor, marginLeft: 8 }} />
+              </div>
+            </Card>
+          );
+          })}
+        </Space>
 
-        {/* 提示信息 */}
-        <Alert
-          message="预测模型说明"
-          description={
-            <div style={{ fontSize: 12 }}>
-              <p style={{ marginBottom: 4 }}>• 动态代谢模型：考虑体重变化导致的基础代谢率变化，最科学准确</p>
-              <p style={{ marginBottom: 4 }}>• 指数衰减模型：考虑减重速度逐渐放缓的生理现象</p>
-              <p style={{ marginBottom: 0 }}>• 线性回归：基于历史趋势线的简单预测</p>
-            </div>
-          }
-          type="info"
-          showIcon
-          style={{ fontSize: 12 }}
-        />
+        {/* 操作按钮区 */}
+        <div style={{ display: "flex", gap: 8, justifyContent: "space-between", alignItems: "center" }}>
+          {/* AI 预测按钮 */}
+          {!aiPrediction && (
+            <Button
+              type="primary"
+              size="small"
+              onClick={handleGenerateAIPrediction}
+              loading={loadingAI}
+              icon={<ThunderboltOutlined />}
+              style={{ 
+                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                border: "none"
+              }}
+            >
+              生成 AI 智能预测
+            </Button>
+          )}
+          
+          {/* 展开/折叠按钮 */}
+          {allPredictions.length > 1 && (
+            <Button
+              type="link"
+              size="small"
+              onClick={() => setShowAllModels(!showAllModels)}
+              style={{ padding: 0, height: "auto", marginLeft: aiPrediction ? 0 : "auto" }}
+              icon={showAllModels ? <UpOutlined /> : <DownOutlined />}
+            >
+              {showAllModels ? "收起其他模型" : `查看其他${allPredictions.length - 1}个预测模型`}
+            </Button>
+          )}
+        </div>
       </Space>
     </Card>
   );

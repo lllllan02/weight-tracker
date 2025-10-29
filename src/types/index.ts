@@ -30,7 +30,7 @@ export interface UserProfile {
 
 export interface PredictionMethod {
   method: string;
-  methodKey: 'linear' | 'exponentialDecay' | 'dynamicBMR';
+  methodKey: 'linear' | 'exponentialDecay' | 'dynamicBMR' | 'ai';
   daysRemaining: number;
   predictedDate: string;
   dailyChange: number;

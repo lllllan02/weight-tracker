@@ -419,6 +419,171 @@ function dynamicBMRPredict(records, profile, targetWeight, daysToPredict = 365) 
   };
 }
 
+// AI 预测（使用大语言模型进行智能预测）
+async function aiPredict(records, targetWeight, profile) {
+  if (records.length < 5 || !targetWeight || targetWeight <= 0) {
+    return null;
+  }
+
+  try {
+    // 导入 AI 配置（延迟加载，避免循环依赖）
+    const { readFileSync } = require('fs');
+    const { homedir } = require('os');
+    const { join } = require('path');
+    const axios = require('axios');
+    
+    // 读取 API 配置
+    let apiKey, baseUrl, model;
+    try {
+      const zshrcPath = join(homedir(), '.zshrc');
+      const zshrcContent = readFileSync(zshrcPath, 'utf-8');
+      
+      const apiKeyMatch = zshrcContent.match(/export OPENAI_API_KEY\s*=\s*"(.+)"/);
+      apiKey = apiKeyMatch ? apiKeyMatch[1] : null;
+      
+      const baseUrlMatch = zshrcContent.match(/export OPENAI_BASE_URL\s*=\s*"(.+)"/);
+      baseUrl = baseUrlMatch ? baseUrlMatch[1] : null;
+      if (baseUrl && baseUrl.endsWith('/')) {
+        baseUrl = baseUrl.slice(0, -1);
+      }
+      
+      const modelMatch = zshrcContent.match(/export OPENAI_MODEL\s*=\s*"(.+)"/);
+      model = modelMatch ? modelMatch[1] : 'qwen-plus';
+      
+      if (!apiKey || !baseUrl) {
+        console.log('[AI预测] 未找到 API 配置，跳过 AI 预测');
+        return null;
+      }
+    } catch (error) {
+      console.log('[AI预测] 读取 API 配置失败，跳过 AI 预测');
+      return null;
+    }
+
+    const sortedRecords = [...records].sort((a, b) => 
+      new Date(a.date).getTime() - new Date(b.date).getTime()
+    );
+    
+    // 使用最近30条记录
+    const recentRecords = sortedRecords.slice(-Math.min(30, sortedRecords.length));
+    const currentWeight = sortedRecords[sortedRecords.length - 1].weight;
+    const weightDifference = targetWeight - currentWeight;
+    
+    if (Math.abs(weightDifference) < 0.5) {
+      return null; // 已达到目标
+    }
+    
+    // 计算一些统计数据
+    const daysDiff = (new Date(recentRecords[recentRecords.length - 1].date).getTime() - 
+                     new Date(recentRecords[0].date).getTime()) / (1000 * 60 * 60 * 24);
+    const totalChange = recentRecords[recentRecords.length - 1].weight - recentRecords[0].weight;
+    const avgDailyChange = totalChange / daysDiff;
+    
+    // 构建提示词
+    const prompt = `你是一位专业的健康数据分析师。请根据以下体重记录数据，智能预测达到目标体重的时间。
+
+【用户资料】
+- 当前体重：${currentWeight}kg
+- 目标体重：${targetWeight}kg
+- 需要${weightDifference > 0 ? '增重' : '减重'}：${Math.abs(weightDifference).toFixed(1)}kg
+${profile.birthYear ? `- 年龄：${new Date().getFullYear() - profile.birthYear}岁` : ''}
+${profile.gender ? `- 性别：${profile.gender === 'male' ? '男' : '女'}` : ''}
+${profile.height ? `- 身高：${profile.height}cm` : ''}
+
+【最近体重数据】（最近${recentRecords.length}条记录，时间跨度${Math.round(daysDiff)}天）
+${recentRecords.map(r => {
+  const date = new Date(r.date);
+  return `- ${date.getMonth() + 1}月${date.getDate()}日：${r.weight}kg`;
+}).join('\n')}
+
+【统计数据】
+- 平均每日变化：${avgDailyChange.toFixed(3)}kg
+- 总变化量：${totalChange > 0 ? '+' : ''}${totalChange.toFixed(1)}kg
+
+请根据以上数据进行智能分析，综合考虑：
+1. 历史体重变化趋势
+2. 变化速度的波动和规律
+3. 健康减重/增重的速度建议（减重建议每周0.5-1kg，增重建议每周0.25-0.5kg）
+4. 可能出现的平台期和速度放缓
+5. 用户的年龄、性别、身高等因素（如有）
+
+**要求**：
+- 必须以纯JSON格式返回，不要包含任何其他文字
+- 预测要合理且符合健康标准
+- 给出具体的天数和日期
+- 提供简短的预测依据说明（50字以内）
+
+**JSON格式**：
+{
+  "daysRemaining": 预计还需天数（整数）,
+  "dailyChange": 预测的平均每日变化（保留3位小数，如-0.123）,
+  "confidence": "预测置信度（high/medium/low）",
+  "reasoning": "预测依据简述（50字以内）"
+}`;
+
+    // 调用 AI API
+    const response = await axios.post(
+      `${baseUrl}/chat/completions`,
+      {
+        model: model,
+        messages: [
+          {
+            role: 'system',
+            content: '你是一位专业的健康数据分析师，擅长基于历史数据进行智能预测。你的回复必须是纯JSON格式。'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        temperature: 0.3, // 较低的温度使预测更稳定
+        timeout: 30000
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        timeout: 30000
+      }
+    );
+
+    let content = response.data.choices[0].message.content;
+    content = content.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+    
+    const aiResponse = JSON.parse(content);
+    
+    // 验证返回数据
+    if (!aiResponse.daysRemaining || aiResponse.daysRemaining <= 0 || aiResponse.daysRemaining > 3650) {
+      console.log('[AI预测] AI返回的天数不合理:', aiResponse.daysRemaining);
+      return null;
+    }
+    
+    // 计算预测日期
+    const lastDate = new Date(sortedRecords[sortedRecords.length - 1].date);
+    const predictedDate = new Date(lastDate);
+    predictedDate.setDate(lastDate.getDate() + Math.ceil(aiResponse.daysRemaining));
+    
+    console.log('[AI预测] 成功生成预测:', {
+      daysRemaining: aiResponse.daysRemaining,
+      predictedDate: predictedDate.toISOString().split('T')[0],
+      reasoning: aiResponse.reasoning
+    });
+    
+    return {
+      method: 'ai',
+      predictions: [], // AI 预测不提供逐日预测点
+      daysRemaining: Math.ceil(aiResponse.daysRemaining),
+      predictedDate: predictedDate.toISOString().split('T')[0],
+      dailyChange: Number(aiResponse.dailyChange.toFixed(3)),
+      confidence: aiResponse.confidence || 'medium',
+      reasoning: aiResponse.reasoning || 'AI智能分析'
+    };
+  } catch (error) {
+    console.error('[AI预测] 生成失败:', error.response?.data || error.message);
+    return null;
+  }
+}
+
 // 计算达到目标的预计日期
 function predictTargetDate(records, targetWeight, profile) {
   if (records.length < 2 || !targetWeight || targetWeight <= 0) {
@@ -599,5 +764,6 @@ module.exports = {
   linearRegression,
   exponentialDecayPredict,
   dynamicBMRPredict,
-  predictTargetDate
+  predictTargetDate,
+  aiPredict
 }; 

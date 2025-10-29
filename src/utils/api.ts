@@ -415,3 +415,22 @@ export async function importData(file: File) {
     throw error;
   }
 }
+
+// ===== AI 预测 API =====
+// 生成 AI 预测
+export async function generateAIPrediction() {
+  try {
+    const res = await fetch(`${API_BASE}/api/ai-prediction`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    });
+    if (!res.ok) {
+      const errorData = await res.json();
+      throw new Error(errorData.error || `HTTP error! status: ${res.status}`);
+    }
+    return await res.json();
+  } catch (error) {
+    console.error("生成 AI 预测失败:", error);
+    throw error;
+  }
+}

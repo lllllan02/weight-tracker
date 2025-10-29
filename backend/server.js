@@ -12,6 +12,7 @@ const exerciseRoutes = require('./routes/exercise');
 const milestonesRoutes = require('./routes/milestones');
 const backupRoutes = require('./routes/backup');
 const healthRoutes = require('./routes/health');
+const aiPredictionRoutes = require('./routes/aiPrediction');
 
 const app = express();
 const PORT = 3001;
@@ -31,6 +32,7 @@ app.use('/api/exercise', exerciseRoutes);
 app.use('/api/milestones', milestonesRoutes);
 app.use('/api/backup', backupRoutes);
 app.use('/api/health', healthRoutes);
+app.use('/api/ai-prediction', aiPredictionRoutes);
 
 // 启动服务器
 app.listen(PORT, () => {
@@ -55,4 +57,5 @@ app.listen(PORT, () => {
   console.log('- POST /api/backup   - 创建数据备份');
   console.log('- GET  /api/backup/export   - 导出数据备份');
   console.log('- POST /api/backup/import   - 导入数据备份');
+  console.log('- POST /api/ai-prediction - 生成AI预测');
 }); 
