@@ -165,6 +165,33 @@ function calculateStats(records, profile) {
   };
 }
 
+// 辅助函数：过滤出每天的代表性记录（优先早晨空腹）
+function filterDailyRecords(records) {
+  const dailyRecordsMap = new Map();
+  for (const record of records) {
+    const dateKey = new Date(record.date).toISOString().split('T')[0];
+    const hour = new Date(record.date).getHours();
+    const isMorning = hour <= 10 || record.fasting === '空腹';
+    
+    if (!dailyRecordsMap.has(dateKey)) {
+      dailyRecordsMap.set(dateKey, record);
+    } else {
+      // 如果当前记录是早晨记录，替换之前的记录
+      const existing = dailyRecordsMap.get(dateKey);
+      const existingHour = new Date(existing.date).getHours();
+      const existingIsMorning = existingHour <= 10 || existing.fasting === '空腹';
+      
+      if (isMorning && !existingIsMorning) {
+        dailyRecordsMap.set(dateKey, record);
+      }
+    }
+  }
+  
+  return Array.from(dailyRecordsMap.values()).sort((a, b) => 
+    new Date(a.date).getTime() - new Date(b.date).getTime()
+  );
+}
+
 // 计算图表数据
 function calculateChartData(records, profile) {
   if (records.length === 0) {
@@ -236,10 +263,14 @@ function linearRegression(records, daysToPredict = 30) {
   
   if (recentRecords.length < 2) return null;
 
-  const startDate = new Date(recentRecords[0].date).getTime();
+  // 过滤出每日的代表性数据（优先早晨空腹）
+  const dailyRecords = filterDailyRecords(recentRecords);
+  const recordsToUse = dailyRecords.length >= 2 ? dailyRecords : recentRecords;
+
+  const startDate = new Date(recordsToUse[0].date).getTime();
   
   // 转换为天数和体重数组
-  const data = recentRecords.map(record => ({
+  const data = recordsToUse.map(record => ({
     day: (new Date(record.date).getTime() - startDate) / (1000 * 60 * 60 * 24),
     weight: record.weight
   }));
@@ -287,15 +318,36 @@ function exponentialDecayPredict(records, daysToPredict = 30) {
   const recentRecords = sortedRecords.slice(-Math.min(30, sortedRecords.length));
   if (recentRecords.length < 5) return null;
 
-  const startDate = new Date(recentRecords[0].date).getTime();
+  // 过滤出每天的代表性数据（优先早晨空腹）
+  const dailyRecords = filterDailyRecords(recentRecords);
   
-  // 计算每日变化率
+  // 如果日记录足够多，使用日记录；否则回退到原始数据
+  const recordsToUse = dailyRecords.length >= 5 ? dailyRecords : recentRecords;
+  
+  const startDate = new Date(recordsToUse[0].date).getTime();
+  
+  // 计算每日变化率（基于日期间隔，而不是记录间隔）
   const dailyChanges = [];
-  for (let i = 1; i < recentRecords.length; i++) {
-    const daysDiff = (new Date(recentRecords[i].date).getTime() - new Date(recentRecords[i-1].date).getTime()) / (1000 * 60 * 60 * 24);
+  for (let i = 1; i < recordsToUse.length; i++) {
+    const daysDiff = (new Date(recordsToUse[i].date).getTime() - new Date(recordsToUse[i-1].date).getTime()) / (1000 * 60 * 60 * 24);
     if (daysDiff > 0) {
-      const change = (recentRecords[i].weight - recentRecords[i-1].weight) / daysDiff;
-      dailyChanges.push(change);
+      const change = (recordsToUse[i].weight - recordsToUse[i-1].weight) / daysDiff;
+      // 过滤极端异常值：单日变化超过±2kg的忽略（放宽到2kg）
+      if (Math.abs(change) <= 2.0) {
+        dailyChanges.push(change);
+      }
+    }
+  }
+
+  // 如果过滤后数据不足，尝试不过滤
+  if (dailyChanges.length < 3) {
+    dailyChanges.length = 0;
+    for (let i = 1; i < recordsToUse.length; i++) {
+      const daysDiff = (new Date(recordsToUse[i].date).getTime() - new Date(recordsToUse[i-1].date).getTime()) / (1000 * 60 * 60 * 24);
+      if (daysDiff > 0) {
+        const change = (recordsToUse[i].weight - recordsToUse[i-1].weight) / daysDiff;
+        dailyChanges.push(change);
+      }
     }
   }
 
@@ -350,10 +402,14 @@ function dynamicBMRPredict(records, profile, targetWeight, daysToPredict = 365) 
   const recentRecords = sortedRecords.slice(-Math.min(30, sortedRecords.length));
   if (recentRecords.length < 2) return null;
 
+  // 过滤出每日的代表性数据（优先早晨空腹）
+  const dailyRecords = filterDailyRecords(recentRecords);
+  const recordsToUse = dailyRecords.length >= 2 ? dailyRecords : recentRecords;
+
   // 计算历史平均每日热量赤字
-  const totalWeightChange = recentRecords[recentRecords.length - 1].weight - recentRecords[0].weight;
-  const daysDiff = (new Date(recentRecords[recentRecords.length - 1].date).getTime() - 
-                   new Date(recentRecords[0].date).getTime()) / (1000 * 60 * 60 * 24);
+  const totalWeightChange = recordsToUse[recordsToUse.length - 1].weight - recordsToUse[0].weight;
+  const daysDiff = (new Date(recordsToUse[recordsToUse.length - 1].date).getTime() - 
+                   new Date(recordsToUse[0].date).getTime()) / (1000 * 60 * 60 * 24);
   
   if (daysDiff <= 0) return null;
 
@@ -363,9 +419,9 @@ function dynamicBMRPredict(records, profile, targetWeight, daysToPredict = 365) 
   // 如果热量赤字太小（接近维持），则无法预测
   if (Math.abs(avgDailyCalorieDeficit) < 50) return null;
 
-  const startDate = new Date(recentRecords[0].date).getTime();
-  const lastWeight = recentRecords[recentRecords.length - 1].weight;
-  const lastDay = (new Date(recentRecords[recentRecords.length - 1].date).getTime() - startDate) / (1000 * 60 * 60 * 24);
+  const startDate = new Date(recordsToUse[0].date).getTime();
+  const lastWeight = recordsToUse[recordsToUse.length - 1].weight;
+  const lastDay = (new Date(recordsToUse[recordsToUse.length - 1].date).getTime() - startDate) / (1000 * 60 * 60 * 24);
   
   const currentYear = new Date().getFullYear();
   const age = currentYear - profile.birthYear;
@@ -465,7 +521,11 @@ async function aiPredict(records, targetWeight, profile) {
     
     // 使用最近30条记录
     const recentRecords = sortedRecords.slice(-Math.min(30, sortedRecords.length));
-    const currentWeight = sortedRecords[sortedRecords.length - 1].weight;
+    
+    // 过滤出每日的代表性数据（优先早晨空腹）
+    const dailyRecords = filterDailyRecords(recentRecords);
+    const recordsToUse = dailyRecords.length >= 5 ? dailyRecords : recentRecords;
+    const currentWeight = recordsToUse[recordsToUse.length - 1].weight;
     const weightDifference = targetWeight - currentWeight;
     
     if (Math.abs(weightDifference) < 0.5) {
@@ -473,9 +533,9 @@ async function aiPredict(records, targetWeight, profile) {
     }
     
     // 计算一些统计数据
-    const daysDiff = (new Date(recentRecords[recentRecords.length - 1].date).getTime() - 
-                     new Date(recentRecords[0].date).getTime()) / (1000 * 60 * 60 * 24);
-    const totalChange = recentRecords[recentRecords.length - 1].weight - recentRecords[0].weight;
+    const daysDiff = (new Date(recordsToUse[recordsToUse.length - 1].date).getTime() - 
+                     new Date(recordsToUse[0].date).getTime()) / (1000 * 60 * 60 * 24);
+    const totalChange = recordsToUse[recordsToUse.length - 1].weight - recordsToUse[0].weight;
     const avgDailyChange = totalChange / daysDiff;
     
     // 构建提示词
@@ -489,8 +549,8 @@ ${profile.birthYear ? `- 年龄：${new Date().getFullYear() - profile.birthYear
 ${profile.gender ? `- 性别：${profile.gender === 'male' ? '男' : '女'}` : ''}
 ${profile.height ? `- 身高：${profile.height}cm` : ''}
 
-【最近体重数据】（最近${recentRecords.length}条记录，时间跨度${Math.round(daysDiff)}天）
-${recentRecords.map(r => {
+【最近体重数据】（最近${recordsToUse.length}条记录，时间跨度${Math.round(daysDiff)}天）
+${recordsToUse.map(r => {
   const date = new Date(r.date);
   return `- ${date.getMonth() + 1}月${date.getDate()}日：${r.weight}kg`;
 }).join('\n')}
@@ -661,12 +721,15 @@ function predictTargetDate(records, targetWeight, profile) {
       const predictedDate = new Date(lastDate);
       predictedDate.setDate(lastDate.getDate() + daysToTarget);
       
+      // 计算平均每日变化（整个预测期的平均值）
+      const avgDailyChange = Number((weightDifference / daysToTarget).toFixed(3));
+      
       predictions.push({
         method: '指数衰减模型',
         methodKey: 'exponentialDecay',
         daysRemaining: daysToTarget,
         predictedDate: predictedDate.toISOString().split('T')[0],
-        dailyChange: expPred.dailyChange,
+        dailyChange: avgDailyChange, // 使用平均每日变化，而不是初始速率
         confidence: 'high',
         decayFactor: expPred.decayFactor,
         description: '考虑减重速度逐渐放缓'
