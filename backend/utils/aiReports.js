@@ -124,7 +124,10 @@ function analyzeFluctuations(records) {
 // 提取运动数据（周报）
 function extractWeeklyExerciseData(exerciseRecords, report) {
   const weekStart = new Date(report.period.split(' - ')[0]);
+  weekStart.setHours(0, 0, 0, 0);
+  
   const weekEnd = new Date(report.period.split(' - ')[1]);
+  weekEnd.setHours(23, 59, 59, 999);
   
   const weekExercises = exerciseRecords.filter(e => {
     const exerciseDate = new Date(e.date);
@@ -153,7 +156,7 @@ function extractMonthlyExerciseData(exerciseRecords, report) {
   const monthMatch = report.period.match(/(\d{4})年(\d{1,2})月/);
   const year = parseInt(monthMatch[1]);
   const month = parseInt(monthMatch[2]);
-  const monthStart = new Date(year, month - 1, 1);
+  const monthStart = new Date(year, month - 1, 1, 0, 0, 0, 0);
   const monthEnd = new Date(year, month, 0, 23, 59, 59, 999);
   
   const monthExercises = exerciseRecords.filter(e => {
