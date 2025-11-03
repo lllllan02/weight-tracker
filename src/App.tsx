@@ -24,6 +24,7 @@ import { DataBackup } from "./components/DataBackup";
 import { MilestonesCard } from "./components/MilestonesCard";
 import { ProfileSettingsCard } from "./components/ProfileSettingsCard";
 import { PredictionCard } from "./components/PredictionCard";
+import { ExerciseEffectivenessCard } from "./components/ExerciseEffectivenessCard";
 
 const { Header, Content } = Layout;
 const { Title, Paragraph } = Typography;
@@ -463,6 +464,13 @@ function App() {
                       ]}
                     />
                   </Card>
+
+                  {/* 运动效果评估 */}
+                  {stats.current > 0 && (
+                    <div style={{ marginBottom: 12 }}>
+                      <ExerciseEffectivenessCard />
+                    </div>
+                  )}
 
                   {/* 数据备份 */}
                   <DataBackup

@@ -434,3 +434,18 @@ export async function generateAIPrediction() {
     throw error;
   }
 }
+
+// ===== 运动效果分析 API =====
+// 获取运动效果综合分析
+export async function getExerciseAnalysis() {
+  try {
+    const res = await fetch(`${API_BASE}/api/exercise-analysis`);
+    if (!res.ok) {
+      throw new Error(`HTTP error! status: ${res.status}`);
+    }
+    return await res.json();
+  } catch (error) {
+    console.error("获取运动效果分析失败:", error);
+    throw error;
+  }
+}

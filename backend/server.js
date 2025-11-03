@@ -13,6 +13,7 @@ const milestonesRoutes = require('./routes/milestones');
 const backupRoutes = require('./routes/backup');
 const healthRoutes = require('./routes/health');
 const aiPredictionRoutes = require('./routes/aiPrediction');
+const exerciseAnalysisRoutes = require('./routes/exerciseAnalysis');
 
 const app = express();
 const PORT = 3001;
@@ -33,6 +34,7 @@ app.use('/api/milestones', milestonesRoutes);
 app.use('/api/backup', backupRoutes);
 app.use('/api/health', healthRoutes);
 app.use('/api/ai-prediction', aiPredictionRoutes);
+app.use('/api/exercise-analysis', exerciseAnalysisRoutes);
 
 // 启动服务器
 app.listen(PORT, () => {

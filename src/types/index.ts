@@ -151,3 +151,84 @@ export interface Report {
   insights: string[];
   aiAnalysis?: AIAnalysis;
 }
+
+// 运动效果分析相关类型
+export interface WeightChangeAfterExercise {
+  date: string;
+  duration: number;
+  timeSlot: 'morning' | 'afternoon' | 'evening';
+  beforeWeight: number;
+  afterWeight: number;
+  weightChange: number;
+  effectiveness: 'positive' | 'negative';
+}
+
+export interface ExerciseEfficiencyScore {
+  score: number;
+  factors: {
+    frequency: number;
+    consistency: number;
+    weightImpact: number;
+  };
+  level: 'none' | 'poor' | 'fair' | 'good' | 'excellent';
+  description: string;
+  exerciseDaysPerWeek?: number;
+}
+
+export interface TimeSlotAnalysis {
+  count: number;
+  avgChange: number;
+  effectiveness: number;
+  score: number;
+}
+
+export interface BestTimeSlotAnalysis {
+  bestTimeSlot: 'morning' | 'afternoon' | 'evening' | null;
+  analysis: {
+    morning: TimeSlotAnalysis;
+    afternoon: TimeSlotAnalysis;
+    evening: TimeSlotAnalysis;
+  };
+  recommendation: string;
+  timeSlotNames?: {
+    morning: string;
+    afternoon: string;
+    evening: string;
+  };
+  dataQuality?: 'good' | 'insufficient';
+}
+
+export interface WeeklyFrequencyData {
+  week: number;
+  startDate: string;
+  exerciseCount: number;
+  totalDuration: number;
+  weightChange: number;
+  avgWeight: number;
+}
+
+export interface FrequencyImpactAnalysis {
+  periods: WeeklyFrequencyData[];
+  correlation: number | null;
+  insight: string;
+  summary: {
+    totalWeeks: number;
+    avgExercisePerWeek: number;
+    avgWeightChangePerWeek: number;
+  };
+}
+
+export interface ExerciseAnalysis {
+  weightChangeAfterExercise: {
+    data: WeightChangeAfterExercise[];
+    summary: {
+      total: number;
+      positive: number;
+      avgChange: number;
+    };
+  };
+  efficiencyScore: ExerciseEfficiencyScore;
+  bestTimeSlot: BestTimeSlotAnalysis;
+  frequencyImpact: FrequencyImpactAnalysis;
+  generatedAt: string;
+}
