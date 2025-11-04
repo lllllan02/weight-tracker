@@ -117,9 +117,10 @@ router.get('/all-time', (req, res) => {
   const min = Math.min(...weights);
   const max = Math.max(...weights);
 
-  // 计算 BMI
+  // 计算 BMI（endWeight 单位为斤，需转换为公斤）
   const heightInMeters = data.profile.height / 100;
-  const bmi = Number((endWeight / (heightInMeters * heightInMeters)).toFixed(1));
+  const endWeightInKg = endWeight / 2; // 斤转公斤
+  const bmi = Number((endWeightInKg / (heightInMeters * heightInMeters)).toFixed(1));
 
   // 统计运动数据（全时段）
   const periodExerciseRecords = data.exerciseRecords.filter(record => {
@@ -260,9 +261,10 @@ function generateWeeklyReportForDate(records, profile, targetDate, exerciseRecor
   const min = Math.min(...weights);
   const max = Math.max(...weights);
 
-  // 计算 BMI
+  // 计算 BMI（endWeight 单位为斤，需转换为公斤）
   const heightInMeters = profile.height / 100;
-  const bmi = Number((endWeight / (heightInMeters * heightInMeters)).toFixed(1));
+  const endWeightInKg = endWeight / 2; // 斤转公斤
+  const bmi = Number((endWeightInKg / (heightInMeters * heightInMeters)).toFixed(1));
 
   // 统计运动数据（本周）
   const weekExerciseRecords = exerciseRecords.filter(record => {
@@ -344,9 +346,10 @@ function generateMonthlyReportForMonth(records, profile, year, month, exerciseRe
   const min = Math.min(...weights);
   const max = Math.max(...weights);
 
-  // 计算 BMI
+  // 计算 BMI（endWeight 单位为斤，需转换为公斤）
   const heightInMeters = profile.height / 100;
-  const bmi = Number((endWeight / (heightInMeters * heightInMeters)).toFixed(1));
+  const endWeightInKg = endWeight / 2; // 斤转公斤
+  const bmi = Number((endWeightInKg / (heightInMeters * heightInMeters)).toFixed(1));
 
   // 统计运动数据（本月）
   const monthExerciseRecords = exerciseRecords.filter(record => {

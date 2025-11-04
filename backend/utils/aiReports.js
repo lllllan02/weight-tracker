@@ -80,11 +80,11 @@ function analyzeFluctuations(records) {
     weekdayAvg = (weekdayWeights.reduce((sum, w) => sum + w, 0) / weekdayWeights.length).toFixed(1);
     
     const diff = weekendAvg - weekdayAvg;
-    if (Math.abs(diff) > 0.3) {
+    if (Math.abs(diff) > 0.6) { // 阈值从 0.3kg 改为 0.6斤
       if (diff > 0) {
-        weekendPattern = `周末体重平均比工作日高 ${diff.toFixed(1)}kg`;
+        weekendPattern = `周末体重平均比工作日高 ${diff.toFixed(1)}斤`;
       } else {
-        weekendPattern = `工作日体重平均比周末高 ${Math.abs(diff).toFixed(1)}kg`;
+        weekendPattern = `工作日体重平均比周末高 ${Math.abs(diff).toFixed(1)}斤`;
       }
     }
   }
@@ -97,8 +97,8 @@ function analyzeFluctuations(records) {
   for (let i = 1; i < sortedRecords.length; i++) {
     const change = sortedRecords[i].weight - sortedRecords[i - 1].weight;
     
-    // 记录异常波动
-    if (Math.abs(change) > 2) {
+    // 记录异常波动（阈值从 2kg 改为 4斤）
+    if (Math.abs(change) > 4) {
       anomalyDetails.push({
         date: sortedRecords[i].date,
         change: change,
@@ -236,8 +236,12 @@ function extractAllTimeExerciseData(exerciseRecords, report) {
 
 // 格式化体重记录（全部显示）
 function formatAllWeightRecords(records) {
-  return records.map(r => 
-    `- ${formatDateTime(r.date)} ${r.weight}kg (${r.fasting})`
+  // 先按时间排序，确保 AI 能正确分析趋势
+  const sortedRecords = [...records].sort((a, b) => 
+    new Date(a.date).getTime() - new Date(b.date).getTime()
+  );
+  return sortedRecords.map(r => 
+    `- ${formatDateTime(r.date)} ${r.weight}斤 (${r.fasting})`
   ).join('\n');
 }
 
@@ -261,18 +265,18 @@ function generatePromptTemplate(reportType, report, profile, exerciseData) {
     fluctuationText = `\n\n=== 【体重波动分析】（重要数据，必须在分析中体现） ===`;
     
     // 异常波动
-    fluctuationText += `\n📊 异常波动次数：${fluctuationData.anomalyCount}次（单日变化>2kg）`;
+    fluctuationText += `\n📊 异常波动次数：${fluctuationData.anomalyCount}次（单日变化>4斤）`;
     if (fluctuationData.anomalyDetails.length > 0) {
-      fluctuationText += `\n   详情：${fluctuationData.anomalyDetails.map(a => `${formatDate(a.date)}变化${a.change > 0 ? '+' : ''}${a.change.toFixed(1)}kg`).join('、')}`;
+      fluctuationText += `\n   详情：${fluctuationData.anomalyDetails.map(a => `${formatDate(a.date)}变化${a.change > 0 ? '+' : ''}${a.change.toFixed(1)}斤`).join('、')}`;
       fluctuationText += `\n   ⚠️ 请在洞察中分析异常波动的可能原因！`;
     }
     
     // 周期性规律
     if (fluctuationData.weekendPattern) {
       fluctuationText += `\n\n📅 周期性规律发现：${fluctuationData.weekendPattern}`;
-      fluctuationText += `\n   · 工作日平均体重：${fluctuationData.weekdayAvg}kg`;
-      fluctuationText += `\n   · 周末平均体重：${fluctuationData.weekendAvg}kg`;
-      fluctuationText += `\n   · 差值：${Math.abs(fluctuationData.weekendAvg - fluctuationData.weekdayAvg).toFixed(1)}kg`;
+      fluctuationText += `\n   · 工作日平均体重：${fluctuationData.weekdayAvg}斤`;
+      fluctuationText += `\n   · 周末平均体重：${fluctuationData.weekendAvg}斤`;
+      fluctuationText += `\n   · 差值：${Math.abs(fluctuationData.weekendAvg - fluctuationData.weekdayAvg).toFixed(1)}斤`;
       fluctuationText += `\n   ⚠️ 请在洞察和建议中针对这个周期性规律给出具体建议！`;
     }
     
@@ -280,10 +284,10 @@ function generatePromptTemplate(reportType, report, profile, exerciseData) {
     if (fluctuationData.maxIncrease > 0 || fluctuationData.maxDecrease > 0) {
       fluctuationText += `\n\n📈 波动幅度统计：`;
       if (fluctuationData.maxIncrease > 0) {
-        fluctuationText += `\n   · 最大单日增幅：+${fluctuationData.maxIncrease.toFixed(1)}kg`;
+        fluctuationText += `\n   · 最大单日增幅：+${fluctuationData.maxIncrease.toFixed(1)}斤`;
       }
       if (fluctuationData.maxDecrease > 0) {
-        fluctuationText += `\n   · 最大单日降幅：-${fluctuationData.maxDecrease.toFixed(1)}kg`;
+        fluctuationText += `\n   · 最大单日降幅：-${fluctuationData.maxDecrease.toFixed(1)}斤`;
       }
     }
     
@@ -293,7 +297,7 @@ function generatePromptTemplate(reportType, report, profile, exerciseData) {
   // 构建基本信息
   let basicInfo = `【基本信息】
 - 用户姓名：${profile.name || '未设置'}
-- 目标体重：${profile.targetWeight ? profile.targetWeight + 'kg' : '未设置'}
+- 目标体重：${profile.targetWeight ? profile.targetWeight + '斤' : '未设置'}
 - 报告周期：${report.period}`;
 
   // 全时段报告的额外信息
@@ -307,38 +311,29 @@ function generatePromptTemplate(reportType, report, profile, exerciseData) {
 - 记录时间段: ${report.period}
 - 总天数: ${daysDiff} 天
 - 记录次数: ${report.records.length} 次
-- 起始体重: ${report.stats.startWeight}kg
-- 当前体重: ${report.stats.endWeight}kg
-- 总体变化: ${report.stats.change > 0 ? '+' : ''}${report.stats.change}kg
-- 平均体重: ${report.stats.average}kg
-- 最低体重: ${report.stats.min}kg
-- 最高体重: ${report.stats.max}kg
+- 起始体重: ${report.stats.startWeight}斤
+- 当前体重: ${report.stats.endWeight}斤
+- 总体变化: ${report.stats.change > 0 ? '+' : ''}${report.stats.change}斤
+- 平均体重: ${report.stats.average}斤
+- 最低体重: ${report.stats.min}斤
+- 最高体重: ${report.stats.max}斤
 - 身高: ${profile.height}cm
-${profile.targetWeight ? `- 目标体重: ${profile.targetWeight}kg` : ''}`;
+${profile.targetWeight ? `- 目标体重: ${profile.targetWeight}斤` : ''}`;
   }
   
   // 构建体重数据部分
   let weightData = `【${config.period}体重数据】
 - 记录次数：${report.records.length}次
-- 起始体重：${report.stats.startWeight}kg
-- 结束体重：${report.stats.endWeight}kg
-- 体重变化：${report.stats.change}kg（${report.stats.change > 0 ? '增加' : report.stats.change < 0 ? '减少' : '无变化'}）
-- 平均体重：${report.stats.average}kg
-- 最高体重：${report.stats.max}kg
-- 最低体重：${report.stats.min}kg${fluctuationText}`;
+- 起始体重：${report.stats.startWeight}斤
+- 结束体重：${report.stats.endWeight}斤
+- 体重变化：${report.stats.change}斤（${report.stats.change > 0 ? '增加' : report.stats.change < 0 ? '减少' : '无变化'}）
+- 平均体重：${report.stats.average}斤
+- 最高体重：${report.stats.max}斤
+- 最低体重：${report.stats.min}斤${fluctuationText}`;
   
-  // 添加日志以便调试
-  console.log(`[AI报告-${reportType}] 体重数据:`, {
-    period: report.period,
-    startWeight: report.stats.startWeight,
-    endWeight: report.stats.endWeight,
-    change: report.stats.change,
-    recordsCount: report.records.length
-  });
-
   // 月报添加每周平均
   if (reportType === 'monthly' && report.stats.weeklyAverages) {
-    weightData += `\n- 每周平均体重：${report.stats.weeklyAverages.map((w, i) => `第${i+1}周: ${w > 0 ? w + 'kg' : '无数据'}`).join(', ')}`;
+    weightData += `\n- 每周平均体重：${report.stats.weeklyAverages.map((w, i) => `第${i+1}周: ${w > 0 ? w + '斤' : '无数据'}`).join(', ')}`;
   }
   
   // 构建体重记录详情 - 所有报告都显示对应时间段内的全部数据
@@ -351,7 +346,7 @@ ${formatAllWeightRecords(report.records)}`;
 2. 体重与运动关联分析（体重变化与运动量的关系，运动效果评估）
 3. 趋势分析（分析每周体重变化趋势，是否稳定）
 4. **波动分析（必须包含）**：
-   - 如果有异常波动（单日变化>2kg），明确指出次数、日期和可能原因
+   - 如果有异常波动（单日变化>4斤），明确指出次数、日期和可能原因
    - 如果有周末vs工作日差异，明确指出具体数值和建议
    - 如果有最大增减幅，分析是否正常
 5. 目标进度（如果设置了目标体重，评估完成进度）
@@ -371,7 +366,7 @@ ${formatAllWeightRecords(report.records)}`;
 2. 体重与运动关联分析（体重变化与运动量的关系）
 3. 趋势分析（体重变化是否符合健康标准）
 4. **波动分析（必须包含）**：
-   - 如果有异常波动（>2kg），明确说明
+   - 如果有异常波动（>4斤），明确说明
    - 如果有周末工作日差异，明确指出并建议
    - 最大增减幅是否需要关注
 5. 目标进度（如果设置了目标体重）
@@ -396,6 +391,9 @@ ${analysisPoints}
 - 建议要具体、可操作
 - 语气友好、鼓励为主
 - 使用中文
+- **重要**：体重记录详情已按时间顺序排列，请严格按照时间顺序观察体重变化趋势
+- **重要**：只基于【体重记录详情】中的实际数据进行分析，不要推测或编造不存在的趋势
+- **重要**：如果体重整体呈下降趋势，请分析具体的下降速度和波动特点，不要简单归纳为"前期快后期慢"等模糊结论
 - **重要**：综合体重和运动数据进行${reportType === 'all-time' ? '长期' : ''}分析${reportType === 'monthly' ? '，给出运动效果评估和优化建议' : '，给出运动与体重变化的关联性洞察'}
 - **重要**：基于现有数据进行分析，不要批评或提及数据缺失、时间范围不完整、记录频率不够${reportType === 'monthly' ? '、首尾周无数据' : ''}等问题
 - **重要**：如果【体重波动分析】中有异常波动或周期性规律数据，必须在"洞察"中明确提及并分析原因
@@ -411,7 +409,7 @@ ${analysisPoints}
 }
 
 // 通用的系统消息
-const COMMON_SYSTEM_MESSAGE = '你是一位专业的健康管理顾问，擅长综合分析体重和运动数据并提供科学的健康建议。你的回复必须是纯JSON格式，不包含任何其他说明文字。重要：综合体重和运动数据进行深度关联分析，评估运动效果，只基于现有数据进行正面分析，绝不批评数据的完整性、记录频率或时间范围等问题。特别注意：如果数据中包含【体重波动分析】信息（异常波动、周期性规律等），必须在洞察中明确提及并给出具体建议。';
+const COMMON_SYSTEM_MESSAGE = '你是一位专业的健康管理顾问，擅长综合分析体重和运动数据并提供科学的健康建议。你的回复必须是纯JSON格式，不包含任何其他说明文字。重要：综合体重和运动数据进行深度关联分析，评估运动效果，只基于现有数据进行正面分析，绝不批评数据的完整性、记录频率或时间范围等问题。特别注意：如果数据中包含【体重波动分析】信息（异常波动、周期性规律等），必须在洞察中明确提及并给出具体建议。关键要求：体重记录已按时间顺序排列，请严格按照实际记录的时间顺序分析趋势，不要推测或编造不存在的阶段性特点。';
 
 // 报告类型配置（简化版）
 const reportTypeConfigs = {

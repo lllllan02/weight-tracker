@@ -67,7 +67,7 @@ export const TargetProgress: React.FC<TargetProgressProps> = ({
       return "目标达成！";
     }
     const direction = getTargetDirection();
-    return `还需${direction} ${Math.abs(stats.targetRemaining)}kg`;
+    return `还需${direction} ${Math.abs(stats.targetRemaining).toFixed(1)}斤`;
   };
 
   // 计算阶段目标在进度条上的位置
@@ -84,7 +84,7 @@ export const TargetProgress: React.FC<TargetProgressProps> = ({
           <AimOutlined style={{ color: "#1890ff" }} />
           <span>目标进度</span>
           <span style={{ color: "#1890ff", fontWeight: "bold", marginLeft: 8 }}>
-            {stats.current}kg
+            {stats.current.toFixed(1)}斤
           </span>
           <span style={{ color: getProgressColor(), fontSize: 12 }}>
             {getRemainingText()}
@@ -125,7 +125,7 @@ export const TargetProgress: React.FC<TargetProgressProps> = ({
                 key={milestone.id}
                 title={
                   <div>
-                    <div>{milestone.targetWeight}kg</div>
+                    <div>{milestone.targetWeight.toFixed(1)}斤</div>
                     {milestone.note && <div>{milestone.note}</div>}
                     {isAchieved && (
                       <div>✓ {dayjs(milestone.achievedDate).format("YYYY-MM-DD")}</div>
@@ -172,12 +172,12 @@ export const TargetProgress: React.FC<TargetProgressProps> = ({
             fontSize: 12,
           }}
         >
-          <span style={{ color: "#666" }}>初始: {stats.initialWeight}kg</span>
+          <span style={{ color: "#666" }}>初始: {stats.initialWeight.toFixed(1)}斤</span>
           <span style={{ color: getProgressColor(), fontWeight: "bold" }}>
             {stats.targetProgress.toFixed(1)}% 完成
           </span>
           <span style={{ color: "#666" }}>
-            目标: {targetWeight}kg ({getTargetDirection()})
+            目标: {targetWeight.toFixed(1)}斤 ({getTargetDirection()})
           </span>
         </div>
       </div>

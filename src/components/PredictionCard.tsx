@@ -148,12 +148,12 @@ export const PredictionCard: React.FC<PredictionCardProps> = ({
           <div>
             <div style={{ fontSize: 12, color: "#999" }}>还需{weightDirection}</div>
             <div style={{ fontSize: 20, fontWeight: 600, color: isGaining ? "#fa8c16" : "#1890ff" }}>
-              {Math.abs(targetPrediction.weightDifference!)}kg
+              {Math.abs(targetPrediction.weightDifference!)}斤
             </div>
           </div>
           <div style={{ textAlign: "right" }}>
             <div style={{ fontSize: 12, color: "#999" }}>
-              {targetPrediction.currentWeight}kg → {targetPrediction.targetWeight}kg
+              {targetPrediction.currentWeight}斤 → {targetPrediction.targetWeight}斤
             </div>
           </div>
         </div>
@@ -206,7 +206,7 @@ export const PredictionCard: React.FC<PredictionCardProps> = ({
                     <div style={{ display: "flex", justifyContent: "space-between" }}>
                       <span style={{ color: "#666", fontSize: 13 }}>每日变化：</span>
                       <span style={{ fontWeight: 600, color: trendColor, fontSize: 13 }}>
-                        {pred.dailyChange > 0 ? "+" : ""}{pred.dailyChange}kg
+                        {pred.dailyChange > 0 ? "+" : ""}{pred.dailyChange}斤
                       </span>
                     </div>
                   </div>

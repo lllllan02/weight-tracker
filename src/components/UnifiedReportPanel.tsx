@@ -140,11 +140,11 @@ export const UnifiedReportPanel: React.FC<UnifiedReportPanelProps> = ({
       };
     });
 
-    // 识别异常波动点（单日变化 > 2kg）
+    // 识别异常波动点（单日变化 > 4斤）
     const anomalyPoints: Array<{ x: number; y: number; change: number }> = [];
     for (let i = 1; i < sortedRecords.length; i++) {
       const change = Math.abs(sortedRecords[i].weight - sortedRecords[i - 1].weight);
-      if (change > 2) {
+      if (change > 4) { // 4斤
         anomalyPoints.push({
           x: new Date(sortedRecords[i].date).getTime(),
           y: sortedRecords[i].weight,
@@ -211,7 +211,7 @@ export const UnifiedReportPanel: React.FC<UnifiedReportPanelProps> = ({
     const datasets: any[] = [
       {
         type: "line" as const,
-        label: "体重 (kg)",
+        label: "体重 (斤)",
         data: weightData,
         borderColor: "#1890ff",
         backgroundColor: "rgba(24, 144, 255, 0.1)",
@@ -418,7 +418,7 @@ export const UnifiedReportPanel: React.FC<UnifiedReportPanelProps> = ({
           <div>
             <Text type="secondary">起始体重</Text>
             <div style={{ fontSize: 18, fontWeight: 500 }}>
-              {report.stats.startWeight}kg
+              {report.stats.startWeight.toFixed(1)}斤
             </div>
           </div>
           
@@ -427,7 +427,7 @@ export const UnifiedReportPanel: React.FC<UnifiedReportPanelProps> = ({
               <div>
                 <Text type="secondary">当前体重</Text>
                 <div style={{ fontSize: 18, fontWeight: 500 }}>
-                  {report.stats.endWeight}kg
+                  {report.stats.endWeight.toFixed(1)}斤
                 </div>
               </div>
               <div
@@ -439,7 +439,7 @@ export const UnifiedReportPanel: React.FC<UnifiedReportPanelProps> = ({
               >
                 {getChangeIcon(report.stats.change)}{" "}
                 {report.stats.change > 0 ? "+" : ""}
-                {report.stats.change}kg
+                {report.stats.change.toFixed(1)}斤
               </div>
             </div>
           </div>
@@ -494,27 +494,29 @@ export const UnifiedReportPanel: React.FC<UnifiedReportPanelProps> = ({
                       callbacks: {
                         label: function (context: any) {
                           const dataset = context.dataset;
-                          if (dataset.label === "体重 (kg)") {
+                          if (dataset.label === "体重 (斤)") {
+                            // 将斤转换回公斤计算BMI
+                            const weightInKg = context.parsed.y / 2;
                             const bmi = (
-                              context.parsed.y /
+                              weightInKg /
                               Math.pow(height / 100, 2)
                             ).toFixed(1);
                             return [
-                              `体重: ${context.parsed.y} kg`,
+                              `体重: ${context.parsed.y.toFixed(1)} 斤`,
                               `BMI: ${bmi}`,
                             ];
                           } else if (dataset.label === "7日移动平均") {
-                            return `7日平均: ${context.parsed.y} kg`;
+                            return `7日平均: ${context.parsed.y.toFixed(1)} 斤`;
                           } else if (dataset.label === "异常波动") {
                             const point = context.raw;
                             return [
                               `⚠️ 异常波动`,
-                              `体重: ${point.y} kg`,
-                              `单日变化: ${point.change?.toFixed(1)} kg`,
+                              `体重: ${point.y.toFixed(1)} 斤`,
+                              `单日变化: ${point.change?.toFixed(1)} 斤`,
                             ];
                           } else if (dataset.label === "体重变化") {
                             const value = context.parsed.y;
-                            return `变化: ${value > 0 ? "+" : ""}${value} kg`;
+                            return `变化: ${value > 0 ? "+" : ""}${value.toFixed(1)} 斤`;
                           }
                           return `${dataset.label}: ${context.parsed.y}`;
                         },
@@ -591,7 +593,7 @@ export const UnifiedReportPanel: React.FC<UnifiedReportPanelProps> = ({
                       position: "left",
                       title: {
                         display: true,
-                        text: "体重 (kg)",
+                        text: "体重 (斤)",
                       },
                       beginAtZero: false,
                     },
@@ -601,7 +603,7 @@ export const UnifiedReportPanel: React.FC<UnifiedReportPanelProps> = ({
                       position: "right",
                       title: {
                         display: true,
-                        text: "体重变化 (kg)",
+                        text: "体重变化 (斤)",
                       },
                       grid: {
                         drawOnChartArea: false,
@@ -609,9 +611,9 @@ export const UnifiedReportPanel: React.FC<UnifiedReportPanelProps> = ({
                       min: -2,
                       max: 2,
                       ticks: {
-                        stepSize: 0.5,
+                        stepSize: 1,
                         callback: function (value: any) {
-                          return (value > 0 ? "+" : "") + value + " kg";
+                          return (value > 0 ? "+" : "") + value + " 斤";
                         },
                       },
                     },

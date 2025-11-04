@@ -67,7 +67,7 @@ export const ExerciseEffectivenessCard: React.FC = () => {
       datasets: [
         {
           type: 'line' as const,
-          label: '体重变化 (kg)',
+          label: '体重变化 (斤)',
           data: periods.map(p => p.weightChange),
           borderColor: '#1890ff',
           backgroundColor: 'rgba(24, 144, 255, 0.1)',
@@ -255,9 +255,9 @@ export const ExerciseEffectivenessCard: React.FC = () => {
                   marginBottom: 2
                 }}>
                   {analysis.weightChangeAfterExercise.summary.avgChange <= 0 ? '↓' : '↑'}
-                  {Math.abs(analysis.weightChangeAfterExercise.summary.avgChange)}
+                  {Math.abs(analysis.weightChangeAfterExercise.summary.avgChange).toFixed(1)}斤
                 </div>
-                <div style={{ fontSize: 11, color: '#999' }}>变化</div>
+                <div style={{ fontSize: 11, color: '#999' }}>平均变化</div>
               </div>
             </div>
             {analysis.weightChangeAfterExercise.summary.positive / analysis.weightChangeAfterExercise.summary.total >= 0.7 && (
@@ -319,7 +319,7 @@ export const ExerciseEffectivenessCard: React.FC = () => {
                   color: analysis.frequencyImpact.summary.avgWeightChangePerWeek <= 0 ? '#52c41a' : '#ff4d4f' 
                 }}>
                   {analysis.frequencyImpact.summary.avgWeightChangePerWeek <= 0 ? '↓' : '↑'}
-                  {Math.abs(analysis.frequencyImpact.summary.avgWeightChangePerWeek)}kg
+                  {Math.abs(analysis.frequencyImpact.summary.avgWeightChangePerWeek).toFixed(1)}斤
                 </Text>
               </div>
             </div>
@@ -357,7 +357,7 @@ export const ExerciseEffectivenessCard: React.FC = () => {
                     position: 'left' as const,
                     title: {
                       display: true,
-                      text: '体重变化 (kg)',
+                      text: '体重变化 (斤)',
                       font: { size: 12 }
                     },
                     ticks: { font: { size: 11 } }

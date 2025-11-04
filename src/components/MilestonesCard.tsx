@@ -100,6 +100,7 @@ export const MilestonesCard: React.FC<MilestonesCardProps> = ({
   const totalCount = milestones.length;
 
   // 计算目标体重的基础代谢率
+  // targetWeight 单位为斤，需要转换为公斤（1公斤 = 2斤）
   const calculateTargetBMR = (targetWeight: number): number | null => {
     if (!profile?.birthYear || !profile?.gender || !profile?.height) {
       return null;
@@ -114,7 +115,8 @@ export const MilestonesCard: React.FC<MilestonesCardProps> = ({
     }
 
     // 使用 Mifflin-St Jeor 公式
-    const baseBMR = 10 * targetWeight + 6.25 * profile.height - 5 * age;
+    const weightInKg = targetWeight / 2; // 斤转公斤
+    const baseBMR = 10 * weightInKg + 6.25 * profile.height - 5 * age;
 
     if (profile.gender === 'male') {
       return Math.round(baseBMR + 5);
@@ -245,7 +247,7 @@ export const MilestonesCard: React.FC<MilestonesCardProps> = ({
                       paddingRight: isAchieved ? 0 : 80  // 为右上角按钮留出空间
                     }}>
                       <span style={{ fontSize: 18, fontWeight: 600 }}>
-                        {milestone.targetWeight} kg
+                        {milestone.targetWeight.toFixed(1)} 斤
                       </span>
                       {isAchieved && (
                         <Tag color="success">
@@ -262,7 +264,7 @@ export const MilestonesCard: React.FC<MilestonesCardProps> = ({
                       {milestone.note && <div style={{ marginBottom: 4 }}>{milestone.note}</div>}
                       {!isAchieved && (
                         <div style={{ marginTop: 4 }}>
-                          距离目标：{Math.abs(currentWeight - milestone.targetWeight).toFixed(1)} kg
+                          距离目标：{Math.abs(currentWeight - milestone.targetWeight).toFixed(1)} 斤
                         </div>
                       )}
                       {targetBMR && (

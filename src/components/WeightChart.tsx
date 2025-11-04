@@ -47,7 +47,12 @@ export const WeightChart: React.FC<WeightChartProps> = ({ chartData, height }) =
   const chartDataWithZeroLine = {
     ...chartData,
     datasets: [
-      ...chartData.datasets,
+      ...chartData.datasets.map(dataset => {
+        if (dataset.label === "体重 (kg)") {
+          return { ...dataset, label: "体重 (斤)" };
+        }
+        return dataset;
+      }),
       {
         label: "零线 (无变化)",
         data: chartData.labels.map(() => 0), // 所有点都是0
@@ -87,12 +92,14 @@ export const WeightChart: React.FC<WeightChartProps> = ({ chartData, height }) =
         callbacks: {
           label: function (context: any) {
             const dataset = context.dataset;
-            if (dataset.label === "体重 (kg)") {
-              const bmi = (context.parsed.y / Math.pow(height / 100, 2)).toFixed(1);
-              return [`体重: ${context.parsed.y} kg`, `BMI: ${bmi}`];
+            if (dataset.label === "体重 (斤)") {
+              // 将斤转换回公斤计算BMI
+              const weightInKg = context.parsed.y / 2;
+              const bmi = (weightInKg / Math.pow(height / 100, 2)).toFixed(1);
+              return [`体重: ${context.parsed.y.toFixed(1)} 斤`, `BMI: ${bmi}`];
             } else if (dataset.label === "体重变化") {
               const value = context.parsed.y;
-              return `变化: ${value > 0 ? "+" : ""}${value} kg`;
+              return `变化: ${value > 0 ? "+" : ""}${value.toFixed(1)} 斤`;
             }
             return `${dataset.label}: ${context.parsed.y}`;
           },
@@ -118,7 +125,7 @@ export const WeightChart: React.FC<WeightChartProps> = ({ chartData, height }) =
         position: "left" as const,
         title: {
           display: true,
-          text: "体重 (kg)",
+          text: "体重 (斤)",
         },
         beginAtZero: false,
       },
@@ -128,19 +135,19 @@ export const WeightChart: React.FC<WeightChartProps> = ({ chartData, height }) =
         position: "right" as const,
         title: {
           display: true,
-          text: "体重变化 (kg)",
+          text: "体重变化 (斤)",
         },
         grid: {
           drawOnChartArea: false,
         },
-        // 设置轴的范围，使0作为中准线
-        min: -2,
-        max: 2,
+        // 设置轴的范围，使0作为中准线（斤的范围是公斤的2倍）
+        min: -4,
+        max: 4,
         // 自定义刻度，确保0在中间
         ticks: {
-          stepSize: 0.5,
+          stepSize: 1,
           callback: function (value: any) {
-            return (value > 0 ? "+" : "") + value + " kg";
+            return (value > 0 ? "+" : "") + value + " 斤";
           },
         },
       },
@@ -149,7 +156,7 @@ export const WeightChart: React.FC<WeightChartProps> = ({ chartData, height }) =
 
   return (
     <Card className="chart-container">
-      <Chart type="bar" options={options} data={chartData} />
+      <Chart type="bar" options={options} data={chartDataWithZeroLine} />
     </Card>
   );
 };

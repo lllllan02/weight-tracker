@@ -74,20 +74,20 @@ export const WeightRecordModal: React.FC<WeightRecordModalProps> = ({
       <Form form={form} layout="vertical">
         <Form.Item
           name="weight"
-          label={<span style={{ fontWeight: 600 }}>体重 (kg)</span>}
+          label={<span style={{ fontWeight: 600 }}>体重 (斤)</span>}
           rules={[
             { required: true, message: "请输入体重" },
             {
               type: "number",
-              min: 20,
-              max: 300,
-              message: "体重范围应在20-300kg之间",
+              min: 40,
+              max: 600,
+              message: "体重范围应在40-600斤之间",
             },
           ]}
           style={{ marginBottom: 24 }}
         >
           <InputNumber
-            placeholder="例如: 65.5"
+            placeholder="例如: 131.0"
             style={{
               width: "100%",
               borderRadius: 12,
@@ -97,8 +97,8 @@ export const WeightRecordModal: React.FC<WeightRecordModalProps> = ({
             }}
             className="weight-input-number"
             precision={1}
-            min={20}
-            max={300}
+            min={40}
+            max={600}
           />
         </Form.Item>
         <Form.Item

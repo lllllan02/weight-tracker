@@ -107,7 +107,7 @@ export const TimeSlotCard: React.FC<TimeSlotCardProps> = ({
               <InputNumber
                 value={editWeight || null}
                 onChange={(value) => setEditWeight(value || 0)}
-                placeholder="请输入体重"
+                placeholder="请输入体重（斤）"
                 style={{
                   width: "100%",
                   borderRadius: 8,
@@ -115,8 +115,8 @@ export const TimeSlotCard: React.FC<TimeSlotCardProps> = ({
                   fontSize: 16,
                 }}
                 precision={1}
-                min={20}
-                max={300}
+                min={40}
+                max={600}
               />
             </div>
           </div>
@@ -131,7 +131,7 @@ export const TimeSlotCard: React.FC<TimeSlotCardProps> = ({
                 letterSpacing: 0.5,
               }}
             >
-              {record?.weight} kg
+              {record?.weight ? record.weight.toFixed(1) : '0.0'} 斤
             </div>
           </div>
         ) : (

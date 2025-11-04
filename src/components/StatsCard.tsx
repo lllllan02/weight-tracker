@@ -49,14 +49,14 @@ export const StatsCard: React.FC<StatsCardProps> = ({ stats, height }) => {
       >
         <Statistic
           title="当前体重"
-          value={stats.current}
-          suffix="kg"
+          value={stats.current.toFixed(1)}
+          suffix="斤"
           valueStyle={{ color: "#1890ff" }}
         />
         {stats.change !== 0 && (
           <div style={{ marginTop: 8, fontSize: 14, color: getChangeColor() }}>
             {getChangeIcon()} {stats.change > 0 ? "+" : ""}
-            {stats.change} kg
+            {stats.change.toFixed(1)} 斤
           </div>
         )}
       </Card>
@@ -67,8 +67,8 @@ export const StatsCard: React.FC<StatsCardProps> = ({ stats, height }) => {
       >
         <Statistic
           title="平均体重"
-          value={stats.average}
-          suffix="kg"
+          value={stats.average.toFixed(1)}
+          suffix="斤"
           valueStyle={{ color: "#722ed1" }}
         />
         <div style={{ marginTop: 8, fontSize: 12, color: "#8c8c8c" }}>
@@ -96,8 +96,8 @@ export const StatsCard: React.FC<StatsCardProps> = ({ stats, height }) => {
       >
         <Statistic
           title="体重范围"
-          value={`${stats.min} - ${stats.max}`}
-          suffix="kg"
+          value={`${stats.min.toFixed(1)} - ${stats.max.toFixed(1)}`}
+          suffix="斤"
           valueStyle={{ color: "#13c2c2" }}
         />
         <div style={{ marginTop: 8, fontSize: 12, color: "#8c8c8c" }}>

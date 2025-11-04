@@ -1,13 +1,16 @@
 // 计算BMI
+// weight 参数单位为斤，需要转换为公斤（1公斤 = 2斤）
 function calculateBMI(weight, height) {
+  const weightInKg = weight / 2; // 斤转公斤
   const heightInMeters = height / 100;
-  return Number((weight / (heightInMeters * heightInMeters)).toFixed(1));
+  return Number((weightInKg / (heightInMeters * heightInMeters)).toFixed(1));
 }
 
 // 计算基础代谢率 (BMR)
 // 使用 Mifflin-St Jeor 公式
 // 男性：BMR = 10 × 体重(kg) + 6.25 × 身高(cm) - 5 × 年龄(岁) + 5
 // 女性：BMR = 10 × 体重(kg) + 6.25 × 身高(cm) - 5 × 年龄(岁) - 161
+// weight 参数单位为斤，需要转换为公斤（1公斤 = 2斤）
 function calculateBMR(weight, height, birthYear, gender) {
   if (!birthYear || birthYear <= 0) {
     return null; // 如果没有出生年份信息，返回 null
@@ -21,7 +24,8 @@ function calculateBMR(weight, height, birthYear, gender) {
     return null; // 年龄不合理
   }
   
-  const baseBMR = 10 * weight + 6.25 * height - 5 * age;
+  const weightInKg = weight / 2; // 斤转公斤
+  const baseBMR = 10 * weightInKg + 6.25 * height - 5 * age;
   
   if (gender === 'male') {
     return Math.round(baseBMR + 5);
@@ -211,7 +215,7 @@ function calculateChartData(records, profile) {
     datasets: [
       {
         type: 'line',
-        label: '体重 (kg)',
+        label: '体重 (斤)',
         data: sortedRecords.map(r => r.weight),
         borderColor: '#3b82f6',
         backgroundColor: 'rgba(59, 130, 246, 0.1)',
@@ -332,8 +336,8 @@ function exponentialDecayPredict(records, daysToPredict = 30) {
     const daysDiff = (new Date(recordsToUse[i].date).getTime() - new Date(recordsToUse[i-1].date).getTime()) / (1000 * 60 * 60 * 24);
     if (daysDiff > 0) {
       const change = (recordsToUse[i].weight - recordsToUse[i-1].weight) / daysDiff;
-      // 过滤极端异常值：单日变化超过±2kg的忽略（放宽到2kg）
-      if (Math.abs(change) <= 2.0) {
+      // 过滤极端异常值：单日变化超过±4斤（即2kg）的忽略
+      if (Math.abs(change) <= 4.0) {
         dailyChanges.push(change);
       }
     }
@@ -413,8 +417,8 @@ function dynamicBMRPredict(records, profile, targetWeight, daysToPredict = 365) 
   
   if (daysDiff <= 0) return null;
 
-  // 1kg脂肪约等于7700kcal
-  const avgDailyCalorieDeficit = (totalWeightChange * 7700) / daysDiff;
+  // 1kg脂肪约等于7700kcal（体重单位为斤，需转换为公斤）
+  const avgDailyCalorieDeficit = ((totalWeightChange / 2) * 7700) / daysDiff;
 
   // 如果热量赤字太小（接近维持），则无法预测
   if (Math.abs(avgDailyCalorieDeficit) < 50) return null;
@@ -443,8 +447,10 @@ function dynamicBMRPredict(records, profile, targetWeight, daysToPredict = 365) 
     const effectiveDeficit = avgDailyCalorieDeficit;
     
     // 计算体重变化（考虑代谢适应，实际效果会打折扣）
+    // weightChange 单位是公斤，需转换为斤（1公斤 = 2斤）
     const metabolicAdaptation = 0.9; // 代谢适应系数，实际消耗会降低约10%
-    const weightChange = (effectiveDeficit * metabolicAdaptation) / 7700;
+    const weightChangeInKg = (effectiveDeficit * metabolicAdaptation) / 7700;
+    const weightChange = weightChangeInKg * 2; // 公斤转斤
     
     currentWeight += weightChange;
     
@@ -470,7 +476,7 @@ function dynamicBMRPredict(records, profile, targetWeight, daysToPredict = 365) 
   return {
     method: 'dynamicBMR',
     predictions,
-    dailyChange: Number((avgDailyCalorieDeficit / 7700).toFixed(3)),
+    dailyChange: Number((avgDailyCalorieDeficit / 7700 * 2).toFixed(3)), // 转换为斤/天
     avgCalorieDeficit: Math.round(avgDailyCalorieDeficit)
   };
 }
@@ -532,19 +538,26 @@ async function aiPredict(records, targetWeight, profile) {
       return null; // 已达到目标
     }
     
-    // 计算一些统计数据
+    // 计算一些统计数据（体重单位为斤，转换为公斤传给 AI）
     const daysDiff = (new Date(recordsToUse[recordsToUse.length - 1].date).getTime() - 
                      new Date(recordsToUse[0].date).getTime()) / (1000 * 60 * 60 * 24);
     const totalChange = recordsToUse[recordsToUse.length - 1].weight - recordsToUse[0].weight;
     const avgDailyChange = totalChange / daysDiff;
     
+    // 转换为公斤供 AI 理解
+    const currentWeightKg = (currentWeight / 2).toFixed(1);
+    const targetWeightKg = (targetWeight / 2).toFixed(1);
+    const weightDifferenceKg = (weightDifference / 2).toFixed(1);
+    const totalChangeKg = (totalChange / 2).toFixed(1);
+    const avgDailyChangeKg = (avgDailyChange / 2).toFixed(3);
+    
     // 构建提示词
     const prompt = `你是一位专业的健康数据分析师。请根据以下体重记录数据，智能预测达到目标体重的时间。
 
 【用户资料】
-- 当前体重：${currentWeight}kg
-- 目标体重：${targetWeight}kg
-- 需要${weightDifference > 0 ? '增重' : '减重'}：${Math.abs(weightDifference).toFixed(1)}kg
+- 当前体重：${currentWeightKg}kg
+- 目标体重：${targetWeightKg}kg
+- 需要${weightDifference > 0 ? '增重' : '减重'}：${Math.abs(weightDifferenceKg)}kg
 ${profile.birthYear ? `- 年龄：${new Date().getFullYear() - profile.birthYear}岁` : ''}
 ${profile.gender ? `- 性别：${profile.gender === 'male' ? '男' : '女'}` : ''}
 ${profile.height ? `- 身高：${profile.height}cm` : ''}
@@ -552,12 +565,12 @@ ${profile.height ? `- 身高：${profile.height}cm` : ''}
 【最近体重数据】（最近${recordsToUse.length}条记录，时间跨度${Math.round(daysDiff)}天）
 ${recordsToUse.map(r => {
   const date = new Date(r.date);
-  return `- ${date.getMonth() + 1}月${date.getDate()}日：${r.weight}kg`;
+  return `- ${date.getMonth() + 1}月${date.getDate()}日：${(r.weight / 2).toFixed(1)}kg`;
 }).join('\n')}
 
 【统计数据】
-- 平均每日变化：${avgDailyChange.toFixed(3)}kg
-- 总变化量：${totalChange > 0 ? '+' : ''}${totalChange.toFixed(1)}kg
+- 平均每日变化：${avgDailyChangeKg}kg
+- 总变化量：${totalChange > 0 ? '+' : ''}${totalChangeKg}kg
 
 请根据以上数据进行智能分析，综合考虑：
 1. 历史体重变化趋势
@@ -634,7 +647,7 @@ ${recordsToUse.map(r => {
       predictions: [], // AI 预测不提供逐日预测点
       daysRemaining: Math.ceil(aiResponse.daysRemaining),
       predictedDate: predictedDate.toISOString().split('T')[0],
-      dailyChange: Number(aiResponse.dailyChange.toFixed(3)),
+      dailyChange: Number((aiResponse.dailyChange * 2).toFixed(3)), // AI 返回的是 kg/天，转换为斤/天
       confidence: aiResponse.confidence || 'medium',
       reasoning: aiResponse.reasoning || 'AI智能分析'
     };

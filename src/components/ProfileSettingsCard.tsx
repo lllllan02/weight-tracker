@@ -80,6 +80,7 @@ export const ProfileSettingsCard: React.FC<ProfileSettingsCardProps> = ({
   };
 
   // 计算目标体重的基础代谢率
+  // targetWeight 单位为斤，需要转换为公斤（1公斤 = 2斤）
   const calculateTargetBMR = (targetWeight: number): number | null => {
     if (!profile?.birthYear || !profile?.gender || !profile?.height) {
       return null;
@@ -92,7 +93,8 @@ export const ProfileSettingsCard: React.FC<ProfileSettingsCardProps> = ({
       return null;
     }
 
-    const baseBMR = 10 * targetWeight + 6.25 * profile.height - 5 * age;
+    const weightInKg = targetWeight / 2; // 斤转公斤
+    const baseBMR = 10 * weightInKg + 6.25 * profile.height - 5 * age;
 
     if (profile.gender === 'male') {
       return Math.round(baseBMR + 5);
@@ -282,7 +284,7 @@ export const ProfileSettingsCard: React.FC<ProfileSettingsCardProps> = ({
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                     <ArrowRightOutlined style={{ color: "#52c41a", fontSize: 12 }} />
                     <span style={{ fontSize: 13, color: "#666" }}>
-                      {nextMilestone.targetWeight}kg
+                      {nextMilestone.targetWeight.toFixed(1)}斤
                     </span>
                   </div>
                   <div style={{ fontSize: 16, fontWeight: 700, color: "#52c41a" }}>
