@@ -152,10 +152,71 @@ router.get('/all-time', (req, res) => {
     }
   }
 
+  // 按日期分组记录，每天只保留一条用于热量计算
+  const recordsByDate = new Map();
+  sortedRecords.forEach(record => {
+    const dateStr = new Date(record.date).toISOString().split('T')[0];
+    if (!recordsByDate.has(dateStr)) {
+      recordsByDate.set(dateStr, []);
+    }
+    recordsByDate.get(dateStr).push(record);
+  });
+
+  // 为每天生成一条带热量数据的记录
+  const recordsWithCalories = sortedRecords.map(record => {
+    const dateStr = new Date(record.date).toISOString().split('T')[0];
+    const recordDate = new Date(record.date).toDateString();
+    const dayRecords = recordsByDate.get(dateStr);
+    
+    // 只为每天的最后一条记录添加热量数据
+    const isLastRecordOfDay = dayRecords[dayRecords.length - 1].id === record.id;
+    
+    if (!isLastRecordOfDay) {
+      // 不是最后一条记录，不添加热量数据
+      return {
+        ...record,
+        caloriesIn: undefined,
+        caloriesOut: undefined,
+        bmr: undefined,
+        isComplete: undefined
+      };
+    }
+    
+    // 检查是否标记为完整记录
+    const isComplete = data.completeRecords && data.completeRecords.includes(dateStr);
+    
+    // 获取当天的饮食记录
+    const dayMeals = data.mealRecords.filter(meal => {
+      return new Date(meal.date).toDateString() === recordDate;
+    });
+    const caloriesIn = dayMeals.reduce((sum, meal) => sum + (meal.estimatedCalories || 0), 0);
+    
+    // 获取当天的运动记录
+    const dayExercises = data.exerciseRecords.filter(exercise => {
+      return new Date(exercise.date).toDateString() === recordDate;
+    });
+    const caloriesOut = dayExercises.reduce((sum, ex) => sum + (ex.estimatedCalories || 0), 0);
+    
+    // 计算基础代谢（使用当天的平均体重）
+    const avgWeight = dayRecords.reduce((sum, r) => sum + r.weight, 0) / dayRecords.length;
+    const weightInKg = avgWeight / 2; // 斤转公斤
+    const bmr = data.profile.gender === 'female'
+      ? Math.round(10 * weightInKg + 6.25 * data.profile.height - 5 * (data.profile.age || 25) - 161)
+      : Math.round(10 * weightInKg + 6.25 * data.profile.height - 5 * (data.profile.age || 25) + 5);
+    
+    return {
+      ...record,
+      caloriesIn,
+      caloriesOut,
+      bmr,
+      isComplete
+    };
+  });
+
   const allTimeReport = {
     period: `${startDate.toLocaleDateString('zh-CN')} - ${endDate.toLocaleDateString('zh-CN')}`,
     type: 'all-time',
-    records: sortedRecords,
+    records: recordsWithCalories,
     stats: {
       startWeight,
       endWeight,
@@ -185,7 +246,7 @@ router.get('/weekly', (req, res) => {
   const data = readData();
   
   let targetDate = date ? new Date(date) : new Date();
-  const weeklyReport = generateWeeklyReportForDate(data.records, data.profile, targetDate, data.exerciseRecords);
+  const weeklyReport = generateWeeklyReportForDate(data.records, data.profile, targetDate, data.exerciseRecords, data.mealRecords);
   
   // 如果有已保存的 AI 分析，附加到报告中
   const reportKey = getReportKey(weeklyReport.period, 'weekly');
@@ -204,7 +265,7 @@ router.get('/monthly', (req, res) => {
   let targetYear = year ? parseInt(year) : new Date().getFullYear();
   let targetMonth = month ? parseInt(month) : new Date().getMonth() + 1;
   
-  const monthlyReport = generateMonthlyReportForMonth(data.records, data.profile, targetYear, targetMonth, data.exerciseRecords);
+  const monthlyReport = generateMonthlyReportForMonth(data.records, data.profile, targetYear, targetMonth, data.exerciseRecords, data.mealRecords);
   
   // 如果有已保存的 AI 分析，附加到报告中
   const reportKey = getReportKey(monthlyReport.period, 'monthly');
@@ -216,7 +277,7 @@ router.get('/monthly', (req, res) => {
 });
 
 // 生成指定日期的周报
-function generateWeeklyReportForDate(records, profile, targetDate, exerciseRecords = []) {
+function generateWeeklyReportForDate(records, profile, targetDate, exerciseRecords = [], mealRecords = []) {
   const weekStart = new Date(targetDate);
   // 计算到周一的天数（周一为一周的开始）
   const dayOfWeek = targetDate.getDay();
@@ -287,10 +348,72 @@ function generateWeeklyReportForDate(records, profile, targetDate, exerciseRecor
     insights.push(`本周运动 ${exerciseCount} 次，共 ${exerciseDuration} 分钟`);
   }
 
+  // 按日期分组记录，每天只保留一条用于热量计算
+  const data = readData();
+  const weekRecordsByDate = new Map();
+  sortedWeekRecords.forEach(record => {
+    const dateStr = new Date(record.date).toISOString().split('T')[0];
+    if (!weekRecordsByDate.has(dateStr)) {
+      weekRecordsByDate.set(dateStr, []);
+    }
+    weekRecordsByDate.get(dateStr).push(record);
+  });
+
+  // 为每天生成一条带热量数据的记录
+  const weekRecordsWithCalories = sortedWeekRecords.map(record => {
+    const dateStr = new Date(record.date).toISOString().split('T')[0];
+    const recordDate = new Date(record.date).toDateString();
+    const dayRecords = weekRecordsByDate.get(dateStr);
+    
+    // 只为每天的最后一条记录添加热量数据
+    const isLastRecordOfDay = dayRecords[dayRecords.length - 1].id === record.id;
+    
+    if (!isLastRecordOfDay) {
+      // 不是最后一条记录，不添加热量数据
+      return {
+        ...record,
+        caloriesIn: undefined,
+        caloriesOut: undefined,
+        bmr: undefined,
+        isComplete: undefined
+      };
+    }
+    
+    // 检查是否标记为完整记录
+    const isComplete = data.completeRecords && data.completeRecords.includes(dateStr);
+    
+    // 获取当天的饮食记录
+    const dayMeals = mealRecords.filter(meal => {
+      return new Date(meal.date).toDateString() === recordDate;
+    });
+    const caloriesIn = dayMeals.reduce((sum, meal) => sum + (meal.estimatedCalories || 0), 0);
+    
+    // 获取当天的运动记录
+    const dayExercises = exerciseRecords.filter(exercise => {
+      return new Date(exercise.date).toDateString() === recordDate;
+    });
+    const caloriesOut = dayExercises.reduce((sum, ex) => sum + (ex.estimatedCalories || 0), 0);
+    
+    // 计算基础代谢（使用当天的平均体重）
+    const avgWeight = dayRecords.reduce((sum, r) => sum + r.weight, 0) / dayRecords.length;
+    const weightInKg = avgWeight / 2; // 斤转公斤
+    const bmr = profile.gender === 'female'
+      ? Math.round(10 * weightInKg + 6.25 * profile.height - 5 * (profile.age || 25) - 161)
+      : Math.round(10 * weightInKg + 6.25 * profile.height - 5 * (profile.age || 25) + 5);
+    
+    return {
+      ...record,
+      caloriesIn,
+      caloriesOut,
+      bmr,
+      isComplete
+    };
+  });
+
   return {
     period: `${weekStart.toLocaleDateString('zh-CN')} - ${weekEnd.toLocaleDateString('zh-CN')}`,
     type: 'weekly',
-    records: weekRecords,
+    records: weekRecordsWithCalories,
     stats: {
       startWeight,
       endWeight,
@@ -307,7 +430,7 @@ function generateWeeklyReportForDate(records, profile, targetDate, exerciseRecor
 }
 
 // 生成指定年月的月报
-function generateMonthlyReportForMonth(records, profile, year, month, exerciseRecords = []) {
+function generateMonthlyReportForMonth(records, profile, year, month, exerciseRecords = [], mealRecords = []) {
   const monthStart = new Date(year, month - 1, 1);
   const monthEnd = new Date(year, month, 0, 23, 59, 59, 999);
 
@@ -393,10 +516,72 @@ function generateMonthlyReportForMonth(records, profile, year, month, exerciseRe
     insights.push(`本月运动 ${exerciseCount} 次，共 ${exerciseDuration} 分钟`);
   }
 
+  // 按日期分组记录，每天只保留一条用于热量计算
+  const data = readData();
+  const monthRecordsByDate = new Map();
+  sortedMonthRecords.forEach(record => {
+    const dateStr = new Date(record.date).toISOString().split('T')[0];
+    if (!monthRecordsByDate.has(dateStr)) {
+      monthRecordsByDate.set(dateStr, []);
+    }
+    monthRecordsByDate.get(dateStr).push(record);
+  });
+
+  // 为每天生成一条带热量数据的记录
+  const monthRecordsWithCalories = sortedMonthRecords.map(record => {
+    const dateStr = new Date(record.date).toISOString().split('T')[0];
+    const recordDate = new Date(record.date).toDateString();
+    const dayRecords = monthRecordsByDate.get(dateStr);
+    
+    // 只为每天的最后一条记录添加热量数据
+    const isLastRecordOfDay = dayRecords[dayRecords.length - 1].id === record.id;
+    
+    if (!isLastRecordOfDay) {
+      // 不是最后一条记录，不添加热量数据
+      return {
+        ...record,
+        caloriesIn: undefined,
+        caloriesOut: undefined,
+        bmr: undefined,
+        isComplete: undefined
+      };
+    }
+    
+    // 检查是否标记为完整记录
+    const isComplete = data.completeRecords && data.completeRecords.includes(dateStr);
+    
+    // 获取当天的饮食记录
+    const dayMeals = mealRecords.filter(meal => {
+      return new Date(meal.date).toDateString() === recordDate;
+    });
+    const caloriesIn = dayMeals.reduce((sum, meal) => sum + (meal.estimatedCalories || 0), 0);
+    
+    // 获取当天的运动记录
+    const dayExercises = exerciseRecords.filter(exercise => {
+      return new Date(exercise.date).toDateString() === recordDate;
+    });
+    const caloriesOut = dayExercises.reduce((sum, ex) => sum + (ex.estimatedCalories || 0), 0);
+    
+    // 计算基础代谢（使用当天的平均体重）
+    const avgWeight = dayRecords.reduce((sum, r) => sum + r.weight, 0) / dayRecords.length;
+    const weightInKg = avgWeight / 2; // 斤转公斤
+    const bmr = profile.gender === 'female'
+      ? Math.round(10 * weightInKg + 6.25 * profile.height - 5 * (profile.age || 25) - 161)
+      : Math.round(10 * weightInKg + 6.25 * profile.height - 5 * (profile.age || 25) + 5);
+    
+    return {
+      ...record,
+      caloriesIn,
+      caloriesOut,
+      bmr,
+      isComplete
+    };
+  });
+
   return {
     period: `${year}年${month}月`,
     type: 'monthly',
-    records: monthRecords,
+    records: monthRecordsWithCalories,
     stats: {
       startWeight,
       endWeight,

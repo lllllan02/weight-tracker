@@ -679,3 +679,54 @@ export async function reanalyzeMeal(id: string) {
     throw error;
   }
 }
+
+// ===== 完整记录标记 API =====
+// 标记某天为完整记录
+export async function markAsComplete(date: string) {
+  try {
+    const res = await fetch(`${API_BASE}/api/complete-records/mark`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ date }),
+    });
+    if (!res.ok) {
+      throw new Error(`HTTP error! status: ${res.status}`);
+    }
+    return await res.json();
+  } catch (error) {
+    console.error("标记完整记录失败:", error);
+    throw error;
+  }
+}
+
+// 取消某天的完整记录标记
+export async function unmarkAsComplete(date: string) {
+  try {
+    const res = await fetch(`${API_BASE}/api/complete-records/mark?date=${encodeURIComponent(date)}`, {
+      method: "DELETE",
+    });
+    if (!res.ok) {
+      throw new Error(`HTTP error! status: ${res.status}`);
+    }
+    return await res.json();
+  } catch (error) {
+    console.error("取消完整记录标记失败:", error);
+    throw error;
+  }
+}
+
+// 检查某天是否标记为完整记录
+export async function checkIsComplete(date: string) {
+  try {
+    const res = await fetch(`${API_BASE}/api/complete-records/check?date=${encodeURIComponent(date)}`);
+    if (!res.ok) {
+      throw new Error(`HTTP error! status: ${res.status}`);
+    }
+    return await res.json();
+  } catch (error) {
+    console.error("检查完整记录失败:", error);
+    throw error;
+  }
+}

@@ -393,6 +393,10 @@ function App() {
                 onSuccess={() => {
                   setMealRefresh(prev => prev + 1);
                   loadData(); // 刷新数据以更新运动记录
+                  // 重新加载所有报告以更新图表（标记完整后需要更新净热量图）
+                  loadAllTimeReport();
+                  loadMonthlyReport();
+                  loadWeeklyReport();
                 }}
               />
 

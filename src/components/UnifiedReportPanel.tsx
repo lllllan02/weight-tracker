@@ -111,22 +111,29 @@ export const UnifiedReportPanel: React.FC<UnifiedReportPanelProps> = ({
       y: record.weight,
     }));
 
-    // 计算体重变化（与前一条记录的差值）
-    const changeData = sortedRecords.map((record, index) => {
-      const change = index === 0 
-        ? 0 
-        : Number((record.weight - sortedRecords[index - 1].weight).toFixed(1));
+    // 计算每日净热量（摄入 - 基础代谢 - 运动消耗）
+    // 只显示标记为完整记录的日期
+    const calorieData = sortedRecords.map((record) => {
+      const caloriesIn = (record as any).caloriesIn || 0;
+      const caloriesOut = (record as any).caloriesOut || 0;
+      const bmr = (record as any).bmr || 0;
+      const isComplete = (record as any).isComplete || false;
+      
+      // 只有标记为完整的记录才显示热量，否则显示null（不显示柱子）
+      const netCalories = isComplete ? caloriesIn - bmr - caloriesOut : null;
+      
       return {
         x: new Date(record.date).getTime(),
-        y: change,
+        y: netCalories,
       };
     });
 
-    // 根据变化值设置颜色（红色增加，绿色减少）
-    const changeColors = changeData.map((item) => {
-      if (item.y > 0) return "rgba(255, 77, 79, 0.6)"; // 红色
-      if (item.y < 0) return "rgba(82, 196, 26, 0.6)"; // 绿色
-      return "rgba(140, 140, 140, 0.6)"; // 灰色
+    // 根据净热量设置颜色（黄色正值，绿色负值）
+    const calorieColors = calorieData.map((item) => {
+      if (item.y === null) return "rgba(140, 140, 140, 0.6)"; // 未完整记录 - 灰色
+      if (item.y > 0) return "rgba(255, 214, 102, 0.6)"; // 黄色 - 热量盈余
+      if (item.y < 0) return "rgba(115, 209, 61, 0.6)"; // 绿色 - 热量亏损
+      return "rgba(140, 140, 140, 0.6)"; // 灰色 - 平衡
     });
 
     // 计算7日移动平均线
@@ -252,10 +259,10 @@ export const UnifiedReportPanel: React.FC<UnifiedReportPanelProps> = ({
       },
       {
         type: "bar" as const,
-        label: "体重变化",
-        data: changeData,
-        backgroundColor: changeColors,
-        borderColor: changeColors.map((color) => color.replace("0.6", "1")),
+        label: "每日净热量",
+        data: calorieData,
+        backgroundColor: calorieColors,
+        borderColor: calorieColors.map((color) => color.replace("0.6", "1")),
         borderWidth: 1,
         yAxisID: "y2",
         order: 4,
@@ -514,9 +521,12 @@ export const UnifiedReportPanel: React.FC<UnifiedReportPanelProps> = ({
                               `体重: ${point.y.toFixed(1)} 斤`,
                               `单日变化: ${point.change?.toFixed(1)} 斤`,
                             ];
-                          } else if (dataset.label === "体重变化") {
+                          } else if (dataset.label === "每日净热量") {
                             const value = context.parsed.y;
-                            return `变化: ${value > 0 ? "+" : ""}${value.toFixed(1)} 斤`;
+                            if (value === null || value === undefined) {
+                              return `净热量: 未标记完整`;
+                            }
+                            return `净热量: ${value > 0 ? "+" : ""}${value.toFixed(0)} 千卡`;
                           }
                           return `${dataset.label}: ${context.parsed.y}`;
                         },
@@ -603,17 +613,17 @@ export const UnifiedReportPanel: React.FC<UnifiedReportPanelProps> = ({
                       position: "right",
                       title: {
                         display: true,
-                        text: "体重变化 (斤)",
+                        text: "净热量 (千卡)",
                       },
                       grid: {
                         drawOnChartArea: false,
                       },
-                      min: -2,
-                      max: 2,
+                      min: -2000,
+                      max: 2000,
                       ticks: {
-                        stepSize: 1,
+                        stepSize: 500,
                         callback: function (value: any) {
-                          return (value > 0 ? "+" : "") + value + " 斤";
+                          return (value > 0 ? "+" : "") + value;
                         },
                       },
                     },

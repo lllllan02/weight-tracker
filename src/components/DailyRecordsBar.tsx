@@ -39,6 +39,9 @@ import {
   getExercises,
   deleteExerciseRecord,
   predictExercise,
+  markAsComplete,
+  unmarkAsComplete,
+  checkIsComplete,
 } from '../utils/api';
 import type { MealRecord, ExerciseRecord } from '../types';
 
@@ -68,6 +71,8 @@ const DailyRecordsBar: React.FC<DailyRecordsBarProps> = ({ refresh, onSuccess, s
   const [totalCaloriesIn, setTotalCaloriesIn] = useState(0);
   const [totalCaloriesOut, setTotalCaloriesOut] = useState(0);
   const [editingRecord, setEditingRecord] = useState<MealRecord | ExerciseRecord | null>(null);
+  const [isComplete, setIsComplete] = useState(false);
+  const [markingComplete, setMarkingComplete] = useState(false);
 
   const currentDate = selectedDate || dayjs();
   const dateStr = currentDate.format('YYYY-MM-DD');
@@ -75,9 +80,10 @@ const DailyRecordsBar: React.FC<DailyRecordsBarProps> = ({ refresh, onSuccess, s
   // 加载记录
   const loadRecords = useCallback(async () => {
     try {
-      const [mealsRes, exercisesRes] = await Promise.all([
+      const [mealsRes, exercisesRes, completeRes] = await Promise.all([
         getMeals({ date: dateStr }),
         getExercises({ date: dateStr }),
+        checkIsComplete(currentDate.toISOString()),
       ]);
 
       if (mealsRes.success) {
@@ -97,10 +103,14 @@ const DailyRecordsBar: React.FC<DailyRecordsBarProps> = ({ refresh, onSuccess, s
         );
         setTotalCaloriesOut(totalOut);
       }
+
+      if (completeRes.success) {
+        setIsComplete(completeRes.isComplete);
+      }
     } catch (error) {
       console.error('加载记录失败:', error);
     }
-  }, [dateStr]);
+  }, [dateStr, currentDate]);
 
   useEffect(() => {
     loadRecords();
@@ -301,6 +311,33 @@ const DailyRecordsBar: React.FC<DailyRecordsBarProps> = ({ refresh, onSuccess, s
 
   const handleChange = ({ fileList: newFileList }: any) => {
     setFileList(newFileList);
+  };
+
+  // 切换完整记录标记
+  const handleToggleComplete = async () => {
+    try {
+      setMarkingComplete(true);
+      if (isComplete) {
+        const result = await unmarkAsComplete(currentDate.toISOString());
+        if (result.success) {
+          message.success('已取消完整记录标记');
+          setIsComplete(false);
+          if (onSuccess) onSuccess();
+        }
+      } else {
+        const result = await markAsComplete(currentDate.toISOString());
+        if (result.success) {
+          message.success('已标记为完整记录');
+          setIsComplete(true);
+          if (onSuccess) onSuccess();
+        }
+      }
+    } catch (error) {
+      console.error('操作失败:', error);
+      message.error('操作失败，请稍后重试');
+    } finally {
+      setMarkingComplete(false);
+    }
   };
 
   // 获取餐次名称
@@ -666,6 +703,20 @@ const DailyRecordsBar: React.FC<DailyRecordsBarProps> = ({ refresh, onSuccess, s
               }}
             >
               详情({meals.length + exercises.length})
+            </Button>
+            <Button
+              size="small"
+              onClick={handleToggleComplete}
+              loading={markingComplete}
+              style={{ 
+                background: isComplete ? 'rgba(82, 196, 26, 0.3)' : 'rgba(255,255,255,0.2)', 
+                border: isComplete ? '1px solid rgba(82, 196, 26, 0.6)' : 'none',
+                color: '#fff',
+                fontWeight: 600,
+                width: 80
+              }}
+            >
+              {isComplete ? '✓ 完整' : '标记'}
             </Button>
           </Space>
         </div>
