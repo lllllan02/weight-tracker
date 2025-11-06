@@ -14,18 +14,27 @@ interface WeightInputProps {
   onAdd: () => void;
   onExerciseChange: () => void; // 专门用于运动状态变化的回调
   calendarData: CalendarData;
+  onDateSelect?: (date: Dayjs) => void; // 日期选择回调
 }
 
 export const WeightInput: React.FC<WeightInputProps> = ({
   onAdd,
   onExerciseChange,
   calendarData,
+  onDateSelect: onDateSelectProp,
 }) => {
   const [selectedDate, setSelectedDate] = useState<Dayjs>(dayjs());
   const [currentDate, setCurrentDate] = useState<Dayjs>(dayjs());
   const [calendarView, setCalendarView] = useState<"date" | "month" | "year">(
     "date"
   );
+
+  const handleDateSelect = (date: Dayjs) => {
+    setSelectedDate(date);
+    if (onDateSelectProp) {
+      onDateSelectProp(date);
+    }
+  };
 
   // 打开添加记录弹窗（现在直接在卡片上编辑，这个函数保留用于新增）
   const handleAddRecord = (date: Dayjs, timeSlot: TimeSlot) => {
@@ -160,7 +169,7 @@ export const WeightInput: React.FC<WeightInputProps> = ({
               calendarView={calendarView}
               setCalendarView={setCalendarView}
               calendarData={calendarData}
-              onDateSelect={setSelectedDate}
+              onDateSelect={handleDateSelect}
             />
           </Card>
         </div>

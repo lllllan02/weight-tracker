@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 
 // 导入路由模块
 const calendarRoutes = require('./routes/calendar');
@@ -14,6 +15,7 @@ const backupRoutes = require('./routes/backup');
 const healthRoutes = require('./routes/health');
 const aiPredictionRoutes = require('./routes/aiPrediction');
 const exerciseAnalysisRoutes = require('./routes/exerciseAnalysis');
+const mealsRoutes = require('./routes/meals');
 
 const app = express();
 const PORT = 3001;
@@ -21,6 +23,9 @@ const PORT = 3001;
 // 中间件配置
 app.use(cors());
 app.use(express.json());
+
+// 静态文件服务 - 用于访问上传的图片
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // 路由配置
 app.use('/api/calendar', calendarRoutes);
@@ -35,6 +40,7 @@ app.use('/api/backup', backupRoutes);
 app.use('/api/health', healthRoutes);
 app.use('/api/ai-prediction', aiPredictionRoutes);
 app.use('/api/exercise-analysis', exerciseAnalysisRoutes);
+app.use('/api/meals', mealsRoutes);
 
 // 启动服务器
 app.listen(PORT, () => {

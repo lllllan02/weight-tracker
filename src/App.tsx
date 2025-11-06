@@ -25,6 +25,7 @@ import { MilestonesCard } from "./components/MilestonesCard";
 import { ProfileSettingsCard } from "./components/ProfileSettingsCard";
 import { PredictionCard } from "./components/PredictionCard";
 import { ExerciseEffectivenessCard } from "./components/ExerciseEffectivenessCard";
+import MealTrackerBar from "./components/MealTrackerBar";
 
 const { Header, Content } = Layout;
 const { Title, Paragraph } = Typography;
@@ -66,6 +67,8 @@ function App() {
   const [canGoPreviousMonth, setCanGoPreviousMonth] = useState(false);
   const [canGoNextMonth, setCanGoNextMonth] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
+  const [mealRefresh, setMealRefresh] = useState(0);
+  const [selectedDateForMeal, setSelectedDateForMeal] = useState<Date>(new Date());
 
   useEffect(() => {
     const initializeApp = async () => {
@@ -385,9 +388,21 @@ function App() {
                     onAdd={handleAddRecord}
                     onExerciseChange={handleExerciseChange}
                     calendarData={calendarData}
+                    onDateSelect={(date) => {
+                      setSelectedDateForMeal(date.toDate());
+                    }}
                   />
                 </div>
               </div>
+
+              {/* 饮食记录横条 */}
+              <MealTrackerBar 
+                refresh={mealRefresh}
+                selectedDate={selectedDateForMeal}
+                onSuccess={() => {
+                  setMealRefresh(prev => prev + 1);
+                }}
+              />
 
               {/* 目标进度 - 使用最小的阶段目标作为最终目标 */}
               {stats.current > 0 && profile.milestones && profile.milestones.length > 0 && (

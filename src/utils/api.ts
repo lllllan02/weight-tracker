@@ -449,3 +449,136 @@ export async function getExerciseAnalysis() {
     throw error;
   }
 }
+
+// ===== 饮食记录 API =====
+// 创建饮食记录（支持图片上传）
+export async function createMeal(formData: FormData) {
+  try {
+    const res = await fetch(`${API_BASE}/api/meals`, {
+      method: "POST",
+      body: formData, // 直接发送 FormData，不设置 Content-Type
+    });
+    if (!res.ok) {
+      throw new Error(`HTTP error! status: ${res.status}`);
+    }
+    return await res.json();
+  } catch (error) {
+    console.error("创建饮食记录失败:", error);
+    throw error;
+  }
+}
+
+// 预测热量（不保存记录）
+export async function predictMealCalories(formData: FormData) {
+  try {
+    const res = await fetch(`${API_BASE}/api/meals/predict`, {
+      method: "POST",
+      body: formData,
+    });
+    if (!res.ok) {
+      throw new Error(`HTTP error! status: ${res.status}`);
+    }
+    return await res.json();
+  } catch (error) {
+    console.error("预测热量失败:", error);
+    throw error;
+  }
+}
+
+// 获取饮食记录列表
+export async function getMeals(params?: {
+  date?: string;
+  startDate?: string;
+  endDate?: string;
+}) {
+  try {
+    let url = `${API_BASE}/api/meals`;
+    if (params) {
+      const queryParams = new URLSearchParams();
+      if (params.date) queryParams.append("date", params.date);
+      if (params.startDate) queryParams.append("startDate", params.startDate);
+      if (params.endDate) queryParams.append("endDate", params.endDate);
+      
+      const queryString = queryParams.toString();
+      if (queryString) {
+        url += `?${queryString}`;
+      }
+    }
+    
+    const res = await fetch(url);
+    if (!res.ok) {
+      throw new Error(`HTTP error! status: ${res.status}`);
+    }
+    return await res.json();
+  } catch (error) {
+    console.error("获取饮食记录失败:", error);
+    throw error;
+  }
+}
+
+// 获取每日总热量
+export async function getDailyCalories(date?: string) {
+  try {
+    let url = `${API_BASE}/api/meals/daily-calories`;
+    if (date) {
+      url += `?date=${date}`;
+    }
+    const res = await fetch(url);
+    if (!res.ok) {
+      throw new Error(`HTTP error! status: ${res.status}`);
+    }
+    return await res.json();
+  } catch (error) {
+    console.error("获取每日热量失败:", error);
+    throw error;
+  }
+}
+
+// 更新饮食记录
+export async function updateMeal(id: string, formData: FormData) {
+  try {
+    const res = await fetch(`${API_BASE}/api/meals/${id}`, {
+      method: "PUT",
+      body: formData,
+    });
+    if (!res.ok) {
+      throw new Error(`HTTP error! status: ${res.status}`);
+    }
+    return await res.json();
+  } catch (error) {
+    console.error("更新饮食记录失败:", error);
+    throw error;
+  }
+}
+
+// 删除饮食记录
+export async function deleteMeal(id: string) {
+  try {
+    const res = await fetch(`${API_BASE}/api/meals/${id}`, {
+      method: "DELETE",
+    });
+    if (!res.ok) {
+      throw new Error(`HTTP error! status: ${res.status}`);
+    }
+    return await res.json();
+  } catch (error) {
+    console.error("删除饮食记录失败:", error);
+    throw error;
+  }
+}
+
+// 重新分析饮食记录
+export async function reanalyzeMeal(id: string) {
+  try {
+    const res = await fetch(`${API_BASE}/api/meals/${id}/analyze`, {
+      method: "POST",
+    });
+    if (!res.ok) {
+      throw new Error(`HTTP error! status: ${res.status}`);
+    }
+    return await res.json();
+  } catch (error) {
+    console.error("重新分析饮食记录失败:", error);
+    throw error;
+  }
+}

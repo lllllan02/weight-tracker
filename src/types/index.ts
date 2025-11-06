@@ -232,3 +232,41 @@ export interface ExerciseAnalysis {
   frequencyImpact: FrequencyImpactAnalysis;
   generatedAt: string;
 }
+
+// 饮食记录相关类型
+export interface MealRecord {
+  id: string;
+  date: string;
+  description: string;
+  images: string[]; // 图片URL数组
+  mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack' | 'other';
+  estimatedCalories: number | null;
+  aiAnalysis: string | null;
+  details?: {
+    confidence?: 'high' | 'medium' | 'low';
+    breakdown?: Array<{
+      food: string;
+      amount: string;
+      calories: number;
+    }>;
+    nutrients?: {
+      protein: number;
+      carbs: number;
+      fat: number;
+    };
+  };
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface DailyCalories {
+  date: string;
+  totalCalories: number;
+  mealCount: number;
+  meals: Array<{
+    id: string;
+    mealType: string;
+    description: string;
+    calories: number | null;
+  }>;
+}
