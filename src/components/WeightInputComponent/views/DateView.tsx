@@ -11,6 +11,7 @@ interface DateViewProps {
   onDateSelect: (date: Dayjs) => void;
   calendarView: "date" | "month" | "year";
   setCalendarView: (view: "date" | "month" | "year") => void;
+  selectedDate?: Dayjs;
 }
 
 export const DateView: React.FC<DateViewProps> = ({
@@ -20,6 +21,7 @@ export const DateView: React.FC<DateViewProps> = ({
   onDateSelect,
   calendarView,
   setCalendarView,
+  selectedDate,
 }) => {
   const { dayRecords = {}, exerciseRecords = {} } = calendarData;
 
@@ -259,6 +261,7 @@ export const DateView: React.FC<DateViewProps> = ({
   const dateFullCellRender = (date: Dayjs) => {
     const dayWeights = getDayWeights(date);
     const isToday = date.isSame(dayjs(), "day");
+    const isSelected = selectedDate ? date.isSame(selectedDate, "day") : false;
     const hasRecord = dayWeights?.hasAnyRecord || false;
     const exerciseData = getExerciseData(date);
     const hasExercise = exerciseData.exercise;
@@ -278,6 +281,13 @@ export const DateView: React.FC<DateViewProps> = ({
       textColor = "#fff";
       fontWeight = 600;
       boxShadow = "0 2px 8px rgba(24, 144, 255, 0.35)";
+    } else if (isSelected && isCurrentMonth) {
+      // 选中的日期：紫色高亮
+      backgroundColor = "#f9f0ff";
+      borderColor = "#d3adf7";
+      textColor = "#722ed1";
+      fontWeight = 600;
+      boxShadow = "0 2px 6px rgba(114, 46, 209, 0.25)";
     } else if ((hasRecord || hasExercise) && isCurrentMonth) {
       // 有数据（体重或运动）：淡蓝色背景
       backgroundColor = "#f0f5ff";

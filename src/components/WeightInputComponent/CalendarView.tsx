@@ -12,6 +12,7 @@ interface CalendarViewProps {
   setCalendarView: (view: "date" | "month" | "year") => void;
   calendarData: CalendarData;
   onDateSelect: (date: Dayjs) => void;
+  selectedDate?: Dayjs;
 }
 
 export const CalendarView: React.FC<CalendarViewProps> = ({
@@ -21,6 +22,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   setCalendarView,
   calendarData,
   onDateSelect,
+  selectedDate,
 }) => {
   return (
     <>
@@ -32,6 +34,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
           onDateSelect={onDateSelect}
           calendarView={calendarView}
           setCalendarView={setCalendarView}
+          selectedDate={selectedDate}
         />
       ) : calendarView === "month" ? (
         <MonthView

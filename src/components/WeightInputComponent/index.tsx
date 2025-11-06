@@ -129,6 +129,7 @@ export const WeightInput: React.FC<WeightInputProps> = ({
               setCalendarView={setCalendarView}
               calendarData={calendarData}
               onDateSelect={handleDateSelect}
+              selectedDate={selectedDate}
             />
           </Card>
         </div>
