@@ -147,11 +147,12 @@ const DailyRecordsBar: React.FC<DailyRecordsBarProps> = ({ refresh, onSuccess, s
       });
     }
 
+    // 修复图片URL - 如果是相对路径，添加后端地址前缀
     const existingFiles = record.images?.map((url, index) => ({
       uid: `existing-${index}`,
       name: `image-${index}`,
       status: 'done' as const,
-      url: url,
+      url: url.startsWith('http') ? url : `http://localhost:3001${url}`,
     })) || [];
     setFileList(existingFiles);
     setModalVisible(true);
@@ -917,7 +918,7 @@ const DailyRecordsBar: React.FC<DailyRecordsBarProps> = ({ refresh, onSuccess, s
                                   {meal.images.map((img, idx) => (
                                     <Image
                                       key={idx}
-                                      src={img}
+                                      src={img.startsWith('http') ? img : `http://localhost:3001${img}`}
                                       width={60}
                                       height={60}
                                       style={{ objectFit: 'cover', borderRadius: 4, marginRight: 4 }}
@@ -983,7 +984,7 @@ const DailyRecordsBar: React.FC<DailyRecordsBarProps> = ({ refresh, onSuccess, s
                                   {exercise.images.map((img, idx) => (
                                     <Image
                                       key={idx}
-                                      src={img}
+                                      src={img.startsWith('http') ? img : `http://localhost:3001${img}`}
                                       width={60}
                                       height={60}
                                       style={{ objectFit: 'cover', borderRadius: 4, marginRight: 4 }}
