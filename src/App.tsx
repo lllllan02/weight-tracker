@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Layout, Typography, message, Tabs, Card, Skeleton } from "antd";
 import { DashboardOutlined, BarChartOutlined } from "@ant-design/icons";
+import dayjs, { Dayjs } from "dayjs";
 import {
   UserProfile,
   WeightStats,
@@ -25,7 +26,7 @@ import { MilestonesCard } from "./components/MilestonesCard";
 import { ProfileSettingsCard } from "./components/ProfileSettingsCard";
 import { PredictionCard } from "./components/PredictionCard";
 import { ExerciseEffectivenessCard } from "./components/ExerciseEffectivenessCard";
-import MealTrackerBar from "./components/MealTrackerBar";
+import DailyRecordsBar from "./components/DailyRecordsBar";
 
 const { Header, Content } = Layout;
 const { Title, Paragraph } = Typography;
@@ -68,7 +69,7 @@ function App() {
   const [canGoNextMonth, setCanGoNextMonth] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [mealRefresh, setMealRefresh] = useState(0);
-  const [selectedDateForMeal, setSelectedDateForMeal] = useState<Date>(new Date());
+  const [selectedDateForMeal, setSelectedDateForMeal] = useState<Dayjs>(dayjs());
 
   useEffect(() => {
     const initializeApp = async () => {
@@ -296,16 +297,6 @@ function App() {
     }
   };
 
-  const handleExerciseChange = async () => {
-    try {
-      // 只重新加载数据，不显示成功提示
-      await Promise.all([loadData(), loadAvailableDates(), loadAllTimeReport()]);
-    } catch (error) {
-      console.error("重新加载数据失败:", error);
-    }
-  };
-
-
   return (
     <Layout className="app-container">
       <Header
@@ -386,21 +377,22 @@ function App() {
                 <div style={{ flex: 1, minWidth: 0, display: "flex" }}>
                   <WeightInput
                     onAdd={handleAddRecord}
-                    onExerciseChange={handleExerciseChange}
                     calendarData={calendarData}
                     onDateSelect={(date) => {
-                      setSelectedDateForMeal(date.toDate());
+                      setSelectedDateForMeal(date);
                     }}
                   />
                 </div>
               </div>
 
-              {/* 饮食记录横条 */}
-              <MealTrackerBar 
+              {/* 饮食和运动记录横条 */}
+              <DailyRecordsBar 
                 refresh={mealRefresh}
                 selectedDate={selectedDateForMeal}
+                bmr={stats.currentBMR || 0}
                 onSuccess={() => {
                   setMealRefresh(prev => prev + 1);
+                  loadData(); // 刷新数据以更新运动记录
                 }}
               />
 

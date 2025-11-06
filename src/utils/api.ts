@@ -207,6 +207,103 @@ export async function deleteExerciseRecord(id: string) {
   }
 }
 
+// 创建运动记录（支持图片上传）
+export async function createExerciseWithImages(formData: FormData) {
+  try {
+    const res = await fetch(`${API_BASE}/api/exercise`, {
+      method: "POST",
+      body: formData,
+    });
+    if (!res.ok) {
+      throw new Error(`HTTP error! status: ${res.status}`);
+    }
+    return await res.json();
+  } catch (error) {
+    console.error("创建运动记录失败:", error);
+    throw error;
+  }
+}
+
+// 预测运动时长和热量（不保存记录）
+export async function predictExercise(formData: FormData) {
+  try {
+    const res = await fetch(`${API_BASE}/api/exercise/predict`, {
+      method: "POST",
+      body: formData,
+    });
+    if (!res.ok) {
+      throw new Error(`HTTP error! status: ${res.status}`);
+    }
+    return await res.json();
+  } catch (error) {
+    console.error("预测运动失败:", error);
+    throw error;
+  }
+}
+
+// 更新运动记录（支持图片上传）
+export async function updateExerciseWithImages(id: string, formData: FormData) {
+  try {
+    const res = await fetch(`${API_BASE}/api/exercise/${id}`, {
+      method: "PUT",
+      body: formData,
+    });
+    if (!res.ok) {
+      throw new Error(`HTTP error! status: ${res.status}`);
+    }
+    return await res.json();
+  } catch (error) {
+    console.error("更新运动记录失败:", error);
+    throw error;
+  }
+}
+
+// 获取运动记录（支持日期过滤）
+export async function getExercises(params?: {
+  date?: string;
+  startDate?: string;
+  endDate?: string;
+}) {
+  try {
+    let url = `${API_BASE}/api/exercise`;
+    if (params) {
+      const queryParams = new URLSearchParams();
+      if (params.date) queryParams.append("date", params.date);
+      if (params.startDate) queryParams.append("startDate", params.startDate);
+      if (params.endDate) queryParams.append("endDate", params.endDate);
+      
+      if (queryParams.toString()) {
+        url += `?${queryParams.toString()}`;
+      }
+    }
+    
+    const res = await fetch(url);
+    if (!res.ok) {
+      throw new Error(`HTTP error! status: ${res.status}`);
+    }
+    return await res.json();
+  } catch (error) {
+    console.error("获取运动记录失败:", error);
+    throw error;
+  }
+}
+
+// 重新分析运动记录
+export async function reanalyzeExercise(id: string) {
+  try {
+    const res = await fetch(`${API_BASE}/api/exercise/${id}/analyze`, {
+      method: "POST",
+    });
+    if (!res.ok) {
+      throw new Error(`HTTP error! status: ${res.status}`);
+    }
+    return await res.json();
+  } catch (error) {
+    console.error("重新分析运动记录失败:", error);
+    throw error;
+  }
+}
+
 // ===== 报告 API =====
 // 获取所有有数据的周列表
 export async function getAvailableWeeks() {

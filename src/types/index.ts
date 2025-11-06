@@ -10,6 +10,20 @@ export interface ExerciseRecord {
   id: string;
   date: string;
   duration: number; // 运动时长（分钟），大于0表示有运动
+  description?: string; // 运动描述
+  images?: string[]; // 图片URL数组
+  estimatedCalories?: number | null; // 估算消耗热量
+  aiAnalysis?: string | null; // AI分析结果
+  details?: {
+    confidence?: 'high' | 'medium' | 'low';
+    breakdown?: Array<{
+      activity: string;
+      duration: number;
+      calories: number;
+    }>;
+  };
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Milestone {

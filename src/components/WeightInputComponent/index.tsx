@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import { Card, message } from "antd";
-import { WeightRecord, CalendarData, ExerciseRecord } from "../../types";
+import { WeightRecord, CalendarData } from "../../types";
 import { generateId } from "../../utils/helpers";
-import { addRecord, updateRecord, deleteRecord, addExerciseRecord, updateExerciseRecord, getExerciseRecords } from "../../utils/api";
+import { addRecord, updateRecord, deleteRecord } from "../../utils/api";
 import dayjs, { Dayjs } from "dayjs";
 
 // 导入子组件
@@ -12,14 +12,12 @@ import { TimeSlot } from "./constants";
 
 interface WeightInputProps {
   onAdd: () => void;
-  onExerciseChange: () => void; // 专门用于运动状态变化的回调
   calendarData: CalendarData;
   onDateSelect?: (date: Dayjs) => void; // 日期选择回调
 }
 
 export const WeightInput: React.FC<WeightInputProps> = ({
   onAdd,
-  onExerciseChange,
   calendarData,
   onDateSelect: onDateSelectProp,
 }) => {
@@ -44,45 +42,6 @@ export const WeightInput: React.FC<WeightInputProps> = ({
   // 编辑记录（现在直接在卡片上编辑，这个函数保留用于兼容）
   const handleEditRecord = (date: Dayjs, timeSlot: TimeSlot) => {
     setSelectedDate(date);
-  };
-
-  // 处理运动时长变化
-  const handleExerciseDurationChange = async (date: Dayjs, duration: number | null) => {
-    try {
-      // 获取所有运动记录
-      const exerciseRecords = await getExerciseRecords();
-      const dateKey = date.format("YYYY-MM-DD");
-      
-      // 查找是否已有该日期的运动记录
-      const existingRecord = exerciseRecords.find((record: ExerciseRecord) => 
-        new Date(record.date).toISOString().split('T')[0] === dateKey
-      );
-      
-      // 有时长且>0就保存，否则删除
-      const hasExercise = duration !== null && duration > 0;
-      
-      if (existingRecord) {
-        // 更新现有运动记录（后端会自动处理删除逻辑）
-        await updateExerciseRecord(existingRecord.id, {
-          date: date.hour(8).minute(0).second(0).toISOString(),
-          duration: duration || 0,
-        });
-      } else if (hasExercise) {
-        // 只有在有运动时长时才创建新记录
-        await addExerciseRecord({
-          date: date.hour(8).minute(0).second(0).toISOString(),
-          duration: duration,
-        });
-      }
-
-      message.success(hasExercise ? "运动记录保存成功！" : "已清除运动记录");
-      
-      // 通知父组件重新加载数据
-      await onExerciseChange();
-    } catch (error) {
-      console.error("保存运动记录失败:", error);
-      message.error("保存失败，请重试");
-    }
   };
 
   // 保存记录（直接在卡片上编辑）
@@ -183,7 +142,6 @@ export const WeightInput: React.FC<WeightInputProps> = ({
             onEditRecord={handleEditRecord}
             onSaveRecord={handleSaveRecord}
             onCancelEdit={handleCancelEdit}
-            onExerciseDurationChange={handleExerciseDurationChange}
             onDeleteRecord={handleDeleteRecord}
           />
         </div>

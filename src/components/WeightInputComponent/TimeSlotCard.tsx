@@ -72,12 +72,12 @@ export const TimeSlotCard: React.FC<TimeSlotCardProps> = ({
         border: hasRecord
           ? `2px solid ${slot.color}`
           : `1px solid ${slot.color}30`,
-        borderRadius: 12,
+        borderRadius: 8,
         background: hasRecord ? `${slot.color}05` : "#fafbfc",
-        padding: "16px",
+        padding: "10px 12px",
         textAlign: "center",
         position: "relative",
-        minHeight: 90,
+        minHeight: 70,
         display: "flex",
         flexDirection: "column",
         justifyContent: "space-between",
@@ -91,10 +91,10 @@ export const TimeSlotCard: React.FC<TimeSlotCardProps> = ({
       <div>
         <div
           style={{
-            fontSize: 13,
+            fontSize: 12,
             fontWeight: 600,
             color: slot.color,
-            marginBottom: 10,
+            marginBottom: 6,
             letterSpacing: 0.5,
           }}
         >
@@ -124,10 +124,10 @@ export const TimeSlotCard: React.FC<TimeSlotCardProps> = ({
           <div>
             <div
               style={{
-                fontSize: 22,
+                fontSize: 18,
                 fontWeight: 700,
                 color: slot.color,
-                marginBottom: 6,
+                marginBottom: 4,
                 letterSpacing: 0.5,
               }}
             >
@@ -137,10 +137,10 @@ export const TimeSlotCard: React.FC<TimeSlotCardProps> = ({
         ) : (
           <div
             style={{
-              fontSize: 14,
+              fontSize: 12,
               color: "#ccc",
               fontWeight: 500,
-              marginBottom: 6,
+              marginBottom: 4,
               fontStyle: "italic",
             }}
           >
@@ -150,20 +150,20 @@ export const TimeSlotCard: React.FC<TimeSlotCardProps> = ({
       </div>
 
       {isEditing ? (
-        <div style={{ display: "flex", gap: 8 }}>
+        <div style={{ display: "flex", gap: 6 }}>
           <Button
             type="primary"
             size="small"
             icon={<CheckOutlined />}
             onClick={handleSave}
             style={{
-              borderRadius: 8,
+              borderRadius: 6,
               background: "#52c41a",
               border: "none",
               color: "#fff",
               fontWeight: 600,
-              height: 32,
-              fontSize: 12,
+              height: 28,
+              fontSize: 11,
               flex: 1,
             }}
           >
@@ -174,12 +174,12 @@ export const TimeSlotCard: React.FC<TimeSlotCardProps> = ({
             icon={<CloseOutlined />}
             onClick={handleCancel}
             style={{
-              borderRadius: 8,
+              borderRadius: 6,
               borderColor: "#d9d9d9",
               color: "#666",
               fontWeight: 600,
-              height: 32,
-              fontSize: 12,
+              height: 28,
+              fontSize: 11,
               flex: 1,
             }}
           >
