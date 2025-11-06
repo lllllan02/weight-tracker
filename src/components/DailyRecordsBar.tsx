@@ -383,7 +383,7 @@ const DailyRecordsBar: React.FC<DailyRecordsBarProps> = ({ refresh, onSuccess, s
       <Card
         style={{
           borderRadius: 8,
-          marginBottom: 16,
+          marginBottom: 12,
           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
           color: '#fff',
           border: 'none',
@@ -393,17 +393,17 @@ const DailyRecordsBar: React.FC<DailyRecordsBarProps> = ({ refresh, onSuccess, s
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           {/* 左侧：大数字 */}
           <div style={{ marginRight: 16, flexShrink: 0 }}>
-            <div style={{ fontSize: 11, opacity: 0.8, marginBottom: 2 }}>今日</div>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+            <div style={{ fontSize: 12, opacity: 0.85, marginBottom: 3 }}>今日净热量</div>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 5 }}>
               <div style={{ 
-                fontSize: 32, 
+                fontSize: 38, 
                 fontWeight: 700,
                 color: netCalories > 0 ? '#ffd666' : '#95de64',
                 lineHeight: 1
               }}>
                 {netCalories > 0 ? '+' : ''}{netCalories}
               </div>
-              <div style={{ fontSize: 12, opacity: 0.85 }}>千卡</div>
+              <div style={{ fontSize: 14, opacity: 0.9 }}>千卡</div>
             </div>
           </div>
 
@@ -411,10 +411,10 @@ const DailyRecordsBar: React.FC<DailyRecordsBarProps> = ({ refresh, onSuccess, s
           <div style={{ 
             flex: 1,
             display: 'flex', 
-            gap: 8,
+            gap: 10,
             overflowX: 'auto',
             marginRight: 16,
-            paddingRight: 8,
+            paddingRight: 10,
           }}>
             {sortedMeals.map(meal => (
                 <div
@@ -422,16 +422,16 @@ const DailyRecordsBar: React.FC<DailyRecordsBarProps> = ({ refresh, onSuccess, s
                   onClick={() => handleEdit(meal, 'meal')}
                   style={{
                     background: 'rgba(255,255,255,0.15)',
-                    borderRadius: 6,
-                    padding: '8px',
-                    minWidth: 140,
+                    borderRadius: 8,
+                    padding: '12px 10px',
+                    minWidth: 160,
                     cursor: 'pointer',
                     transition: 'all 0.2s',
                     border: '1px solid rgba(255,255,255,0.2)',
                     flexShrink: 0,
                     display: 'flex',
                     gap: 8,
-                    height: 52,
+                    height: 70,
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.background = 'rgba(255,255,255,0.25)';
@@ -443,14 +443,14 @@ const DailyRecordsBar: React.FC<DailyRecordsBarProps> = ({ refresh, onSuccess, s
                   {/* 左侧：竖向标签 */}
                   <div style={{
                     writingMode: 'vertical-rl',
-                    fontSize: 11,
+                    fontSize: 12,
                     fontWeight: 700,
                     letterSpacing: 2,
                     color: getMealTypeColor(meal.mealType),
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    minWidth: 14,
+                    minWidth: 16,
                   }}>
                     {getMealTypeName(meal.mealType)}
                   </div>
@@ -472,7 +472,7 @@ const DailyRecordsBar: React.FC<DailyRecordsBarProps> = ({ refresh, onSuccess, s
                   }}>
                     {/* 右上角：食物描述 */}
                     <div style={{
-                      fontSize: 11,
+                      fontSize: 12,
                       opacity: 0.9,
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
@@ -480,13 +480,13 @@ const DailyRecordsBar: React.FC<DailyRecordsBarProps> = ({ refresh, onSuccess, s
                     }}>
                       {meal.description || '未填写'}
                       {meal.images && meal.images.length > 0 && (
-                        <CameraOutlined style={{ fontSize: 9, marginLeft: 4, opacity: 0.7 }} />
+                        <CameraOutlined style={{ fontSize: 10, marginLeft: 4, opacity: 0.7 }} />
                       )}
                     </div>
                     
                     {/* 右下角：热量 */}
                     <div style={{
-                      fontSize: 13,
+                      fontSize: 16,
                       fontWeight: 700,
                       color: '#fff566',
                       display: 'flex',
@@ -494,7 +494,7 @@ const DailyRecordsBar: React.FC<DailyRecordsBarProps> = ({ refresh, onSuccess, s
                       gap: 4,
                     }}>
                       <span>+{meal.estimatedCalories || 0}</span>
-                      <span style={{ fontSize: 10, opacity: 0.8 }}>千卡</span>
+                      <span style={{ fontSize: 11, opacity: 0.8 }}>千卡</span>
                     </div>
                   </div>
                 </div>
@@ -505,16 +505,16 @@ const DailyRecordsBar: React.FC<DailyRecordsBarProps> = ({ refresh, onSuccess, s
                   onClick={() => handleEdit(exercise, 'exercise')}
                   style={{
                     background: 'rgba(255,255,255,0.15)',
-                    borderRadius: 6,
-                    padding: '8px',
-                    minWidth: 140,
+                    borderRadius: 8,
+                    padding: '12px 10px',
+                    minWidth: 160,
                     cursor: 'pointer',
                     transition: 'all 0.2s',
                     border: '1px solid rgba(255,255,255,0.2)',
                     flexShrink: 0,
                     display: 'flex',
                     gap: 8,
-                    height: 52,
+                    height: 70,
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.background = 'rgba(255,255,255,0.25)';
@@ -526,14 +526,14 @@ const DailyRecordsBar: React.FC<DailyRecordsBarProps> = ({ refresh, onSuccess, s
                   {/* 左侧：竖向标签 */}
                   <div style={{
                     writingMode: 'vertical-rl',
-                    fontSize: 11,
+                    fontSize: 12,
                     fontWeight: 700,
                     letterSpacing: 2,
                     color: '#73d13d',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    minWidth: 14,
+                    minWidth: 16,
                   }}>
                     运动
                   </div>
@@ -555,7 +555,7 @@ const DailyRecordsBar: React.FC<DailyRecordsBarProps> = ({ refresh, onSuccess, s
                   }}>
                     {/* 右上角：运动描述 */}
                     <div style={{
-                      fontSize: 11,
+                      fontSize: 12,
                       opacity: 0.9,
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
@@ -563,13 +563,13 @@ const DailyRecordsBar: React.FC<DailyRecordsBarProps> = ({ refresh, onSuccess, s
                     }}>
                       {exercise.description || `${exercise.duration}分钟`}
                       {exercise.images && exercise.images.length > 0 && (
-                        <CameraOutlined style={{ fontSize: 9, marginLeft: 4, opacity: 0.7 }} />
+                        <CameraOutlined style={{ fontSize: 10, marginLeft: 4, opacity: 0.7 }} />
                       )}
                     </div>
                     
                     {/* 右下角：热量 */}
                     <div style={{
-                      fontSize: 13,
+                      fontSize: 16,
                       fontWeight: 700,
                       color: '#73d13d',
                       display: 'flex',
@@ -577,7 +577,7 @@ const DailyRecordsBar: React.FC<DailyRecordsBarProps> = ({ refresh, onSuccess, s
                       gap: 4,
                     }}>
                       <span>-{exercise.estimatedCalories || 0}</span>
-                      <span style={{ fontSize: 10, opacity: 0.8 }}>千卡</span>
+                      <span style={{ fontSize: 11, opacity: 0.8 }}>千卡</span>
                     </div>
                   </div>
                 </div>
@@ -587,27 +587,27 @@ const DailyRecordsBar: React.FC<DailyRecordsBarProps> = ({ refresh, onSuccess, s
             <div
               style={{
                 background: 'rgba(255,255,255,0.2)',
-                borderRadius: 6,
-                padding: '8px',
-                minWidth: 140,
+                borderRadius: 8,
+                padding: '12px 10px',
+                minWidth: 160,
                 border: '1px solid rgba(255,255,255,0.3)',
                 flexShrink: 0,
                 display: 'flex',
                 gap: 8,
-                height: 52,
+                height: 70,
               }}
             >
               {/* 左侧：竖向标签 */}
               <div style={{
                 writingMode: 'vertical-rl',
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: 700,
                 letterSpacing: 2,
                 color: '#ff9c6e',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                minWidth: 14,
+                minWidth: 16,
               }}>
                 基础
               </div>
@@ -629,7 +629,7 @@ const DailyRecordsBar: React.FC<DailyRecordsBarProps> = ({ refresh, onSuccess, s
               }}>
                 {/* 右上角：说明 */}
                 <div style={{
-                  fontSize: 11,
+                  fontSize: 12,
                   opacity: 0.9,
                 }}>
                   基础代谢
@@ -637,7 +637,7 @@ const DailyRecordsBar: React.FC<DailyRecordsBarProps> = ({ refresh, onSuccess, s
                 
                 {/* 右下角：热量 */}
                 <div style={{
-                  fontSize: 13,
+                  fontSize: 16,
                   fontWeight: 700,
                   color: '#ff9c6e',
                   display: 'flex',
@@ -645,45 +645,51 @@ const DailyRecordsBar: React.FC<DailyRecordsBarProps> = ({ refresh, onSuccess, s
                   gap: 4,
                 }}>
                   <span>-{Math.round(bmr)}</span>
-                  <span style={{ fontSize: 10, opacity: 0.8 }}>千卡</span>
+                  <span style={{ fontSize: 11, opacity: 0.8 }}>千卡</span>
                 </div>
               </div>
             </div>
           </div>
 
           {/* 右侧：所有按钮（竖向） */}
-          <Space direction="vertical" size="small" style={{ flexShrink: 0 }}>
+          <Space direction="vertical" size={5} style={{ flexShrink: 0 }}>
             <Button
               size="small"
-              icon={<CameraOutlined />}
+              icon={<CameraOutlined style={{ fontSize: 13 }} />}
               onClick={() => handleOpenModal('meal')}
               style={{ 
                 background: 'rgba(255,255,255,0.2)', 
                 border: 'none',
                 color: '#fff',
                 fontWeight: 600,
-                width: 80
+                width: 78,
+                height: 30,
+                fontSize: 12,
+                padding: '0 10px'
               }}
             >
               饮食
             </Button>
             <Button
               size="small"
-              icon={<ThunderboltOutlined />}
+              icon={<ThunderboltOutlined style={{ fontSize: 13 }} />}
               onClick={() => handleOpenModal('exercise')}
               style={{ 
                 background: 'rgba(255,255,255,0.2)', 
                 border: 'none',
                 color: '#fff',
                 fontWeight: 600,
-                width: 80
+                width: 78,
+                height: 30,
+                fontSize: 12,
+                padding: '0 10px'
               }}
             >
               运动
             </Button>
             <Button
               size="small"
-              icon={<UnorderedListOutlined />}
+              icon={<UnorderedListOutlined style={{ fontSize: 13 }} />}
               onClick={() => {
                 // 智能选择tab：优先显示有记录的那一项
                 if (meals.length > 0 && exercises.length === 0) {
@@ -699,7 +705,10 @@ const DailyRecordsBar: React.FC<DailyRecordsBarProps> = ({ refresh, onSuccess, s
                 border: 'none',
                 color: '#fff',
                 fontWeight: 600,
-                width: 80
+                width: 78,
+                height: 30,
+                fontSize: 12,
+                padding: '0 10px'
               }}
             >
               详情({meals.length + exercises.length})
@@ -713,7 +722,10 @@ const DailyRecordsBar: React.FC<DailyRecordsBarProps> = ({ refresh, onSuccess, s
                 border: isComplete ? '1px solid rgba(82, 196, 26, 0.6)' : 'none',
                 color: '#fff',
                 fontWeight: 600,
-                width: 80
+                width: 78,
+                height: 30,
+                fontSize: 12,
+                padding: '0 10px'
               }}
             >
               {isComplete ? '✓ 完整' : '标记'}
