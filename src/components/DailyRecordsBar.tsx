@@ -329,6 +329,18 @@ const DailyRecordsBar: React.FC<DailyRecordsBarProps> = ({ refresh, onSuccess, s
   // 净摄入热量（包含基础代谢）
   const netCalories = totalCaloriesIn - Math.round(bmr) - totalCaloriesOut;
 
+  // 排序饮食记录：早餐、午餐、晚餐、其他、零食
+  const sortedMeals = [...meals].sort((a, b) => {
+    const order: Record<string, number> = {
+      breakfast: 1,
+      lunch: 2,
+      dinner: 3,
+      other: 4,
+      snack: 5,
+    };
+    return (order[a.mealType] || 999) - (order[b.mealType] || 999);
+  });
+
   return (
     <>
       <Card
@@ -367,7 +379,7 @@ const DailyRecordsBar: React.FC<DailyRecordsBarProps> = ({ refresh, onSuccess, s
             marginRight: 16,
             paddingRight: 8,
           }}>
-            {meals.map(meal => (
+            {sortedMeals.map(meal => (
                 <div
                   key={meal.id}
                   onClick={() => handleEdit(meal, 'meal')}
