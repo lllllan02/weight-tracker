@@ -84,7 +84,8 @@ function migrateData() {
       description: record.description || null,
       images: record.images || [],
       estimatedCalories: record.estimatedCalories || null,
-      aiAnalysis: record.aiAnalysis || null,
+      isAiPredicted: record.aiAnalysis === 'AI预测',
+      aiAnalysisText: (record.aiAnalysis && record.aiAnalysis !== 'AI预测') ? record.aiAnalysis : null,
       timestamp: record.date,
       createdAt: record.createdAt || record.date,
       updatedAt: record.updatedAt || null
@@ -111,7 +112,8 @@ function migrateData() {
       description: record.description,
       images: record.images || [],
       estimatedCalories: record.estimatedCalories || null,
-      aiAnalysis: record.aiAnalysis || null,
+      isAiPredicted: record.aiAnalysis === 'AI预测',
+      aiAnalysisText: (record.aiAnalysis && record.aiAnalysis !== 'AI预测') ? record.aiAnalysis : null,
       timestamp: record.date,
       createdAt: record.createdAt || record.date,
       updatedAt: record.updatedAt || null

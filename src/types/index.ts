@@ -13,7 +13,8 @@ export interface ExerciseRecord {
   description?: string; // 运动描述
   images?: string[]; // 图片URL数组
   estimatedCalories?: number | null; // 估算消耗热量
-  aiAnalysis?: string | null; // AI分析结果
+  isAiPredicted?: boolean; // 是否为 AI 预测
+  aiAnalysisText?: string | null; // AI 分析文本
   details?: {
     confidence?: 'high' | 'medium' | 'low';
     breakdown?: Array<{
@@ -255,7 +256,8 @@ export interface MealRecord {
   images: string[]; // 图片URL数组
   mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack' | 'other';
   estimatedCalories: number | null;
-  aiAnalysis: string | null;
+  isAiPredicted?: boolean; // 是否为 AI 预测
+  aiAnalysisText?: string | null; // AI 分析文本
   details?: {
     confidence?: 'high' | 'medium' | 'low';
     breakdown?: Array<{

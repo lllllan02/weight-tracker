@@ -225,7 +225,7 @@ const MealTrackerBar: React.FC<MealTrackerBarProps> = ({ refresh, onSuccess, sel
     });
     setPredictedCalories(meal.estimatedCalories);
     // 如果是AI预测的记录，保持AI预测标志
-    setIsAIPredicted(meal.aiAnalysis === 'AI预测');
+    setIsAIPredicted(meal.isAiPredicted || false);
     // 不设置 fileList，让用户重新选择图片
     setFileList([]);
     setEditModalVisible(true);
@@ -436,7 +436,7 @@ const MealTrackerBar: React.FC<MealTrackerBarProps> = ({ refresh, onSuccess, sel
                               <span style={{ fontSize: 13, fontWeight: 'bold', color: '#cf1322' }}>
                                 {meal.estimatedCalories}千卡
                               </span>
-                              {meal.aiAnalysis === 'AI预测' && (
+                              {meal.isAiPredicted && (
                                 <span style={{ 
                                   fontSize: 9, 
                                   color: '#1890ff', 
@@ -843,7 +843,7 @@ const MealTrackerBar: React.FC<MealTrackerBarProps> = ({ refresh, onSuccess, sel
                             <Tag icon={<FireOutlined />} color="red">
                               {meal.estimatedCalories} 千卡
                             </Tag>
-                            {meal.aiAnalysis === 'AI预测' ? (
+                            {meal.isAiPredicted ? (
                               <Tag color="blue" style={{ fontSize: 10, padding: '0 4px', lineHeight: '18px' }}>
                                 AI预测
                               </Tag>
@@ -890,9 +890,9 @@ const MealTrackerBar: React.FC<MealTrackerBarProps> = ({ refresh, onSuccess, sel
                           </Image.PreviewGroup>
                         )}
 
-                        {meal.aiAnalysis && meal.aiAnalysis !== 'AI预测' && (
+                        {meal.aiAnalysisText && (
                           <Alert
-                            message={meal.aiAnalysis}
+                            message={meal.aiAnalysisText}
                             type="info"
                             showIcon
                             icon={<InfoCircleOutlined />}

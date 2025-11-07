@@ -164,7 +164,8 @@ function getAllExerciseRecords(data) {
           description: exercise.description,
           images: exercise.images,
           estimatedCalories: exercise.estimatedCalories,
-          aiAnalysis: exercise.aiAnalysis,
+          isAiPredicted: exercise.isAiPredicted,
+          aiAnalysisText: exercise.aiAnalysisText,
           createdAt: exercise.createdAt,
           updatedAt: exercise.updatedAt
         });
@@ -189,7 +190,8 @@ function getAllMealRecords(data) {
           description: meal.description,
           images: meal.images,
           estimatedCalories: meal.estimatedCalories,
-          aiAnalysis: meal.aiAnalysis,
+          isAiPredicted: meal.isAiPredicted,
+          aiAnalysisText: meal.aiAnalysisText,
           createdAt: meal.createdAt,
           updatedAt: meal.updatedAt
         });

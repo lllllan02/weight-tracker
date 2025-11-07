@@ -496,6 +496,16 @@ const DailyRecordsBar: React.FC<DailyRecordsBarProps> = ({ refresh, onSuccess, s
                     }}>
                       <span>+{meal.estimatedCalories || 0}</span>
                       <span style={{ fontSize: 11, opacity: 0.8 }}>千卡</span>
+                      {meal.isAiPredicted && (
+                        <span style={{ 
+                          fontSize: 10, 
+                          color: '#1890ff', 
+                          background: 'rgba(24, 144, 255, 0.1)',
+                          padding: '1px 4px',
+                          borderRadius: 2,
+                          fontWeight: 500,
+                        }}>AI</span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -579,6 +589,16 @@ const DailyRecordsBar: React.FC<DailyRecordsBarProps> = ({ refresh, onSuccess, s
                     }}>
                       <span>-{exercise.estimatedCalories || 0}</span>
                       <span style={{ fontSize: 11, opacity: 0.8 }}>千卡</span>
+                      {exercise.isAiPredicted && (
+                        <span style={{ 
+                          fontSize: 10, 
+                          color: '#1890ff', 
+                          background: 'rgba(24, 144, 255, 0.1)',
+                          padding: '1px 4px',
+                          borderRadius: 2,
+                          fontWeight: 500,
+                        }}>AI</span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -904,7 +924,7 @@ const DailyRecordsBar: React.FC<DailyRecordsBarProps> = ({ refresh, onSuccess, s
                         title={
                           <Space>
                             <span>{meal.estimatedCalories || 0} 千卡</span>
-                            {meal.aiAnalysis === 'AI预测' && (
+                            {meal.isAiPredicted && (
                               <Tag color="blue" style={{ fontSize: 10 }}>AI</Tag>
                             )}
                           </Space>
@@ -970,7 +990,7 @@ const DailyRecordsBar: React.FC<DailyRecordsBarProps> = ({ refresh, onSuccess, s
                           <Space>
                             <span>{exercise.duration || 0} 分钟</span>
                             <span>· {exercise.estimatedCalories || 0} 千卡</span>
-                            {exercise.aiAnalysis === 'AI预测' && (
+                            {exercise.isAiPredicted && (
                               <Tag color="blue" style={{ fontSize: 10 }}>AI</Tag>
                             )}
                           </Space>

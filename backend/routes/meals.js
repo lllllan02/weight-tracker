@@ -97,11 +97,11 @@ router.post('/', (req, res, next) => {
     // 如果用户手动输入了热量
     if (manualCalories && !isNaN(Number(manualCalories))) {
       mealData.estimatedCalories = Number(manualCalories);
-      // 如果是AI预测且未修改，标记为AI预测；否则不设置特殊标记
+      // 如果是AI预测且未修改，标记为AI预测
       if (aiPredicted === 'true') {
-        mealData.aiAnalysis = 'AI预测';
+        mealData.isAiPredicted = true;
       }
-      // 如果是skipAI，说明是纯手动输入，不设置aiAnalysis（或设置为null）
+      // 如果是skipAI，说明是纯手动输入，不标记为AI预测
     }
     
     const meal = addMeal(mealData);
@@ -255,12 +255,13 @@ router.put('/:id', upload.array('images', 5), async (req, res) => {
     // 如果用户手动输入了热量
     if (manualCalories && !isNaN(Number(manualCalories))) {
       updates.estimatedCalories = Number(manualCalories);
-      // 如果是AI预测且未修改，标记为AI预测；否则不设置特殊标记
+      // 如果是AI预测且未修改，标记为AI预测
       if (aiPredicted === 'true') {
-        updates.aiAnalysis = 'AI预测';
+        updates.isAiPredicted = true;
       } else {
-        // 清除原有的aiAnalysis，因为是用户手动输入或修改
-        updates.aiAnalysis = null;
+        // 清除AI预测标记，因为是用户手动输入或修改
+        updates.isAiPredicted = false;
+        updates.aiAnalysisText = null;
       }
     }
     

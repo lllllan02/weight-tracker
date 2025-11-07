@@ -173,7 +173,8 @@ router.post('/', upload.array('images', 5), async (req, res) => {
       description: description || '',
       images: imageUrls,
       estimatedCalories: null,
-      aiAnalysis: null,
+      isAiPredicted: false,
+      aiAnalysisText: null,
       timestamp: date || new Date().toISOString(),
       createdAt: new Date().toISOString(),
       updatedAt: null
@@ -184,7 +185,7 @@ router.post('/', upload.array('images', 5), async (req, res) => {
       exerciseData.duration = Number(manualDuration);
       // 如果是AI预测且未修改，标记为AI预测
       if (aiPredicted === 'true') {
-        exerciseData.aiAnalysis = 'AI预测';
+        exerciseData.isAiPredicted = true;
       }
     }
     
@@ -226,7 +227,8 @@ router.post('/', upload.array('images', 5), async (req, res) => {
                 ...data.dailyRecords[dateKey].exercises[recordIndex],
                 duration: analysis.duration,
                 estimatedCalories: analysis.calories,
-                aiAnalysis: analysis.analysis,
+                isAiPredicted: true,
+                aiAnalysisText: analysis.analysis,
                 details: analysis.details,
                 updatedAt: new Date().toISOString()
               };
@@ -308,10 +310,11 @@ router.put('/:id', upload.array('images', 5), async (req, res) => {
       updates.duration = Number(manualDuration);
       // 如果是AI预测且未修改，标记为AI预测
       if (aiPredicted === 'true') {
-        updates.aiAnalysis = 'AI预测';
+        updates.isAiPredicted = true;
       } else {
-        // 清除原有的aiAnalysis，因为是用户手动输入或修改
-        updates.aiAnalysis = null;
+        // 清除AI预测标记，因为是用户手动输入或修改
+        updates.isAiPredicted = false;
+        updates.aiAnalysisText = null;
       }
     }
     
@@ -375,7 +378,8 @@ router.put('/:id', upload.array('images', 5), async (req, res) => {
                   ...data.dailyRecords[dateKey].exercises[exerciseIndex],
                   duration: analysis.duration,
                   estimatedCalories: analysis.calories,
-                  aiAnalysis: analysis.analysis,
+                  isAiPredicted: true,
+                  aiAnalysisText: analysis.analysis,
                   details: analysis.details,
                   updatedAt: new Date().toISOString()
                 };
@@ -519,7 +523,8 @@ router.post('/:id/analyze', async (req, res) => {
           ...data.dailyRecords[dateKey].exercises[recordIndex],
           duration: analysis.duration,
           estimatedCalories: analysis.calories,
-          aiAnalysis: analysis.analysis,
+          isAiPredicted: true,
+          aiAnalysisText: analysis.analysis,
           details: analysis.details,
           updatedAt: new Date().toISOString()
         };

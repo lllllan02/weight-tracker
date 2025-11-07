@@ -25,7 +25,8 @@ function addMeal(mealData) {
     description: mealData.description || '',
     images: mealData.images || [],
     estimatedCalories: mealData.estimatedCalories !== undefined ? mealData.estimatedCalories : null,
-    aiAnalysis: mealData.aiAnalysis || null,
+    isAiPredicted: mealData.isAiPredicted || false,
+    aiAnalysisText: mealData.aiAnalysisText || null,
     timestamp: mealData.date || new Date().toISOString(),
     createdAt: new Date().toISOString(),
     updatedAt: null
@@ -90,7 +91,8 @@ function updateMealAnalysis(mealId, analysis) {
     
     if (mealIndex !== -1) {
       dayRecord.meals[mealIndex].estimatedCalories = analysis.calories;
-      dayRecord.meals[mealIndex].aiAnalysis = analysis.analysis;
+      dayRecord.meals[mealIndex].isAiPredicted = true;
+      dayRecord.meals[mealIndex].aiAnalysisText = analysis.analysis;
       dayRecord.meals[mealIndex].updatedAt = new Date().toISOString();
       
       writeData(data);
@@ -127,7 +129,8 @@ function updateMeal(mealId, updates) {
         description: updates.description !== undefined ? updates.description : existingMeal.description,
         images: updates.images !== undefined ? updates.images : existingMeal.images,
         estimatedCalories: updates.estimatedCalories !== undefined ? updates.estimatedCalories : existingMeal.estimatedCalories,
-        aiAnalysis: updates.aiAnalysis !== undefined ? updates.aiAnalysis : existingMeal.aiAnalysis,
+        isAiPredicted: updates.isAiPredicted !== undefined ? updates.isAiPredicted : existingMeal.isAiPredicted,
+        aiAnalysisText: updates.aiAnalysisText !== undefined ? updates.aiAnalysisText : existingMeal.aiAnalysisText,
         timestamp: updates.date || existingMeal.timestamp,
         updatedAt: new Date().toISOString()
       };
