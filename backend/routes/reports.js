@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { readData, writeData } = require('../utils/dataManager');
+const { readData, writeData, getAllWeightRecords, getAllExerciseRecords } = require('../utils/dataManager');
 const { generateWeeklyReport, generateMonthlyReport } = require('../utils/reports');
 const { generateAIWeeklyReport, generateAIMonthlyReport, generateAIAllTimeReport } = require('../utils/aiReports');
 
@@ -35,9 +35,10 @@ function getWeekNumber(date) {
 router.get('/available-weeks', (req, res) => {
   try {
     const data = readData();
+    const records = getAllWeightRecords(data);
     const weeks = new Set();
     
-    data.records.forEach(record => {
+    records.forEach(record => {
       const date = new Date(record.date);
       const weekStart = new Date(date);
       // 计算到周一的天数（周一为一周的开始）
@@ -64,9 +65,10 @@ router.get('/available-weeks', (req, res) => {
 router.get('/available-months', (req, res) => {
   try {
     const data = readData();
+    const records = getAllWeightRecords(data);
     const months = new Set();
     
-    data.records.forEach(record => {
+    records.forEach(record => {
       const date = new Date(record.date);
       const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
       months.add(monthKey);
@@ -82,8 +84,13 @@ router.get('/available-months', (req, res) => {
 // 获取全部历史报告
 router.get('/all-time', (req, res) => {
   const data = readData();
+  const records = getAllWeightRecords(data);
+  const allExercises = getAllExerciseRecords(data);
+  const { getAllMealRecords } = require('../utils/dataManager');
+  const allMeals = getAllMealRecords(data);
+  const { getCompleteRecords } = require('../utils/dataManager');
   
-  if (data.records.length === 0) {
+  if (records.length === 0) {
     return res.json({
       period: '暂无数据',
       type: 'all-time',
@@ -103,7 +110,7 @@ router.get('/all-time', (req, res) => {
     });
   }
 
-  const sortedRecords = data.records.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  const sortedRecords = [...records].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   const startRecord = sortedRecords[0];
   const endRecord = sortedRecords[sortedRecords.length - 1];
   const startDate = new Date(startRecord.date);
@@ -112,7 +119,7 @@ router.get('/all-time', (req, res) => {
   const startWeight = startRecord.weight;
   const endWeight = endRecord.weight;
   const change = Number((endWeight - startWeight).toFixed(1));
-  const weights = data.records.map(r => r.weight);
+  const weights = records.map(r => r.weight);
   const average = Number((weights.reduce((sum, w) => sum + w, 0) / weights.length).toFixed(1));
   const min = Math.min(...weights);
   const max = Math.max(...weights);
@@ -123,7 +130,7 @@ router.get('/all-time', (req, res) => {
   const bmi = Number((endWeightInKg / (heightInMeters * heightInMeters)).toFixed(1));
 
   // 统计运动数据（全时段）
-  const periodExerciseRecords = data.exerciseRecords.filter(record => {
+  const periodExerciseRecords = allExercises.filter(record => {
     const recordDate = new Date(record.date);
     return recordDate >= startDate && recordDate <= endDate;
   });
@@ -133,7 +140,7 @@ router.get('/all-time', (req, res) => {
   const insights = [];
   const daysDiff = Math.floor((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
   
-  insights.push(`共记录 ${daysDiff} 天，${data.records.length} 次`);
+  insights.push(`共记录 ${daysDiff} 天，${records.length} 次`);
   
   if (change !== 0) {
     insights.push(`总体变化 ${change > 0 ? '+' : ''}${change}kg`);
@@ -178,21 +185,23 @@ router.get('/all-time', (req, res) => {
         caloriesIn: undefined,
         caloriesOut: undefined,
         bmr: undefined,
+        netCalories: undefined,
         isComplete: undefined
       };
     }
     
     // 检查是否标记为完整记录
-    const isComplete = data.completeRecords && data.completeRecords.includes(dateStr);
+    const completeRecords = getCompleteRecords(data);
+    const isComplete = completeRecords && completeRecords.includes(dateStr);
     
     // 获取当天的饮食记录
-    const dayMeals = data.mealRecords.filter(meal => {
+    const dayMeals = allMeals.filter(meal => {
       return new Date(meal.date).toDateString() === recordDate;
     });
     const caloriesIn = dayMeals.reduce((sum, meal) => sum + (meal.estimatedCalories || 0), 0);
     
     // 获取当天的运动记录
-    const dayExercises = data.exerciseRecords.filter(exercise => {
+    const dayExercises = allExercises.filter(exercise => {
       return new Date(exercise.date).toDateString() === recordDate;
     });
     const caloriesOut = dayExercises.reduce((sum, ex) => sum + (ex.estimatedCalories || 0), 0);
@@ -204,11 +213,15 @@ router.get('/all-time', (req, res) => {
       ? Math.round(10 * weightInKg + 6.25 * data.profile.height - 5 * (data.profile.age || 25) - 161)
       : Math.round(10 * weightInKg + 6.25 * data.profile.height - 5 * (data.profile.age || 25) + 5);
     
+    // 计算每日净热量：摄入 - (基础代谢 + 运动消耗)
+    const netCalories = caloriesIn - (bmr + caloriesOut);
+    
     return {
       ...record,
       caloriesIn,
       caloriesOut,
       bmr,
+      netCalories,
       isComplete
     };
   });
@@ -244,9 +257,13 @@ router.get('/all-time', (req, res) => {
 router.get('/weekly', (req, res) => {
   const { date } = req.query; // 可选参数：指定日期
   const data = readData();
+  const records = getAllWeightRecords(data);
+  const exerciseRecords = getAllExerciseRecords(data);
+  const { getAllMealRecords } = require('../utils/dataManager');
+  const mealRecords = getAllMealRecords(data);
   
   let targetDate = date ? new Date(date) : new Date();
-  const weeklyReport = generateWeeklyReportForDate(data.records, data.profile, targetDate, data.exerciseRecords, data.mealRecords);
+  const weeklyReport = generateWeeklyReportForDate(records, data.profile, targetDate, exerciseRecords, mealRecords);
   
   // 如果有已保存的 AI 分析，附加到报告中
   const reportKey = getReportKey(weeklyReport.period, 'weekly');
@@ -261,11 +278,15 @@ router.get('/weekly', (req, res) => {
 router.get('/monthly', (req, res) => {
   const { year, month } = req.query; // 可选参数：指定年月
   const data = readData();
+  const records = getAllWeightRecords(data);
+  const exerciseRecords = getAllExerciseRecords(data);
+  const { getAllMealRecords } = require('../utils/dataManager');
+  const mealRecords = getAllMealRecords(data);
   
   let targetYear = year ? parseInt(year) : new Date().getFullYear();
   let targetMonth = month ? parseInt(month) : new Date().getMonth() + 1;
   
-  const monthlyReport = generateMonthlyReportForMonth(data.records, data.profile, targetYear, targetMonth, data.exerciseRecords, data.mealRecords);
+  const monthlyReport = generateMonthlyReportForMonth(records, data.profile, targetYear, targetMonth, exerciseRecords, mealRecords);
   
   // 如果有已保存的 AI 分析，附加到报告中
   const reportKey = getReportKey(monthlyReport.period, 'monthly');
@@ -375,12 +396,13 @@ function generateWeeklyReportForDate(records, profile, targetDate, exerciseRecor
         caloriesIn: undefined,
         caloriesOut: undefined,
         bmr: undefined,
+        netCalories: undefined,
         isComplete: undefined
       };
     }
     
-    // 检查是否标记为完整记录
-    const isComplete = data.completeRecords && data.completeRecords.includes(dateStr);
+    // 检查是否标记为完整记录（从新的数据结构中获取）
+    const isComplete = data.dailyRecords && data.dailyRecords[dateStr] && data.dailyRecords[dateStr].isComplete === true;
     
     // 获取当天的饮食记录
     const dayMeals = mealRecords.filter(meal => {
@@ -401,11 +423,15 @@ function generateWeeklyReportForDate(records, profile, targetDate, exerciseRecor
       ? Math.round(10 * weightInKg + 6.25 * profile.height - 5 * (profile.age || 25) - 161)
       : Math.round(10 * weightInKg + 6.25 * profile.height - 5 * (profile.age || 25) + 5);
     
+    // 计算每日净热量：摄入 - (基础代谢 + 运动消耗)
+    const netCalories = caloriesIn - (bmr + caloriesOut);
+    
     return {
       ...record,
       caloriesIn,
       caloriesOut,
       bmr,
+      netCalories,
       isComplete
     };
   });
@@ -543,12 +569,13 @@ function generateMonthlyReportForMonth(records, profile, year, month, exerciseRe
         caloriesIn: undefined,
         caloriesOut: undefined,
         bmr: undefined,
+        netCalories: undefined,
         isComplete: undefined
       };
     }
     
-    // 检查是否标记为完整记录
-    const isComplete = data.completeRecords && data.completeRecords.includes(dateStr);
+    // 检查是否标记为完整记录（从新的数据结构中获取）
+    const isComplete = data.dailyRecords && data.dailyRecords[dateStr] && data.dailyRecords[dateStr].isComplete === true;
     
     // 获取当天的饮食记录
     const dayMeals = mealRecords.filter(meal => {
@@ -569,11 +596,15 @@ function generateMonthlyReportForMonth(records, profile, year, month, exerciseRe
       ? Math.round(10 * weightInKg + 6.25 * profile.height - 5 * (profile.age || 25) - 161)
       : Math.round(10 * weightInKg + 6.25 * profile.height - 5 * (profile.age || 25) + 5);
     
+    // 计算每日净热量：摄入 - (基础代谢 + 运动消耗)
+    const netCalories = caloriesIn - (bmr + caloriesOut);
+    
     return {
       ...record,
       caloriesIn,
       caloriesOut,
       bmr,
+      netCalories,
       isComplete
     };
   });
@@ -603,10 +634,12 @@ router.post('/weekly/ai', async (req, res) => {
   try {
     const { force = false, date } = req.body;
     const data = readData();
+    const records = getAllWeightRecords(data);
+    const exerciseRecords = getAllExerciseRecords(data);
     
     // 根据日期参数生成报告
     let targetDate = date ? new Date(date) : new Date();
-    const weeklyReport = generateWeeklyReportForDate(data.records, data.profile, targetDate, data.exerciseRecords);
+    const weeklyReport = generateWeeklyReportForDate(records, data.profile, targetDate, exerciseRecords);
     const reportKey = getReportKey(weeklyReport.period, 'weekly');
     
     // 检查是否已有分析（如果不是强制重新生成）
@@ -614,7 +647,7 @@ router.post('/weekly/ai', async (req, res) => {
       return res.json(data.aiReports.weekly[reportKey]);
     }
     
-    const aiAnalysis = await generateAIWeeklyReport(weeklyReport, data.profile, data.exerciseRecords);
+    const aiAnalysis = await generateAIWeeklyReport(weeklyReport, data.profile, exerciseRecords);
     
     if (aiAnalysis.success) {
       // 保存 AI 分析结果
@@ -645,6 +678,8 @@ router.post('/all-time/ai', async (req, res) => {
   try {
     const { force = false } = req.body;
     const data = readData();
+    const records = getAllWeightRecords(data);
+    const exerciseRecords = getAllExerciseRecords(data);
     
     // 检查是否已有分析（如果不是强制重新生成）
     if (!force && data.aiReports.allTime) {
@@ -652,11 +687,11 @@ router.post('/all-time/ai', async (req, res) => {
     }
     
     // 生成全时段报告
-    if (data.records.length === 0) {
+    if (records.length === 0) {
       return res.status(400).json({ error: '暂无体重记录' });
     }
 
-    const sortedRecords = data.records.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    const sortedRecords = [...records].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     const startRecord = sortedRecords[0];
     const endRecord = sortedRecords[sortedRecords.length - 1];
     const startDate = new Date(startRecord.date);
@@ -665,7 +700,7 @@ router.post('/all-time/ai', async (req, res) => {
     const startWeight = startRecord.weight;
     const endWeight = endRecord.weight;
     const change = Number((endWeight - startWeight).toFixed(1));
-    const weights = data.records.map(r => r.weight);
+    const weights = records.map(r => r.weight);
     const average = Number((weights.reduce((sum, w) => sum + w, 0) / weights.length).toFixed(1));
     const min = Math.min(...weights);
     const max = Math.max(...weights);
@@ -681,11 +716,11 @@ router.post('/all-time/ai', async (req, res) => {
         average,
         min,
         max,
-        recordCount: data.records.length
+        recordCount: records.length
       }
     };
     
-    const aiAnalysis = await generateAIAllTimeReport(allTimeReport, data.profile, data.exerciseRecords);
+    const aiAnalysis = await generateAIAllTimeReport(allTimeReport, data.profile, exerciseRecords);
     
     if (aiAnalysis.success) {
       const analysisData = {
@@ -713,11 +748,13 @@ router.post('/monthly/ai', async (req, res) => {
   try {
     const { force = false, year, month } = req.body;
     const data = readData();
+    const records = getAllWeightRecords(data);
+    const exerciseRecords = getAllExerciseRecords(data);
     
     // 根据年月参数生成报告
     let targetYear = year || new Date().getFullYear();
     let targetMonth = month || new Date().getMonth() + 1;
-    const monthlyReport = generateMonthlyReportForMonth(data.records, data.profile, targetYear, targetMonth, data.exerciseRecords);
+    const monthlyReport = generateMonthlyReportForMonth(records, data.profile, targetYear, targetMonth, exerciseRecords);
     const reportKey = getReportKey(monthlyReport.period, 'monthly');
     
     // 检查是否已有分析（如果不是强制重新生成）
@@ -725,7 +762,7 @@ router.post('/monthly/ai', async (req, res) => {
       return res.json(data.aiReports.monthly[reportKey]);
     }
     
-    const aiAnalysis = await generateAIMonthlyReport(monthlyReport, data.profile, data.exerciseRecords);
+    const aiAnalysis = await generateAIMonthlyReport(monthlyReport, data.profile, exerciseRecords);
     
     if (aiAnalysis.success) {
       // 保存 AI 分析结果

@@ -1,13 +1,14 @@
 const express = require('express');
 const router = express.Router();
-const { readData } = require('../utils/dataManager');
+const { readData, getAllWeightRecords } = require('../utils/dataManager');
 const { aiPredict } = require('../utils/calculations');
 
 // 生成 AI 预测
 router.post('/', async (req, res) => {
   try {
     const data = readData();
-    const { records, profile } = data;
+    const records = getAllWeightRecords(data);
+    const { profile } = data;
     
     // 获取目标体重：优先使用阶段目标中的最小值，否则使用 profile.targetWeight
     let targetWeight = profile?.targetWeight;

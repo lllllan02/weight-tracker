@@ -1,4 +1,11 @@
-const { readData, writeData } = require('./dataManager');
+const dayjs = require('dayjs');
+const { 
+  readData, 
+  writeData,
+  getAllMealRecords,
+  ensureDailyRecord,
+  formatDateKey
+} = require('./dataManager');
 const { generateId } = require('./helpers');
 
 /**
@@ -7,25 +14,34 @@ const { generateId } = require('./helpers');
 function addMeal(mealData) {
   const data = readData();
   
+  const dateKey = formatDateKey(mealData.date || new Date().toISOString());
+  
+  // 确保日期记录存在
+  ensureDailyRecord(data.dailyRecords, dateKey);
+  
   const newMeal = {
     id: generateId(),
-    date: mealData.date || new Date().toISOString(),
+    mealType: mealData.mealType || 'other', // breakfast, lunch, dinner, other
     description: mealData.description || '',
     images: mealData.images || [],
-    mealType: mealData.mealType || 'other', // breakfast, lunch, dinner, snack, other
     estimatedCalories: mealData.estimatedCalories !== undefined ? mealData.estimatedCalories : null,
     aiAnalysis: mealData.aiAnalysis || null,
-    createdAt: new Date().toISOString()
+    timestamp: mealData.date || new Date().toISOString(),
+    createdAt: new Date().toISOString(),
+    updatedAt: null
   };
   
-  if (!data.mealRecords) {
-    data.mealRecords = [];
-  }
+  data.dailyRecords[dateKey].meals.push(newMeal);
   
-  data.mealRecords.push(newMeal);
+  // 按餐次类型排序
+  const mealOrder = { breakfast: 1, lunch: 2, dinner: 3, other: 4 };
+  data.dailyRecords[dateKey].meals.sort((a, b) => 
+    (mealOrder[a.mealType] || 5) - (mealOrder[b.mealType] || 5)
+  );
+  
   writeData(data);
   
-  return newMeal;
+  return { ...newMeal, date: newMeal.timestamp };
 }
 
 /**
@@ -33,15 +49,12 @@ function addMeal(mealData) {
  */
 function getMealsByDateRange(startDate, endDate) {
   const data = readData();
-  
-  if (!data.mealRecords) {
-    return [];
-  }
+  const meals = getAllMealRecords(data);
   
   const start = new Date(startDate);
   const end = new Date(endDate);
   
-  return data.mealRecords.filter(meal => {
+  return meals.filter(meal => {
     const mealDate = new Date(meal.date);
     return mealDate >= start && mealDate <= end;
   }).sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -52,18 +65,16 @@ function getMealsByDateRange(startDate, endDate) {
  */
 function getMealsByDate(date) {
   const data = readData();
+  const dateKey = formatDateKey(date);
   
-  if (!data.mealRecords) {
+  if (!data.dailyRecords[dateKey] || !data.dailyRecords[dateKey].meals) {
     return [];
   }
   
-  // 将日期字符串转换为 YYYY-MM-DD 格式进行比较
-  const targetDateStr = new Date(date).toISOString().split('T')[0];
-  
-  return data.mealRecords.filter(meal => {
-    const mealDateStr = new Date(meal.date).toISOString().split('T')[0];
-    return mealDateStr === targetDateStr;
-  }).sort((a, b) => new Date(b.date) - new Date(a.date));
+  return data.dailyRecords[dateKey].meals.map(meal => ({
+    ...meal,
+    date: meal.timestamp
+  }));
 }
 
 /**
@@ -72,23 +83,23 @@ function getMealsByDate(date) {
 function updateMealAnalysis(mealId, analysis) {
   const data = readData();
   
-  if (!data.mealRecords) {
-    return null;
+  // 在所有日期中查找该记录
+  for (const dateKey in data.dailyRecords) {
+    const dayRecord = data.dailyRecords[dateKey];
+    const mealIndex = dayRecord.meals.findIndex(m => m.id === mealId);
+    
+    if (mealIndex !== -1) {
+      dayRecord.meals[mealIndex].estimatedCalories = analysis.calories;
+      dayRecord.meals[mealIndex].aiAnalysis = analysis.analysis;
+      dayRecord.meals[mealIndex].updatedAt = new Date().toISOString();
+      
+      writeData(data);
+      
+      return { ...dayRecord.meals[mealIndex], date: dayRecord.meals[mealIndex].timestamp };
+    }
   }
   
-  const mealIndex = data.mealRecords.findIndex(m => m.id === mealId);
-  
-  if (mealIndex === -1) {
-    return null;
-  }
-  
-  data.mealRecords[mealIndex].estimatedCalories = analysis.calories;
-  data.mealRecords[mealIndex].aiAnalysis = analysis.analysis;
-  data.mealRecords[mealIndex].updatedAt = new Date().toISOString();
-  
-  writeData(data);
-  
-  return data.mealRecords[mealIndex];
+  return null;
 }
 
 /**
@@ -97,38 +108,68 @@ function updateMealAnalysis(mealId, analysis) {
 function updateMeal(mealId, updates) {
   const data = readData();
   
-  if (!data.mealRecords) {
-    return null;
+  // 在所有日期中查找该记录
+  let existingMeal = null;
+  let existingDateKey = null;
+  
+  for (const dateKey in data.dailyRecords) {
+    const dayRecord = data.dailyRecords[dateKey];
+    const mealIndex = dayRecord.meals.findIndex(m => m.id === mealId);
+    
+    if (mealIndex !== -1) {
+      existingMeal = dayRecord.meals[mealIndex];
+      existingDateKey = dateKey;
+      
+      // 更新记录
+      const updatedMeal = {
+        ...existingMeal,
+        mealType: updates.mealType !== undefined ? updates.mealType : existingMeal.mealType,
+        description: updates.description !== undefined ? updates.description : existingMeal.description,
+        images: updates.images !== undefined ? updates.images : existingMeal.images,
+        estimatedCalories: updates.estimatedCalories !== undefined ? updates.estimatedCalories : existingMeal.estimatedCalories,
+        aiAnalysis: updates.aiAnalysis !== undefined ? updates.aiAnalysis : existingMeal.aiAnalysis,
+        timestamp: updates.date || existingMeal.timestamp,
+        updatedAt: new Date().toISOString()
+      };
+      
+      // 如果日期改变了，需要移动到新日期
+      const newDateKey = formatDateKey(updatedMeal.timestamp);
+      if (newDateKey !== existingDateKey) {
+        // 从旧日期删除
+        dayRecord.meals.splice(mealIndex, 1);
+        
+        // 如果旧日期没有记录了，删除整个日期记录
+        if (dayRecord.weights.length === 0 && dayRecord.exercises.length === 0 && dayRecord.meals.length === 0) {
+          delete data.dailyRecords[existingDateKey];
+        }
+        
+        // 添加到新日期
+        ensureDailyRecord(data.dailyRecords, newDateKey);
+        data.dailyRecords[newDateKey].meals.push(updatedMeal);
+        
+        // 按餐次类型排序
+        const mealOrder = { breakfast: 1, lunch: 2, dinner: 3, other: 4 };
+        data.dailyRecords[newDateKey].meals.sort((a, b) => 
+          (mealOrder[a.mealType] || 5) - (mealOrder[b.mealType] || 5)
+        );
+      } else {
+        // 更新现有记录
+        dayRecord.meals[mealIndex] = updatedMeal;
+        
+        // 重新排序
+        const mealOrder = { breakfast: 1, lunch: 2, dinner: 3, other: 4 };
+        dayRecord.meals.sort((a, b) => 
+          (mealOrder[a.mealType] || 5) - (mealOrder[b.mealType] || 5)
+        );
+      }
+      
+      writeData(data);
+      
+      return { ...updatedMeal, date: updatedMeal.timestamp };
+    }
   }
   
-  const mealIndex = data.mealRecords.findIndex(m => m.id === mealId);
-  
-  if (mealIndex === -1) {
-    return null;
-  }
-  
-  // 更新允许的字段
-  if (updates.description !== undefined) {
-    data.mealRecords[mealIndex].description = updates.description;
-  }
-  if (updates.mealType !== undefined) {
-    data.mealRecords[mealIndex].mealType = updates.mealType;
-  }
-  if (updates.images !== undefined) {
-    data.mealRecords[mealIndex].images = updates.images;
-  }
-  if (updates.estimatedCalories !== undefined) {
-    data.mealRecords[mealIndex].estimatedCalories = updates.estimatedCalories;
-  }
-  if (updates.aiAnalysis !== undefined) {
-    data.mealRecords[mealIndex].aiAnalysis = updates.aiAnalysis;
-  }
-  
-  data.mealRecords[mealIndex].updatedAt = new Date().toISOString();
-  
-  writeData(data);
-  
-  return data.mealRecords[mealIndex];
+  return null;
 }
 
 /**
@@ -137,16 +178,21 @@ function updateMeal(mealId, updates) {
 function deleteMeal(mealId) {
   const data = readData();
   
-  if (!data.mealRecords) {
-    return false;
-  }
-  
-  const initialLength = data.mealRecords.length;
-  data.mealRecords = data.mealRecords.filter(m => m.id !== mealId);
-  
-  if (data.mealRecords.length < initialLength) {
-    writeData(data);
-    return true;
+  // 在所有日期中查找并删除该记录
+  for (const dateKey in data.dailyRecords) {
+    const dayRecord = data.dailyRecords[dateKey];
+    const originalLength = dayRecord.meals.length;
+    dayRecord.meals = dayRecord.meals.filter(m => m.id !== mealId);
+    
+    if (dayRecord.meals.length < originalLength) {
+      // 如果该天没有任何记录了，删除整个日期记录
+      if (dayRecord.weights.length === 0 && dayRecord.exercises.length === 0 && dayRecord.meals.length === 0) {
+        delete data.dailyRecords[dateKey];
+      }
+      
+      writeData(data);
+      return true;
+    }
   }
   
   return false;
@@ -156,22 +202,32 @@ function deleteMeal(mealId) {
  * 获取指定日期的总热量
  */
 function getDailyCalories(date) {
-  const meals = getMealsByDate(date);
+  const dateKey = formatDateKey(date);
+  const data = readData();
+  
+  if (!data.dailyRecords[dateKey] || !data.dailyRecords[dateKey].meals) {
+    return {
+      date: dateKey,
+      totalCalories: 0,
+      meals: [],
+      mealCount: 0
+    };
+  }
+  
+  const meals = data.dailyRecords[dateKey].meals.map(meal => ({
+    ...meal,
+    date: meal.timestamp
+  }));
   
   const totalCalories = meals.reduce((sum, meal) => {
     return sum + (meal.estimatedCalories || 0);
   }, 0);
   
   return {
-    date,
+    date: dateKey,
     totalCalories,
-    mealCount: meals.length,
-    meals: meals.map(m => ({
-      id: m.id,
-      mealType: m.mealType,
-      description: m.description,
-      calories: m.estimatedCalories
-    }))
+    meals,
+    mealCount: meals.length
   };
 }
 
@@ -184,4 +240,3 @@ module.exports = {
   deleteMeal,
   getDailyCalories
 };
-

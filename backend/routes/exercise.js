@@ -3,7 +3,14 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const { readData, writeData } = require('../utils/dataManager');
+const dayjs = require('dayjs');
+const { 
+  readData, 
+  writeData, 
+  getAllExerciseRecords,
+  ensureDailyRecord,
+  formatDateKey
+} = require('../utils/dataManager');
 const { generateId } = require('../utils/helpers');
 const { analyzeExercise } = require('../utils/exerciseEstimation');
 
@@ -43,13 +50,13 @@ const upload = multer({
 
 /**
  * GET /api/exercise
- * 获取所有运动记录
+ * 获取所有运动记录（兼容旧API）
  */
 router.get('/', async (req, res) => {
   try {
     const { date, startDate, endDate } = req.query;
     const data = readData();
-    let exerciseRecords = data.exerciseRecords || [];
+    let exerciseRecords = getAllExerciseRecords(data);
     
     // 按日期过滤
     if (date) {
@@ -150,20 +157,26 @@ router.post('/', upload.array('images', 5), async (req, res) => {
     // 获取上传的图片路径
     const imagePaths = req.files ? req.files.map(file => file.path) : [];
     const imageUrls = req.files ? req.files.map(file => `/uploads/exercises/${file.filename}`) : [];
-    
+
     const data = readData();
-    const exerciseRecords = data.exerciseRecords || [];
+    
+    // 获取日期key
+    const dateKey = formatDateKey(date);
+    
+    // 确保日期记录存在
+    ensureDailyRecord(data.dailyRecords, dateKey);
     
     // 创建运动记录
     const exerciseData = {
       id: generateId(),
-      date: date || new Date().toISOString(),
       duration: manualDuration ? Number(manualDuration) : (duration ? Number(duration) : 0),
       description: description || '',
       images: imageUrls,
       estimatedCalories: null,
       aiAnalysis: null,
-      createdAt: new Date().toISOString()
+      timestamp: date || new Date().toISOString(),
+      createdAt: new Date().toISOString(),
+      updatedAt: null
     };
     
     // 如果用户手动输入了时长
@@ -180,15 +193,21 @@ router.post('/', upload.array('images', 5), async (req, res) => {
       exerciseData.estimatedCalories = Number(manualCalories);
     }
     
-    exerciseRecords.push(exerciseData);
-    data.exerciseRecords = exerciseRecords;
+    // 添加到对应日期
+    data.dailyRecords[dateKey].exercises.push(exerciseData);
+    
+    // 按时间排序
+    data.dailyRecords[dateKey].exercises.sort((a, b) => 
+      new Date(a.timestamp) - new Date(b.timestamp)
+    );
+    
     writeData(data);
     
     // 如果用户手动输入了时长或要求跳过AI，则不进行AI分析
     if (skipAI === 'true' || aiPredicted === 'true' || (manualDuration && !isNaN(Number(manualDuration)))) {
       return res.json({
         success: true,
-        exercise: exerciseData,
+        exercise: { ...exerciseData, date: exerciseData.timestamp },
         message: '运动记录已创建'
       });
     }
@@ -199,16 +218,20 @@ router.post('/', upload.array('images', 5), async (req, res) => {
         if (analysis.success) {
           // 更新记录
           const data = readData();
-          const recordIndex = data.exerciseRecords.findIndex(r => r.id === exerciseData.id);
-          if (recordIndex >= 0) {
-            data.exerciseRecords[recordIndex] = {
-              ...data.exerciseRecords[recordIndex],
-              duration: analysis.duration,
-              estimatedCalories: analysis.calories,
-              aiAnalysis: analysis.analysis,
-              details: analysis.details
-            };
-            writeData(data);
+          const dateKey = formatDateKey(date);
+          if (data.dailyRecords[dateKey]) {
+            const recordIndex = data.dailyRecords[dateKey].exercises.findIndex(r => r.id === exerciseData.id);
+            if (recordIndex >= 0) {
+              data.dailyRecords[dateKey].exercises[recordIndex] = {
+                ...data.dailyRecords[dateKey].exercises[recordIndex],
+                duration: analysis.duration,
+                estimatedCalories: analysis.calories,
+                aiAnalysis: analysis.analysis,
+                details: analysis.details,
+                updatedAt: new Date().toISOString()
+              };
+              writeData(data);
+            }
           }
         }
       })
@@ -218,7 +241,7 @@ router.post('/', upload.array('images', 5), async (req, res) => {
     
     res.json({
       success: true,
-      exercise: exerciseData,
+      exercise: { ...exerciseData, date: exerciseData.timestamp },
       message: '运动记录已创建，AI正在分析中...'
     });
   } catch (error) {
@@ -240,17 +263,27 @@ router.put('/:id', upload.array('images', 5), async (req, res) => {
     const { date, duration, description, keepExistingImages, manualDuration, manualCalories, skipAI, aiPredicted } = req.body;
     
     const data = readData();
-    const exerciseRecords = data.exerciseRecords || [];
     
-    const recordIndex = exerciseRecords.findIndex(record => record.id === id);
-    if (recordIndex === -1) {
+    // 在所有日期中查找该记录
+    let existingRecord = null;
+    let existingDateKey = null;
+    
+    for (const dateKey in data.dailyRecords) {
+      const dayRecord = data.dailyRecords[dateKey];
+      const exerciseIndex = dayRecord.exercises.findIndex(ex => ex.id === id);
+      if (exerciseIndex !== -1) {
+        existingRecord = dayRecord.exercises[exerciseIndex];
+        existingDateKey = dateKey;
+        break;
+      }
+    }
+    
+    if (!existingRecord) {
       return res.status(404).json({
         success: false,
         error: '运动记录不存在'
       });
     }
-    
-    const existingRecord = exerciseRecords[recordIndex];
     
     // 处理图片
     let newImageUrls = [];
@@ -265,7 +298,7 @@ router.put('/:id', upload.array('images', 5), async (req, res) => {
     
     // 更新记录
     const updates = {
-      date: date || existingRecord.date,
+      timestamp: date || existingRecord.timestamp,
       description: description !== undefined ? description : existingRecord.description,
       images: newImageUrls
     };
@@ -287,13 +320,37 @@ router.put('/:id', upload.array('images', 5), async (req, res) => {
       updates.estimatedCalories = Number(manualCalories);
     }
     
-    exerciseRecords[recordIndex] = {
+    const updatedRecord = {
       ...existingRecord,
       ...updates,
       updatedAt: new Date().toISOString()
     };
     
-    data.exerciseRecords = exerciseRecords;
+    // 如果日期改变了，需要移动到新日期
+    const newDateKey = formatDateKey(updates.timestamp);
+    if (newDateKey !== existingDateKey) {
+      // 从旧日期删除
+      data.dailyRecords[existingDateKey].exercises = data.dailyRecords[existingDateKey].exercises.filter(ex => ex.id !== id);
+      
+      // 如果旧日期没有记录了，删除整个日期记录
+      if (data.dailyRecords[existingDateKey].weights.length === 0 && 
+          data.dailyRecords[existingDateKey].exercises.length === 0 && 
+          data.dailyRecords[existingDateKey].meals.length === 0) {
+        delete data.dailyRecords[existingDateKey];
+      }
+      
+      // 添加到新日期
+      ensureDailyRecord(data.dailyRecords, newDateKey);
+      data.dailyRecords[newDateKey].exercises.push(updatedRecord);
+      data.dailyRecords[newDateKey].exercises.sort((a, b) => 
+        new Date(a.timestamp) - new Date(b.timestamp)
+      );
+    } else {
+      // 更新现有记录
+      const exerciseIndex = data.dailyRecords[existingDateKey].exercises.findIndex(ex => ex.id === id);
+      data.dailyRecords[existingDateKey].exercises[exerciseIndex] = updatedRecord;
+    }
+    
     writeData(data);
     
     // 如果用户手动输入了时长，则不重新分析
@@ -310,16 +367,20 @@ router.put('/:id', upload.array('images', 5), async (req, res) => {
         .then(analysis => {
           if (analysis.success) {
             const data = readData();
-            const recordIndex = data.exerciseRecords.findIndex(r => r.id === id);
-            if (recordIndex >= 0) {
-              data.exerciseRecords[recordIndex] = {
-                ...data.exerciseRecords[recordIndex],
-                duration: analysis.duration,
-                estimatedCalories: analysis.calories,
-                aiAnalysis: analysis.analysis,
-                details: analysis.details
-              };
-              writeData(data);
+            const dateKey = formatDateKey(updates.timestamp);
+            if (data.dailyRecords[dateKey]) {
+              const exerciseIndex = data.dailyRecords[dateKey].exercises.findIndex(ex => ex.id === id);
+              if (exerciseIndex >= 0) {
+                data.dailyRecords[dateKey].exercises[exerciseIndex] = {
+                  ...data.dailyRecords[dateKey].exercises[exerciseIndex],
+                  duration: analysis.duration,
+                  estimatedCalories: analysis.calories,
+                  aiAnalysis: analysis.analysis,
+                  details: analysis.details,
+                  updatedAt: new Date().toISOString()
+                };
+                writeData(data);
+              }
             }
           }
         })
@@ -330,7 +391,7 @@ router.put('/:id', upload.array('images', 5), async (req, res) => {
     
     res.json({
       success: true,
-      exercise: exerciseRecords[recordIndex],
+      exercise: { ...updatedRecord, date: updatedRecord.timestamp },
       message: '运动记录已更新'
     });
   } catch (error) {
@@ -351,30 +412,47 @@ router.delete('/:id', async (req, res) => {
     const { id } = req.params;
     
     const data = readData();
-    const exerciseRecords = data.exerciseRecords || [];
     
-    const recordIndex = exerciseRecords.findIndex(record => record.id === id);
-    if (recordIndex === -1) {
+    // 在所有日期中查找并删除该记录
+    let found = false;
+    for (const dateKey in data.dailyRecords) {
+      const dayRecord = data.dailyRecords[dateKey];
+      const exerciseIndex = dayRecord.exercises.findIndex(ex => ex.id === id);
+      
+      if (exerciseIndex !== -1) {
+        const record = dayRecord.exercises[exerciseIndex];
+        
+        // 删除关联的图片文件
+        if (record.images && record.images.length > 0) {
+          record.images.forEach(imageUrl => {
+            const filename = path.basename(imageUrl);
+            const imagePath = path.join(uploadDir, filename);
+            if (fs.existsSync(imagePath)) {
+              fs.unlinkSync(imagePath);
+            }
+          });
+        }
+        
+        // 删除记录
+        dayRecord.exercises.splice(exerciseIndex, 1);
+        
+        // 如果该天没有任何记录了，删除整个日期记录
+        if (dayRecord.weights.length === 0 && dayRecord.exercises.length === 0 && dayRecord.meals.length === 0) {
+          delete data.dailyRecords[dateKey];
+        }
+        
+        found = true;
+        break;
+      }
+    }
+    
+    if (!found) {
       return res.status(404).json({
         success: false,
         error: '运动记录不存在'
       });
     }
     
-    // 删除关联的图片文件
-    const record = exerciseRecords[recordIndex];
-    if (record.images && record.images.length > 0) {
-      record.images.forEach(imageUrl => {
-        const filename = path.basename(imageUrl);
-        const imagePath = path.join(uploadDir, filename);
-        if (fs.existsSync(imagePath)) {
-          fs.unlinkSync(imagePath);
-        }
-      });
-    }
-    
-    exerciseRecords.splice(recordIndex, 1);
-    data.exerciseRecords = exerciseRecords;
     writeData(data);
     
     res.json({
@@ -399,9 +477,19 @@ router.post('/:id/analyze', async (req, res) => {
     const { id } = req.params;
     
     const data = readData();
-    const exerciseRecords = data.exerciseRecords || [];
     
-    const record = exerciseRecords.find(r => r.id === id);
+    // 从新数据结构中查找记录
+    let record = null;
+    let dateKey = null;
+    for (const [key, dayRecord] of Object.entries(data.dailyRecords || {})) {
+      const found = dayRecord.exercises?.find(r => r.id === id);
+      if (found) {
+        record = found;
+        dateKey = key;
+        break;
+      }
+    }
+    
     if (!record) {
       return res.status(404).json({
         success: false,
@@ -425,22 +513,21 @@ router.post('/:id/analyze', async (req, res) => {
     const analysis = await analyzeExercise(record.description || '', imagePaths);
     
     if (analysis.success) {
-      const recordIndex = exerciseRecords.findIndex(r => r.id === id);
+      const recordIndex = data.dailyRecords[dateKey].exercises.findIndex(r => r.id === id);
       if (recordIndex >= 0) {
-        exerciseRecords[recordIndex] = {
-          ...exerciseRecords[recordIndex],
+        data.dailyRecords[dateKey].exercises[recordIndex] = {
+          ...data.dailyRecords[dateKey].exercises[recordIndex],
           duration: analysis.duration,
           estimatedCalories: analysis.calories,
           aiAnalysis: analysis.analysis,
           details: analysis.details,
           updatedAt: new Date().toISOString()
         };
-        data.exerciseRecords = exerciseRecords;
         writeData(data);
         
         res.json({
           success: true,
-          exercise: exerciseRecords[recordIndex],
+          exercise: { ...data.dailyRecords[dateKey].exercises[recordIndex], date: data.dailyRecords[dateKey].exercises[recordIndex].timestamp },
           message: 'AI分析完成'
         });
       }
@@ -459,4 +546,4 @@ router.post('/:id/analyze', async (req, res) => {
   }
 });
 
-module.exports = router;
+module.exports = router; 

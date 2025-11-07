@@ -1,15 +1,18 @@
 const express = require('express');
 const router = express.Router();
-const { readData } = require('../utils/dataManager');
+const { readData, getAllExerciseRecords, getAllWeightRecords } = require('../utils/dataManager');
 const { generateComprehensiveExerciseAnalysis } = require('../utils/exerciseAnalysis');
 
 // 获取综合运动效果分析
 router.get('/', (req, res) => {
   try {
     const data = readData();
+    const exerciseRecords = getAllExerciseRecords(data);
+    const weightRecords = getAllWeightRecords(data);
+    
     const analysis = generateComprehensiveExerciseAnalysis(
-      data.exerciseRecords || [],
-      data.records || []
+      exerciseRecords,
+      weightRecords
     );
     res.json(analysis);
   } catch (error) {

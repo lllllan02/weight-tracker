@@ -55,13 +55,36 @@ const upload = multer({
  * POST /api/meals
  * 创建饮食记录
  */
-router.post('/', upload.array('images', 5), async (req, res) => {
+router.post('/', (req, res, next) => {
+  upload.array('images', 5)(req, res, (err) => {
+    if (err instanceof multer.MulterError) {
+      console.error('[饮食记录] Multer 错误:', err.message);
+      return res.status(400).json({
+        success: false,
+        error: `上传失败: ${err.message}`
+      });
+    } else if (err) {
+      console.error('[饮食记录] 上传错误:', err.message);
+      return res.status(400).json({
+        success: false,
+        error: err.message
+      });
+    }
+    next();
+  });
+}, async (req, res) => {
   try {
+    console.log('[饮食记录] 收到创建请求');
+    console.log('[饮食记录] Body:', req.body);
+    console.log('[饮食记录] Files:', req.files ? req.files.length : 0);
+    
     const { description, mealType, date, manualCalories, skipAI, aiPredicted } = req.body;
     
     // 获取上传的图片路径
     const imagePaths = req.files ? req.files.map(file => file.path) : [];
     const imageUrls = req.files ? req.files.map(file => `/uploads/meals/${file.filename}`) : [];
+    
+    console.log('[饮食记录] 图片数量:', imageUrls.length);
     
     // 创建饮食记录
     const mealData = {
@@ -190,9 +213,10 @@ router.put('/:id', upload.array('images', 5), async (req, res) => {
     const { description, mealType, keepExistingImages, manualCalories, skipAI, aiPredicted } = req.body;
     
     // 获取当前记录
-    const { readData } = require('../utils/dataManager');
+    const { readData, getAllMealRecords } = require('../utils/dataManager');
     const data = readData();
-    const meal = data.mealRecords?.find(m => m.id === id);
+    const allMeals = getAllMealRecords(data);
+    const meal = allMeals.find(m => m.id === id);
     
     if (!meal) {
       return res.status(404).json({
@@ -376,10 +400,11 @@ router.post('/predict', upload.array('images', 5), async (req, res) => {
 router.post('/:id/analyze', async (req, res) => {
   try {
     const { id } = req.params;
-    const { readData } = require('../utils/dataManager');
+    const { readData, getAllMealRecords } = require('../utils/dataManager');
     
     const data = readData();
-    const meal = data.mealRecords?.find(m => m.id === id);
+    const allMeals = getAllMealRecords(data);
+    const meal = allMeals.find(m => m.id === id);
     
     if (!meal) {
       return res.status(404).json({

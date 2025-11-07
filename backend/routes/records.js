@@ -1,6 +1,14 @@
 const express = require('express');
 const router = express.Router();
-const { readData, writeData, validateRecord } = require('../utils/dataManager');
+const dayjs = require('dayjs');
+const { 
+  readData, 
+  writeData, 
+  validateRecord,
+  getAllWeightRecords,
+  ensureDailyRecord,
+  formatDateKey
+} = require('../utils/dataManager');
 
 // 检查并更新达成的阶段目标
 function checkAndUpdateMilestones(data, newWeight, recordDate) {
@@ -9,7 +17,7 @@ function checkAndUpdateMilestones(data, newWeight, recordDate) {
   }
   
   // 判断是减重还是增重场景
-  const allRecords = data.records || [];
+  const allRecords = getAllWeightRecords(data);
   if (allRecords.length === 0) return;
   
   const sortedRecords = [...allRecords].sort((a, b) => 
@@ -37,10 +45,10 @@ function checkAndUpdateMilestones(data, newWeight, recordDate) {
   });
 }
 
-// 获取所有记录（原始数据）
+// 获取所有记录（兼容旧API）
 router.get('/', (req, res) => {
   const data = readData();
-  res.json(data.records || []);
+  res.json(getAllWeightRecords(data));
 });
 
 // 添加记录
@@ -53,8 +61,29 @@ router.post('/', (req, res) => {
       return res.status(400).json({ error: 'Invalid record data' });
     }
     
-    data.records = data.records || [];
-    data.records.push(record);
+    // 获取日期key
+    const dateKey = formatDateKey(record.date);
+    
+    // 确保日期记录存在
+    ensureDailyRecord(data.dailyRecords, dateKey);
+    
+    // 判断是早上还是晚上
+    const hour = dayjs(record.date).hour();
+    const time = hour < 12 ? 'morning' : 'night';
+    
+    // 添加体重记录
+    data.dailyRecords[dateKey].weights.push({
+      id: record.id,
+      time: time,
+      weight: record.weight,
+      fasting: record.fasting || null,
+      timestamp: record.date
+    });
+    
+    // 按时间排序
+    data.dailyRecords[dateKey].weights.sort((a, b) => 
+      new Date(a.timestamp) - new Date(b.timestamp)
+    );
     
     // 检查并更新阶段目标
     checkAndUpdateMilestones(data, record.weight, record.date);
@@ -75,25 +104,52 @@ router.put('/:id', (req, res) => {
     const id = req.params.id;
     const updatedRecord = req.body;
     
-    const recordIndex = data.records.findIndex(r => r.id === id);
-    if (recordIndex === -1) {
+    // 在所有日期中查找该记录
+    let found = false;
+    for (const dateKey in data.dailyRecords) {
+      const dayRecord = data.dailyRecords[dateKey];
+      const weightIndex = dayRecord.weights.findIndex(w => w.id === id);
+      
+      if (weightIndex !== -1) {
+        // 找到记录，合并更新
+        const existingWeight = dayRecord.weights[weightIndex];
+        const hour = dayjs(updatedRecord.date || existingWeight.timestamp).hour();
+        const time = hour < 12 ? 'morning' : 'night';
+        
+        dayRecord.weights[weightIndex] = {
+          ...existingWeight,
+          weight: updatedRecord.weight ?? existingWeight.weight,
+          fasting: updatedRecord.fasting ?? existingWeight.fasting,
+          time: time,
+          timestamp: updatedRecord.date || existingWeight.timestamp
+        };
+        
+        // 如果日期改变了，需要移动到新日期
+        const newDateKey = formatDateKey(updatedRecord.date || existingWeight.timestamp);
+        if (newDateKey !== dateKey) {
+          const weightToMove = dayRecord.weights[weightIndex];
+          dayRecord.weights.splice(weightIndex, 1);
+          
+          ensureDailyRecord(data.dailyRecords, newDateKey);
+          data.dailyRecords[newDateKey].weights.push(weightToMove);
+          data.dailyRecords[newDateKey].weights.sort((a, b) => 
+            new Date(a.timestamp) - new Date(b.timestamp)
+          );
+        }
+        
+        // 检查并更新阶段目标
+        checkAndUpdateMilestones(data, dayRecord.weights[weightIndex].weight, dayRecord.weights[weightIndex].timestamp);
+        
+        found = true;
+        break;
+      }
+    }
+    
+    if (!found) {
       return res.status(404).json({ error: 'Record not found' });
     }
     
-    // 合并现有记录和更新数据
-    const mergedRecord = { ...data.records[recordIndex], ...updatedRecord };
-    
-    if (!validateRecord(mergedRecord)) {
-      return res.status(400).json({ error: 'Invalid record data' });
-    }
-    
-    data.records[recordIndex] = mergedRecord;
-    
-    // 检查并更新阶段目标
-    checkAndUpdateMilestones(data, mergedRecord.weight, mergedRecord.date);
-    
     writeData(data);
-    
     res.json({ success: true });
   } catch (error) {
     console.error('更新记录失败:', error.message);
@@ -106,9 +162,22 @@ router.delete('/:id', (req, res) => {
   const data = readData();
   const id = req.params.id;
   
-  data.records = (data.records || []).filter(r => r.id !== id);
-  writeData(data);
+  // 在所有日期中查找并删除该记录
+  for (const dateKey in data.dailyRecords) {
+    const dayRecord = data.dailyRecords[dateKey];
+    const originalLength = dayRecord.weights.length;
+    dayRecord.weights = dayRecord.weights.filter(w => w.id !== id);
+    
+    if (dayRecord.weights.length < originalLength) {
+      // 如果该天没有任何记录了，删除整个日期记录
+      if (dayRecord.weights.length === 0 && dayRecord.exercises.length === 0 && dayRecord.meals.length === 0) {
+        delete data.dailyRecords[dateKey];
+      }
+      break;
+    }
+  }
   
+  writeData(data);
   res.json({ success: true });
 });
 

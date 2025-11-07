@@ -8,12 +8,9 @@ function readData() {
   try {
     if (!fs.existsSync(DATA_FILE)) {
       return { 
-        records: [], 
-        exerciseRecords: [],
+        dailyRecords: {},
         profile: { height: 170, targetWeight: 65, theme: 'light' },
-        aiReports: { weekly: {}, monthly: {}, allTime: null },
-        mealRecords: [],
-        completeRecords: []
+        aiReports: { weekly: {}, monthly: {}, allTime: null }
       };
     }
     
@@ -21,21 +18,16 @@ function readData() {
     
     // 确保数据结构完整
     return {
-      records: data.records || [],
-      exerciseRecords: data.exerciseRecords || [],
+      dailyRecords: data.dailyRecords || {},
       profile: data.profile || { height: 170, targetWeight: 65, theme: 'light' },
-      aiReports: data.aiReports || { weekly: {}, monthly: {}, allTime: null },
-      mealRecords: data.mealRecords || [],
-      completeRecords: data.completeRecords || []
+      aiReports: data.aiReports || { weekly: {}, monthly: {}, allTime: null }
     };
   } catch (error) {
     console.error('读取数据文件失败，使用默认数据:', error.message);
     return { 
-      records: [], 
-      exerciseRecords: [],
+      dailyRecords: {},
       profile: { height: 170, targetWeight: 65, theme: 'light' },
-      aiReports: { weekly: {}, monthly: {}, allTime: null },
-      mealRecords: []
+      aiReports: { weekly: {}, monthly: {}, allTime: null }
     };
   }
 }
@@ -45,12 +37,9 @@ function writeData(data) {
   try {
     // 确保只写入核心数据
     const coreData = {
-      records: data.records || [],
-      exerciseRecords: data.exerciseRecords || [],
+      dailyRecords: data.dailyRecords || {},
       profile: data.profile || { height: 170, targetWeight: 65, theme: 'light' },
-      aiReports: data.aiReports || { weekly: {}, monthly: {}, allTime: null },
-      mealRecords: data.mealRecords || [],
-      completeRecords: data.completeRecords || []
+      aiReports: data.aiReports || { weekly: {}, monthly: {}, allTime: null }
     };
     
     fs.writeFileSync(DATA_FILE, JSON.stringify(coreData, null, 2), 'utf-8');
@@ -122,11 +111,113 @@ function validateProfile(profile) {
   return true;
 }
 
+// 辅助函数：确保日期记录存在
+function ensureDailyRecord(dailyRecords, dateKey) {
+  if (!dailyRecords[dateKey]) {
+    dailyRecords[dateKey] = {
+      weights: [],
+      exercises: [],
+      meals: [],
+      isComplete: false
+    };
+  }
+  return dailyRecords[dateKey];
+}
+
+// 辅助函数：将旧格式的体重记录转换为日期格式
+function formatDateKey(dateString) {
+  const dayjs = require('dayjs');
+  return dayjs(dateString).format('YYYY-MM-DD');
+}
+
+// 辅助函数：获取所有体重记录（兼容旧API）
+function getAllWeightRecords(data) {
+  const records = [];
+  Object.keys(data.dailyRecords || {}).forEach(dateKey => {
+    const dayRecord = data.dailyRecords[dateKey];
+    if (dayRecord && dayRecord.weights && Array.isArray(dayRecord.weights)) {
+      dayRecord.weights.forEach(weight => {
+        records.push({
+          id: weight.id,
+          date: weight.timestamp,
+          weight: weight.weight,
+          fasting: weight.fasting
+        });
+      });
+    }
+  });
+  // 按时间排序
+  return records.sort((a, b) => new Date(a.date) - new Date(b.date));
+}
+
+// 辅助函数：获取所有运动记录（兼容旧API）
+function getAllExerciseRecords(data) {
+  const records = [];
+  Object.keys(data.dailyRecords || {}).forEach(dateKey => {
+    const dayRecord = data.dailyRecords[dateKey];
+    if (dayRecord && dayRecord.exercises && Array.isArray(dayRecord.exercises)) {
+      dayRecord.exercises.forEach(exercise => {
+        records.push({
+          id: exercise.id,
+          date: exercise.timestamp,
+          duration: exercise.duration,
+          description: exercise.description,
+          images: exercise.images,
+          estimatedCalories: exercise.estimatedCalories,
+          aiAnalysis: exercise.aiAnalysis,
+          createdAt: exercise.createdAt,
+          updatedAt: exercise.updatedAt
+        });
+      });
+    }
+  });
+  // 按时间排序
+  return records.sort((a, b) => new Date(a.date) - new Date(b.date));
+}
+
+// 辅助函数：获取所有饮食记录（兼容旧API）
+function getAllMealRecords(data) {
+  const records = [];
+  Object.keys(data.dailyRecords || {}).forEach(dateKey => {
+    const dayRecord = data.dailyRecords[dateKey];
+    if (dayRecord && dayRecord.meals && Array.isArray(dayRecord.meals)) {
+      dayRecord.meals.forEach(meal => {
+        records.push({
+          id: meal.id,
+          date: meal.timestamp,
+          mealType: meal.mealType,
+          description: meal.description,
+          images: meal.images,
+          estimatedCalories: meal.estimatedCalories,
+          aiAnalysis: meal.aiAnalysis,
+          createdAt: meal.createdAt,
+          updatedAt: meal.updatedAt
+        });
+      });
+    }
+  });
+  // 按时间排序
+  return records.sort((a, b) => new Date(a.date) - new Date(b.date));
+}
+
+// 辅助函数：获取所有完整记录日期（兼容旧API）
+function getCompleteRecords(data) {
+  return Object.keys(data.dailyRecords || {}).filter(
+    dateKey => data.dailyRecords[dateKey] && data.dailyRecords[dateKey].isComplete
+  );
+}
+
 module.exports = {
   readData,
   writeData,
   validateRecord,
   validateExerciseRecord,
   validateProfile,
+  ensureDailyRecord,
+  formatDateKey,
+  getAllWeightRecords,
+  getAllExerciseRecords,
+  getAllMealRecords,
+  getCompleteRecords,
   DATA_FILE
 }; 

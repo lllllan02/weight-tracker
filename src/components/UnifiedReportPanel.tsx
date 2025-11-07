@@ -111,20 +111,18 @@ export const UnifiedReportPanel: React.FC<UnifiedReportPanelProps> = ({
       y: record.weight,
     }));
 
-    // 计算每日净热量（摄入 - 基础代谢 - 运动消耗）
-    // 只显示标记为完整记录的日期
+    // 使用后端返回的每日净热量
+    // 只显示标记为完整记录的日期（isComplete === true）
     const calorieData = sortedRecords.map((record) => {
-      const caloriesIn = (record as any).caloriesIn || 0;
-      const caloriesOut = (record as any).caloriesOut || 0;
-      const bmr = (record as any).bmr || 0;
-      const isComplete = (record as any).isComplete || false;
+      const netCalories = (record as any).netCalories;
+      const isComplete = (record as any).isComplete;
       
-      // 只有标记为完整的记录才显示热量，否则显示null（不显示柱子）
-      const netCalories = isComplete ? caloriesIn - bmr - caloriesOut : null;
+      // 只有标记为完整记录且有净热量数据时才显示柱子
+      const displayValue = (isComplete && netCalories !== null && netCalories !== undefined) ? netCalories : null;
       
       return {
         x: new Date(record.date).getTime(),
-        y: netCalories,
+        y: displayValue,
       };
     });
 
