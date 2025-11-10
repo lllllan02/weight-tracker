@@ -314,6 +314,11 @@ function generateWeeklyReportForDate(records, profile, targetDate, exerciseRecor
     return recordDate >= weekStart && recordDate <= weekEnd;
   });
 
+  // 获取上周最后一条体重记录（用于图表连贯性）
+  const previousRecord = records
+    .filter(r => new Date(r.date) < weekStart)
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+
   if (weekRecords.length === 0) {
     return {
       period: `${weekStart.toLocaleDateString('zh-CN')} - ${weekEnd.toLocaleDateString('zh-CN')}`,
@@ -436,10 +441,15 @@ function generateWeeklyReportForDate(records, profile, targetDate, exerciseRecor
     };
   });
 
+  // 如果存在上周的记录，添加到数组开头（用虚点显示）
+  const finalRecords = previousRecord 
+    ? [{ ...previousRecord, isPrevious: true }, ...weekRecordsWithCalories]
+    : weekRecordsWithCalories;
+
   return {
     period: `${weekStart.toLocaleDateString('zh-CN')} - ${weekEnd.toLocaleDateString('zh-CN')}`,
     type: 'weekly',
-    records: weekRecordsWithCalories,
+    records: finalRecords,
     stats: {
       startWeight,
       endWeight,
@@ -464,6 +474,11 @@ function generateMonthlyReportForMonth(records, profile, year, month, exerciseRe
     const recordDate = new Date(r.date);
     return recordDate >= monthStart && recordDate <= monthEnd;
   });
+
+  // 获取上月最后一条体重记录（用于图表连贯性）
+  const previousRecord = records
+    .filter(r => new Date(r.date) < monthStart)
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
 
   if (monthRecords.length === 0) {
     return {
@@ -609,10 +624,15 @@ function generateMonthlyReportForMonth(records, profile, year, month, exerciseRe
     };
   });
 
+  // 如果存在上月的记录，添加到数组开头（用虚点显示）
+  const finalRecords = previousRecord 
+    ? [{ ...previousRecord, isPrevious: true }, ...monthRecordsWithCalories]
+    : monthRecordsWithCalories;
+
   return {
     period: `${year}年${month}月`,
     type: 'monthly',
-    records: monthRecordsWithCalories,
+    records: finalRecords,
     stats: {
       startWeight,
       endWeight,

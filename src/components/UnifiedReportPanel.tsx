@@ -107,11 +107,21 @@ export const UnifiedReportPanel: React.FC<UnifiedReportPanelProps> = ({
       (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
     );
 
+    // 分离当前周期和前一周期的数据
+    const currentPeriodRecords = sortedRecords.filter(r => !(r as any).isPrevious);
+    const previousRecord = sortedRecords.find(r => (r as any).isPrevious);
+
     // 使用时间戳作为 x 轴数据
-    const weightData = sortedRecords.map((record) => ({
+    const weightData = currentPeriodRecords.map((record) => ({
       x: new Date(record.date).getTime(),
       y: record.weight,
     }));
+
+    // 前一周期的点（虚点）
+    const previousWeightData = previousRecord ? [{
+      x: new Date(previousRecord.date).getTime(),
+      y: previousRecord.weight,
+    }] : [];
 
     // 使用后端返回的每日净热量
     // 只显示标记为完整记录的日期（isComplete === true）
@@ -136,10 +146,14 @@ export const UnifiedReportPanel: React.FC<UnifiedReportPanelProps> = ({
       return "rgba(140, 140, 140, 0.6)"; // 灰色 - 平衡
     });
 
-    // 计算7日移动平均线
-    const movingAverageData = sortedRecords.map((record, index) => {
+    // 计算7日移动平均线（包含前一周期的点）
+    const allRecordsForAverage = previousRecord 
+      ? [previousRecord, ...currentPeriodRecords]
+      : currentPeriodRecords;
+    
+    const movingAverageData = allRecordsForAverage.map((record, index) => {
       const startIndex = Math.max(0, index - 6);
-      const recentRecords = sortedRecords.slice(startIndex, index + 1);
+      const recentRecords = allRecordsForAverage.slice(startIndex, index + 1);
       const average = recentRecords.reduce((sum, r) => sum + r.weight, 0) / recentRecords.length;
       return {
         x: new Date(record.date).getTime(),
@@ -147,14 +161,14 @@ export const UnifiedReportPanel: React.FC<UnifiedReportPanelProps> = ({
       };
     });
 
-    // 识别异常波动点（单日变化 > 4斤）
+    // 识别异常波动点（单日变化 > 4斤，仅检查当前周期）
     const anomalyPoints: Array<{ x: number; y: number; change: number }> = [];
-    for (let i = 1; i < sortedRecords.length; i++) {
-      const change = Math.abs(sortedRecords[i].weight - sortedRecords[i - 1].weight);
+    for (let i = 1; i < currentPeriodRecords.length; i++) {
+      const change = Math.abs(currentPeriodRecords[i].weight - currentPeriodRecords[i - 1].weight);
       if (change > 4) { // 4斤
         anomalyPoints.push({
-          x: new Date(sortedRecords[i].date).getTime(),
-          y: sortedRecords[i].weight,
+          x: new Date(currentPeriodRecords[i].date).getTime(),
+          y: currentPeriodRecords[i].weight,
           change: change,
         });
       }
@@ -175,16 +189,17 @@ export const UnifiedReportPanel: React.FC<UnifiedReportPanelProps> = ({
         if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime())) {
           startDate.setHours(0, 0, 0, 0);
           endDate.setHours(23, 59, 59, 999);
-          chartMinTime = startDate.getTime();
+          // 如果有前一周期的点，扩展时间范围
+          chartMinTime = previousWeightData.length > 0 ? previousWeightData[0].x : startDate.getTime();
           chartMaxTime = endDate.getTime();
         } else {
           // 解析失败，使用数据范围
-          chartMinTime = weightData[0].x;
+          chartMinTime = previousWeightData.length > 0 ? previousWeightData[0].x : weightData[0].x;
           chartMaxTime = weightData[weightData.length - 1].x;
         }
       } else {
         // 兜底：使用数据范围
-        chartMinTime = weightData[0].x;
+        chartMinTime = previousWeightData.length > 0 ? previousWeightData[0].x : weightData[0].x;
         chartMaxTime = weightData[weightData.length - 1].x;
       }
     } else if (report.type === "monthly") {
@@ -195,11 +210,12 @@ export const UnifiedReportPanel: React.FC<UnifiedReportPanelProps> = ({
         const month = parseInt(match[2]) - 1; // JavaScript月份从0开始
         const startDate = new Date(year, month, 1, 0, 0, 0, 0);
         const endDate = new Date(year, month + 1, 0, 23, 59, 59, 999); // 月底最后一天
-        chartMinTime = startDate.getTime();
+        // 如果有前一月的点，扩展时间范围
+        chartMinTime = previousWeightData.length > 0 ? previousWeightData[0].x : startDate.getTime();
         chartMaxTime = endDate.getTime();
       } else {
         // 兜底：使用数据范围
-        chartMinTime = weightData[0].x;
+        chartMinTime = previousWeightData.length > 0 ? previousWeightData[0].x : weightData[0].x;
         chartMaxTime = weightData[weightData.length - 1].x;
       }
     } else {
@@ -229,6 +245,26 @@ export const UnifiedReportPanel: React.FC<UnifiedReportPanelProps> = ({
         yAxisID: "y",
         order: 2,
       },
+      // 前一周期的连接线（虚线连接前期点到当前第一个点）
+      ...(previousWeightData.length > 0 && weightData.length > 0 ? [{
+        type: "line" as const,
+        label: "前期体重",
+        data: [...previousWeightData, weightData[0]], // 前期点 + 当前第一个点
+        borderColor: "rgba(24, 144, 255, 0.5)",
+        backgroundColor: "transparent",
+        borderWidth: 2,
+        borderDash: [5, 5], // 虚线样式
+        tension: 0.4,
+        fill: false,
+        pointRadius: [4, 0], // 前期点和正常点一样大小，当前点不重复显示
+        pointHoverRadius: [6, 0],
+        pointStyle: "circle",
+        pointBorderColor: "#1890ff",
+        pointBackgroundColor: "rgba(255, 255, 255, 0.8)",
+        pointBorderWidth: 2,
+        yAxisID: "y",
+        order: 2,
+      }] : []),
       {
         type: "line" as const,
         label: "7日移动平均",
