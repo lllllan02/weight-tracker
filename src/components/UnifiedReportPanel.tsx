@@ -431,9 +431,33 @@ export const UnifiedReportPanel: React.FC<UnifiedReportPanelProps> = ({
                       }
                     },
                     tooltip: {
-                      mode: "index",
+                      mode: "nearest",
                       intersect: false,
+                      axis: 'x',
                       callbacks: {
+                        title: function (context: any) {
+                          if (context.length === 0) return '';
+                          
+                          // 获取最近的点
+                          const item = context[0];
+                          const timestamp = item.parsed.x;
+                          const date = new Date(timestamp);
+                          
+                          // 检查是否是前期数据点
+                          const isPreviousPoint = item.dataset.label === "前期体重";
+                          
+                          const year = date.getFullYear();
+                          const month = date.getMonth() + 1;
+                          const day = date.getDate();
+                          const hours = date.getHours();
+                          const minutes = String(date.getMinutes()).padStart(2, '0');
+                          
+                          if (isPreviousPoint) {
+                            return `${year}年${month}月${day}日 ${hours}:${minutes} (前期数据)`;
+                          }
+                          
+                          return `${year}年${month}月${day}日 ${hours}:${minutes}`;
+                        },
                         label: function (context: any) {
                           const dataset = context.dataset;
                           const point = context.raw;
@@ -442,6 +466,12 @@ export const UnifiedReportPanel: React.FC<UnifiedReportPanelProps> = ({
                             // 直接使用后端计算好的BMI
                             return [
                               `体重: ${point.y.toFixed(1)} 斤`,
+                              `BMI: ${point.bmi}`,
+                            ];
+                          } else if (dataset.label === "前期体重") {
+                            // 前期体重点的显示
+                            return [
+                              `前期体重: ${point.y.toFixed(1)} 斤`,
                               `BMI: ${point.bmi}`,
                             ];
                           } else if (dataset.label === "7日移动平均") {
@@ -461,6 +491,24 @@ export const UnifiedReportPanel: React.FC<UnifiedReportPanelProps> = ({
                           }
                           return `${dataset.label}: ${context.parsed.y}`;
                         },
+                        afterLabel: function(context: any) {
+                          // 在前期数据点的tooltip中显示其他相关数据
+                          if (context.dataset.label === "前期体重") {
+                            const chart = context.chart;
+                            const dataIndex = context.dataIndex;
+                            const results = [];
+                            
+                            // 查找7日移动平均
+                            const movingAvgDataset = chart.data.datasets.find((ds: any) => ds.label === "7日移动平均");
+                            if (movingAvgDataset && movingAvgDataset.data[dataIndex]) {
+                              const avgPoint = movingAvgDataset.data[dataIndex];
+                              results.push(`7日平均: ${avgPoint.y.toFixed(1)} 斤`);
+                            }
+                            
+                            return results.join('\n');
+                          }
+                          return '';
+                        }
                       },
                     },
                   },
