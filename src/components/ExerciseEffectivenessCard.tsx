@@ -375,7 +375,7 @@ export const ExerciseEffectivenessCard: React.FC = () => {
                       drawOnChartArea: false,
                     },
                     beginAtZero: true,
-                    suggestedMax: Math.max(...analysis.frequencyImpact.periods.map(p => p.exerciseCount)) + 2,
+                    suggestedMax: analysis.frequencyImpact.chartConfig?.suggestedMaxY1 || 10,
                     ticks: { 
                       font: { size: 11 },
                       stepSize: 1

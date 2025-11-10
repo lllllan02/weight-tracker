@@ -3,6 +3,7 @@ const router = express.Router();
 const { readData, writeData, getAllWeightRecords, getAllExerciseRecords } = require('../utils/dataManager');
 const { generateWeeklyReport, generateMonthlyReport } = require('../utils/reports');
 const { generateAIWeeklyReport, generateAIMonthlyReport, generateAIAllTimeReport } = require('../utils/aiReports');
+const { generateChartData } = require('../utils/chartData');
 
 // 生成报告的唯一键（基于时间段）
 function getReportKey(period, type) {
@@ -244,6 +245,9 @@ router.get('/all-time', (req, res) => {
     insights
   };
 
+  // 生成图表数据
+  allTimeReport.chartData = generateChartData(recordsWithCalories, allTimeReport, data.profile.height || 170);
+
   // 如果有已保存的 AI 分析，附加到报告中
   const reportKey = 'all-time';
   if (data.aiReports && data.aiReports.allTime) {
@@ -446,7 +450,7 @@ function generateWeeklyReportForDate(records, profile, targetDate, exerciseRecor
     ? [{ ...previousRecord, isPrevious: true }, ...weekRecordsWithCalories]
     : weekRecordsWithCalories;
 
-  return {
+  const report = {
     period: `${weekStart.toLocaleDateString('zh-CN')} - ${weekEnd.toLocaleDateString('zh-CN')}`,
     type: 'weekly',
     records: finalRecords,
@@ -463,6 +467,11 @@ function generateWeeklyReportForDate(records, profile, targetDate, exerciseRecor
     },
     insights
   };
+
+  // 生成图表数据
+  report.chartData = generateChartData(finalRecords, report, profile.height || 170);
+
+  return report;
 }
 
 // 生成指定年月的月报
@@ -629,7 +638,7 @@ function generateMonthlyReportForMonth(records, profile, year, month, exerciseRe
     ? [{ ...previousRecord, isPrevious: true }, ...monthRecordsWithCalories]
     : monthRecordsWithCalories;
 
-  return {
+  const report = {
     period: `${year}年${month}月`,
     type: 'monthly',
     records: finalRecords,
@@ -647,6 +656,11 @@ function generateMonthlyReportForMonth(records, profile, year, month, exerciseRe
     },
     insights
   };
+
+  // 生成图表数据
+  report.chartData = generateChartData(finalRecords, report, profile.height || 170);
+
+  return report;
 }
 
 // 生成周报 AI 分析

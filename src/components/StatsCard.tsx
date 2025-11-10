@@ -137,7 +137,7 @@ export const StatsCard: React.FC<StatsCardProps> = ({ stats, height }) => {
           />
           <div style={{ marginTop: 8, fontSize: 12, color: "#8c8c8c" }}>
             {stats.currentBMR && stats.targetBMR ? 
-              `相差 ${Math.abs(stats.currentBMR - stats.targetBMR)} kcal` : 
+              `相差 ${stats.bmrDifference || 0} kcal` : 
               '目标状态'
             }
           </div>

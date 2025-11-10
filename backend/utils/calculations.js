@@ -99,12 +99,24 @@ function calculateStats(records, profile) {
   // 计算目标进度 - 使用阶段目标中最小的作为最终目标
   let targetProgress = 0;
   let targetRemaining = 0;
+  let milestonesWithPosition = [];
   
   // 优先使用阶段目标，如果没有则使用旧的 targetWeight
   let targetWeight = safeProfile.targetWeight;
   if (safeProfile.milestones && safeProfile.milestones.length > 0) {
     // 找到最小的目标体重（最终目标）
     targetWeight = Math.min(...safeProfile.milestones.map(m => m.targetWeight));
+    
+    // 为每个里程碑计算位置百分比
+    const totalChange = Math.abs(initialWeight - targetWeight);
+    milestonesWithPosition = safeProfile.milestones.map(milestone => {
+      const milestoneChange = Math.abs(initialWeight - milestone.targetWeight);
+      const position = Math.min(100, totalChange > 0 ? (milestoneChange / totalChange) * 100 : 0);
+      return {
+        ...milestone,
+        position: Number(position.toFixed(1))
+      };
+    });
   }
   
   if (targetWeight && targetWeight > 0) {
@@ -135,12 +147,14 @@ function calculateStats(records, profile) {
   // 计算当前体重和目标体重的基础代谢率
   let currentBMR = null;
   let targetBMR = null;
+  let bmrDifference = null;
   
   if (safeProfile.birthYear && safeProfile.gender) {
     currentBMR = calculateBMR(current, safeProfile.height, safeProfile.birthYear, safeProfile.gender);
     
     if (targetWeight && targetWeight > 0) {
       targetBMR = calculateBMR(targetWeight, safeProfile.height, safeProfile.birthYear, safeProfile.gender);
+      bmrDifference = Math.abs(currentBMR - targetBMR);  // BMR差值的绝对值
     }
   }
 
@@ -162,10 +176,13 @@ function calculateStats(records, profile) {
     thisWeek,
     targetProgress: Number(targetProgress.toFixed(1)),
     targetRemaining,
+    targetRemainingAbs: Math.abs(targetRemaining),  // 绝对值，避免前端计算
     initialWeight: records.length > 0 ? sortedRecords[0].weight : 0,
     currentBMR,
     targetBMR,
-    targetPrediction
+    bmrDifference,  // BMR差值，避免前端计算
+    targetPrediction,
+    milestonesWithPosition  // 包含position的里程碑数据
   };
 }
 
@@ -535,7 +552,15 @@ async function aiPredict(records, targetWeight, profile) {
     const weightDifference = targetWeight - currentWeight;
     
     if (Math.abs(weightDifference) < 0.5) {
-      return null; // 已达到目标
+      return {
+      achieved: true,
+      currentWeight,
+      targetWeight,
+      weightDifference: 0,
+      weightDifferenceAbs: 0,
+      daysRemaining: 0,
+      predictedDate: new Date().toISOString().split('T')[0]
+    }; // 已达到目标
     }
     
     // 计算一些统计数据（体重单位为斤，转换为公斤传给 AI）
@@ -675,7 +700,9 @@ function predictTargetDate(records, targetWeight, profile) {
     return {
       achieved: true,
       daysRemaining: 0,
-      predictedDate: new Date().toISOString().split('T')[0]
+      predictedDate: new Date().toISOString().split('T')[0],
+      weightDifference: 0,
+      weightDifferenceAbs: 0
     };
   }
 
@@ -780,6 +807,7 @@ function predictTargetDate(records, targetWeight, profile) {
     currentWeight,
     targetWeight,
     weightDifference: Number(weightDifference.toFixed(1)),
+    weightDifferenceAbs: Math.abs(Number(weightDifference.toFixed(1))),  // 绝对值，避免前端计算
     predictions,
     linearPrediction: linearPred,
     exponentialDecayPrediction: expPred,

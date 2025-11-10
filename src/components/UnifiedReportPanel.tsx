@@ -99,135 +99,18 @@ export const UnifiedReportPanel: React.FC<UnifiedReportPanelProps> = ({
   };
 
   const generateChartData = () => {
-    if (!report.records || report.records.length === 0) {
+    // 直接使用后端返回的图表数据
+    const chartData = (report as any).chartData;
+    if (!chartData) {
       return null;
     }
 
-    const sortedRecords = [...report.records].sort(
-      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
-    );
-
-    // 分离当前周期和前一周期的数据
-    const currentPeriodRecords = sortedRecords.filter(r => !(r as any).isPrevious);
-    const previousRecord = sortedRecords.find(r => (r as any).isPrevious);
-
-    // 使用时间戳作为 x 轴数据
-    const weightData = currentPeriodRecords.map((record) => ({
-      x: new Date(record.date).getTime(),
-      y: record.weight,
-    }));
-
-    // 前一周期的点（虚点）
-    const previousWeightData = previousRecord ? [{
-      x: new Date(previousRecord.date).getTime(),
-      y: previousRecord.weight,
-    }] : [];
-
-    // 使用后端返回的每日净热量
-    // 只显示标记为完整记录的日期（isComplete === true）
-    const calorieData = sortedRecords.map((record) => {
-      const netCalories = (record as any).netCalories;
-      const isComplete = (record as any).isComplete;
-      
-      // 只有标记为完整记录且有净热量数据时才显示柱子
-      const displayValue = (isComplete && netCalories !== null && netCalories !== undefined) ? netCalories : null;
-      
-      return {
-        x: new Date(record.date).getTime(),
-        y: displayValue,
-      };
-    });
-
-    // 根据净热量设置颜色（黄色正值，绿色负值）
-    const calorieColors = calorieData.map((item) => {
-      if (item.y === null) return "rgba(140, 140, 140, 0.6)"; // 未完整记录 - 灰色
-      if (item.y > 0) return "rgba(255, 214, 102, 0.6)"; // 黄色 - 热量盈余
-      if (item.y < 0) return "rgba(115, 209, 61, 0.6)"; // 绿色 - 热量亏损
-      return "rgba(140, 140, 140, 0.6)"; // 灰色 - 平衡
-    });
-
-    // 计算7日移动平均线（包含前一周期的点）
-    const allRecordsForAverage = previousRecord 
-      ? [previousRecord, ...currentPeriodRecords]
-      : currentPeriodRecords;
-    
-    const movingAverageData = allRecordsForAverage.map((record, index) => {
-      const startIndex = Math.max(0, index - 6);
-      const recentRecords = allRecordsForAverage.slice(startIndex, index + 1);
-      const average = recentRecords.reduce((sum, r) => sum + r.weight, 0) / recentRecords.length;
-      return {
-        x: new Date(record.date).getTime(),
-        y: Number(average.toFixed(1)),
-      };
-    });
-
-    // 识别异常波动点（单日变化 > 4斤，仅检查当前周期）
-    const anomalyPoints: Array<{ x: number; y: number; change: number }> = [];
-    for (let i = 1; i < currentPeriodRecords.length; i++) {
-      const change = Math.abs(currentPeriodRecords[i].weight - currentPeriodRecords[i - 1].weight);
-      if (change > 4) { // 4斤
-        anomalyPoints.push({
-          x: new Date(currentPeriodRecords[i].date).getTime(),
-          y: currentPeriodRecords[i].weight,
-          change: change,
-        });
-      }
-    }
-
-    // 计算时间范围
-    let chartMinTime: number;
-    let chartMaxTime: number;
-
-    if (report.type === "weekly") {
-      // 周报：显示完整的周一到周日
-      // 从 period 中解析周的起始和结束日期
-      const periodParts = report.period.split(" - ");
-      if (periodParts.length === 2) {
-        // 支持中文格式 "2025/10/20" 和标准格式
-        const startDate = new Date(periodParts[0].replace(/\//g, '-'));
-        const endDate = new Date(periodParts[1].replace(/\//g, '-'));
-        if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime())) {
-          startDate.setHours(0, 0, 0, 0);
-          endDate.setHours(23, 59, 59, 999);
-          // 如果有前一周期的点，扩展时间范围
-          chartMinTime = previousWeightData.length > 0 ? previousWeightData[0].x : startDate.getTime();
-          chartMaxTime = endDate.getTime();
-        } else {
-          // 解析失败，使用数据范围
-          chartMinTime = previousWeightData.length > 0 ? previousWeightData[0].x : weightData[0].x;
-          chartMaxTime = weightData[weightData.length - 1].x;
-        }
-      } else {
-        // 兜底：使用数据范围
-        chartMinTime = previousWeightData.length > 0 ? previousWeightData[0].x : weightData[0].x;
-        chartMaxTime = weightData[weightData.length - 1].x;
-      }
-    } else if (report.type === "monthly") {
-      // 月报：显示完整的月份（1号到月底）
-      const match = report.period.match(/(\d{4})年(\d{1,2})月/);
-      if (match) {
-        const year = parseInt(match[1]);
-        const month = parseInt(match[2]) - 1; // JavaScript月份从0开始
-        const startDate = new Date(year, month, 1, 0, 0, 0, 0);
-        const endDate = new Date(year, month + 1, 0, 23, 59, 59, 999); // 月底最后一天
-        // 如果有前一月的点，扩展时间范围
-        chartMinTime = previousWeightData.length > 0 ? previousWeightData[0].x : startDate.getTime();
-        chartMaxTime = endDate.getTime();
-      } else {
-        // 兜底：使用数据范围
-        chartMinTime = previousWeightData.length > 0 ? previousWeightData[0].x : weightData[0].x;
-        chartMaxTime = weightData[weightData.length - 1].x;
-      }
-    } else {
-      // 全时段报告：使用数据范围
-      chartMinTime = weightData[0].x;
-      chartMaxTime = weightData[weightData.length - 1].x;
-    }
+    const { weightData, previousWeightData, calorieData, calorieColors, movingAverageData, anomalyPoints, timeRange, weekBoundaries } = chartData;
 
     // 零线数据（覆盖整个时间范围）
     const zeroLineData = [
-      { x: chartMinTime, y: 0 },
-      { x: chartMaxTime, y: 0 },
+      { x: timeRange.min, y: 0 },
+      { x: timeRange.max, y: 0 },
     ];
 
     // 准备数据集
@@ -298,7 +181,7 @@ export const UnifiedReportPanel: React.FC<UnifiedReportPanelProps> = ({
         label: "每日净热量",
         data: calorieData,
         backgroundColor: calorieColors,
-        borderColor: calorieColors.map((color) => color.replace("0.6", "1")),
+        borderColor: calorieColors.map((color: string) => color.replace("0.6", "1")),
         borderWidth: 1,
         yAxisID: "y2",
         order: 4,
@@ -320,34 +203,14 @@ export const UnifiedReportPanel: React.FC<UnifiedReportPanelProps> = ({
       },
     ];
 
-
-    // 计算自然周边界（周一00:00）
-    const weekBoundaries: number[] = [];
-    const startDate = new Date(chartMinTime);
-    const endDate = new Date(chartMaxTime);
-    
-    // 找到第一个周一
-    let currentDate = new Date(startDate);
-    const dayOfWeek = currentDate.getDay();
-    // 调整到下一个周一（如果不是周一的话）
-    const daysToMonday = dayOfWeek === 0 ? 1 : dayOfWeek === 1 ? 0 : (8 - dayOfWeek);
-    currentDate.setDate(currentDate.getDate() + daysToMonday);
-    currentDate.setHours(0, 0, 0, 0);
-    
-    // 收集所有周一的时间戳
-    while (currentDate <= endDate) {
-      weekBoundaries.push(currentDate.getTime());
-      currentDate.setDate(currentDate.getDate() + 7); // 下一个周一
-    }
-
     return {
       chartData: {
         datasets,
       },
-      timeRange: { min: chartMinTime, max: chartMaxTime },
+      timeRange,
       anomalyCount: anomalyPoints.length,
-      anomalyPoints: anomalyPoints,
-      weekBoundaries: weekBoundaries,
+      anomalyPoints,
+      weekBoundaries,
     };
   };
 
@@ -573,25 +436,21 @@ export const UnifiedReportPanel: React.FC<UnifiedReportPanelProps> = ({
                       callbacks: {
                         label: function (context: any) {
                           const dataset = context.dataset;
+                          const point = context.raw;
+                          
                           if (dataset.label === "体重 (斤)") {
-                            // 将斤转换回公斤计算BMI
-                            const weightInKg = context.parsed.y / 2;
-                            const bmi = (
-                              weightInKg /
-                              Math.pow(height / 100, 2)
-                            ).toFixed(1);
+                            // 直接使用后端计算好的BMI
                             return [
-                              `体重: ${context.parsed.y.toFixed(1)} 斤`,
-                              `BMI: ${bmi}`,
+                              `体重: ${point.y.toFixed(1)} 斤`,
+                              `BMI: ${point.bmi}`,
                             ];
                           } else if (dataset.label === "7日移动平均") {
-                            return `7日平均: ${context.parsed.y.toFixed(1)} 斤`;
+                            return `7日平均: ${point.y.toFixed(1)} 斤`;
                           } else if (dataset.label === "异常波动") {
-                            const point = context.raw;
                             return [
                               `⚠️ 异常波动`,
                               `体重: ${point.y.toFixed(1)} 斤`,
-                              `单日变化: ${point.change?.toFixed(1)} 斤`,
+                              `单日变化: ${point.change} 斤`,
                             ];
                           } else if (dataset.label === "每日净热量") {
                             const value = context.parsed.y;

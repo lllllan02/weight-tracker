@@ -32,6 +32,7 @@ export interface Milestone {
   targetWeight: number;
   achievedDate?: string; // 达成日期
   note?: string; // 备注
+  position?: number; // 在进度条上的位置百分比（后端计算）
 }
 
 export interface UserProfile {
@@ -77,6 +78,7 @@ export interface TargetPrediction {
   currentWeight?: number;
   targetWeight?: number;
   weightDifference?: number;
+  weightDifferenceAbs?: number;  // 体重差的绝对值（后端计算）
   daysRemaining?: number;
   predictedDate?: string;
   predictions?: PredictionMethod[];
@@ -97,10 +99,13 @@ export interface WeightStats {
   thisWeek: number;
   targetProgress: number;
   targetRemaining: number;
+  targetRemainingAbs?: number; // 目标剩余的绝对值（后端计算）
   initialWeight: number;
   currentBMR?: number; // 当前体重的基础代谢
   targetBMR?: number; // 目标体重的基础代谢
+  bmrDifference?: number; // BMR差值（后端计算）
   targetPrediction?: TargetPrediction; // 目标达成预测
+  milestonesWithPosition?: Milestone[]; // 包含position的里程碑数据
 }
 
 export interface TimeSlot {
@@ -232,6 +237,9 @@ export interface FrequencyImpactAnalysis {
     totalWeeks: number;
     avgExercisePerWeek: number;
     avgWeightChangePerWeek: number;
+  };
+  chartConfig?: {
+    suggestedMaxY1: number;
   };
 }
 

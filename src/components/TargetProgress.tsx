@@ -63,18 +63,12 @@ export const TargetProgress: React.FC<TargetProgressProps> = ({
   };
 
   const getRemainingText = () => {
-    if (Math.abs(stats.targetRemaining) <= 0.5) {
+    const remaining = stats.targetRemainingAbs || Math.abs(stats.targetRemaining);
+    if (remaining <= 0.5) {
       return "目标达成！";
     }
     const direction = getTargetDirection();
-    return `还需${direction} ${Math.abs(stats.targetRemaining).toFixed(1)}斤`;
-  };
-
-  // 计算阶段目标在进度条上的位置
-  const calculateMilestonePosition = (milestoneWeight: number) => {
-    const totalChange = Math.abs(stats.initialWeight - targetWeight);
-    const milestoneChange = Math.abs(stats.initialWeight - milestoneWeight);
-    return Math.min(100, (milestoneChange / totalChange) * 100);
+    return `还需${direction} ${remaining.toFixed(1)}斤`;
   };
 
   return (
@@ -99,7 +93,7 @@ export const TargetProgress: React.FC<TargetProgressProps> = ({
         <div style={{ position: "relative", marginBottom: 8 }}>
           {/* 进度条 - 使用渐变色 */}
           <Progress
-            percent={Math.min(100, stats.targetProgress)}
+            percent={stats.targetProgress}
             status={getProgressStatus()}
             strokeColor={{
               '0%': stats.targetProgress < 20 ? '#ff4d4f' : 
@@ -115,9 +109,9 @@ export const TargetProgress: React.FC<TargetProgressProps> = ({
             strokeWidth={12}
           />
           
-          {/* 阶段目标标记 */}
-          {milestones.map((milestone) => {
-            const position = calculateMilestonePosition(milestone.targetWeight);
+          {/* 阶段目标标记 - 使用后端计算好的position */}
+          {(stats.milestonesWithPosition || milestones).map((milestone) => {
+            const position = milestone.position || 0;
             const isAchieved = !!milestone.achievedDate;
             
             return (

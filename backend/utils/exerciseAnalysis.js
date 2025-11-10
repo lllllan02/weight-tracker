@@ -424,6 +424,11 @@ function analyzeExerciseFrequencyImpact(exerciseRecords, weightRecords) {
     }
   }
   
+  // 计算Y轴最大值（用于前端图表配置）
+  const maxExerciseCount = weeklyData.length > 0 
+    ? Math.max(...weeklyData.map(d => d.exerciseCount))
+    : 0;
+
   return {
     periods: weeklyData,
     correlation,
@@ -436,6 +441,9 @@ function analyzeExerciseFrequencyImpact(exerciseRecords, weightRecords) {
       avgWeightChangePerWeek: weeklyData.length > 0
         ? Number((weeklyData.reduce((sum, d) => sum + d.weightChange, 0) / weeklyData.length).toFixed(2))
         : 0
+    },
+    chartConfig: {
+      suggestedMaxY1: maxExerciseCount + 2  // Y1轴（运动次数）的建议最大值
     }
   };
 }

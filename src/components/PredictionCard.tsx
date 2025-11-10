@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import { Card, Tag, Empty, Descriptions, Alert, Space, Button, Tooltip, message } from "antd";
-import { RiseOutlined, FallOutlined, CalendarOutlined, LineChartOutlined, DashboardOutlined, DownOutlined, UpOutlined, QuestionCircleOutlined, RobotOutlined, ThunderboltOutlined } from "@ant-design/icons";
+import { Card, Tag, Empty, Alert, Space, Button, Tooltip, message } from "antd";
+import { RiseOutlined, FallOutlined, CalendarOutlined, LineChartOutlined, DownOutlined, UpOutlined, QuestionCircleOutlined, RobotOutlined, ThunderboltOutlined } from "@ant-design/icons";
 import { TargetPrediction, PredictionMethod } from "../types";
 import dayjs from "dayjs";
 import { generateAIPrediction } from "../utils/api";
@@ -148,7 +148,7 @@ export const PredictionCard: React.FC<PredictionCardProps> = ({
           <div>
             <div style={{ fontSize: 12, color: "#999" }}>还需{weightDirection}</div>
             <div style={{ fontSize: 20, fontWeight: 600, color: isGaining ? "#fa8c16" : "#1890ff" }}>
-              {Math.abs(targetPrediction.weightDifference!)}斤
+              {targetPrediction.weightDifferenceAbs || 0}斤
             </div>
           </div>
           <div style={{ textAlign: "right" }}>
