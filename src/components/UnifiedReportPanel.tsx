@@ -26,6 +26,7 @@ import {
   Legend,
   Filler,
 } from "chart.js";
+import annotationPlugin from "chartjs-plugin-annotation";
 import "chartjs-adapter-date-fns";
 import { Chart } from "react-chartjs-2";
 import { Report, AIAnalysis, TargetPrediction } from "../types";
@@ -45,7 +46,8 @@ ChartJS.register(
   ChartTitle,
   Tooltip,
   Legend,
-  Filler
+  Filler,
+  annotationPlugin
 );
 
 const { Text, Title } = Typography;
@@ -283,6 +285,25 @@ export const UnifiedReportPanel: React.FC<UnifiedReportPanelProps> = ({
     ];
 
 
+    // 计算自然周边界（周一00:00）
+    const weekBoundaries: number[] = [];
+    const startDate = new Date(chartMinTime);
+    const endDate = new Date(chartMaxTime);
+    
+    // 找到第一个周一
+    let currentDate = new Date(startDate);
+    const dayOfWeek = currentDate.getDay();
+    // 调整到下一个周一（如果不是周一的话）
+    const daysToMonday = dayOfWeek === 0 ? 1 : dayOfWeek === 1 ? 0 : (8 - dayOfWeek);
+    currentDate.setDate(currentDate.getDate() + daysToMonday);
+    currentDate.setHours(0, 0, 0, 0);
+    
+    // 收集所有周一的时间戳
+    while (currentDate <= endDate) {
+      weekBoundaries.push(currentDate.getTime());
+      currentDate.setDate(currentDate.getDate() + 7); // 下一个周一
+    }
+
     return {
       chartData: {
         datasets,
@@ -290,6 +311,7 @@ export const UnifiedReportPanel: React.FC<UnifiedReportPanelProps> = ({
       timeRange: { min: chartMinTime, max: chartMaxTime },
       anomalyCount: anomalyPoints.length,
       anomalyPoints: anomalyPoints,
+      weekBoundaries: weekBoundaries,
     };
   };
 
@@ -482,6 +504,22 @@ export const UnifiedReportPanel: React.FC<UnifiedReportPanelProps> = ({
                   responsive: true,
                   maintainAspectRatio: false,
                   plugins: {
+                    annotation: {
+                      annotations: chartResult?.weekBoundaries?.reduce((acc: any, timestamp: number, index: number) => {
+                        acc[`week${index}`] = {
+                          type: 'line',
+                          xMin: timestamp,
+                          xMax: timestamp,
+                          borderColor: 'rgba(0, 0, 0, 0.15)',
+                          borderWidth: 1,
+                          borderDash: [5, 5],
+                          label: {
+                            display: false,
+                          },
+                        };
+                        return acc;
+                      }, {}) || {},
+                    },
                     legend: {
                       display: true,
                       position: "top",
@@ -592,6 +630,7 @@ export const UnifiedReportPanel: React.FC<UnifiedReportPanelProps> = ({
                         source: "auto",
                       },
                       grid: {
+                        display: false, // 隐藏X轴网格线，使用周分割线代替
                         offset: false,
                       },
                     },
