@@ -287,10 +287,25 @@ function analyzeExerciseFrequencyImpact(exerciseRecords, weightRecords) {
     };
   }
   
-  // 按周划分数据
+  // 按自然周（周一到周日）划分数据
   const sortedWeights = [...weightRecords].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  const startDate = new Date(sortedWeights[0].date);
-  const endDate = new Date(sortedWeights[sortedWeights.length - 1].date);
+  const firstDate = new Date(sortedWeights[0].date);
+  const lastDate = new Date(sortedWeights[sortedWeights.length - 1].date);
+  
+  // 找到第一个周一作为起始日期
+  const startDate = new Date(firstDate);
+  const dayOfWeek = startDate.getDay(); // 0=周日, 1=周一, ..., 6=周六
+  const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // 如果是周日，回退6天；否则计算到周一的天数
+  startDate.setDate(startDate.getDate() + daysToMonday);
+  startDate.setHours(0, 0, 0, 0);
+  
+  // 找到最后一个周日作为结束日期
+  const endDate = new Date(lastDate);
+  const lastDayOfWeek = endDate.getDay();
+  const daysToSunday = lastDayOfWeek === 0 ? 0 : 7 - lastDayOfWeek;
+  endDate.setDate(endDate.getDate() + daysToSunday);
+  endDate.setHours(23, 59, 59, 999);
+  
   const totalDays = Math.floor((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
   const totalWeeks = Math.ceil(totalDays / 7);
   
@@ -305,8 +320,11 @@ function analyzeExerciseFrequencyImpact(exerciseRecords, weightRecords) {
   const weeklyData = [];
   
   for (let week = 0; week < totalWeeks; week++) {
+    // 每周从周一开始，到周日结束
     const weekStartDate = new Date(startDate);
     weekStartDate.setDate(startDate.getDate() + week * 7);
+    weekStartDate.setHours(0, 0, 0, 0);
+    
     const weekEndDate = new Date(weekStartDate);
     weekEndDate.setDate(weekStartDate.getDate() + 6);
     weekEndDate.setHours(23, 59, 59, 999);
@@ -323,20 +341,42 @@ function analyzeExerciseFrequencyImpact(exerciseRecords, weightRecords) {
       return date >= weekStartDate && date <= weekEndDate;
     });
     
-    if (weekWeights.length >= 2) {
-      const firstWeight = weekWeights[0].weight;
-      const lastWeight = weekWeights[weekWeights.length - 1].weight;
-      const weightChange = Number((lastWeight - firstWeight).toFixed(1));
+    // 只要有体重记录或运动记录就记录该周数据
+    if (weekWeights.length >= 1 || weekExercises.length > 0) {
       const exerciseCount = weekExercises.length;
       const totalDuration = weekExercises.reduce((sum, e) => sum + (e.duration || 0), 0);
       
+      // 体重变化需要至少2条记录才能计算
+      let weightChange = 0;
+      let avgWeight = null;
+      
+      if (weekWeights.length >= 2) {
+        const firstWeight = weekWeights[0].weight;
+        const lastWeight = weekWeights[weekWeights.length - 1].weight;
+        weightChange = Number((lastWeight - firstWeight).toFixed(1));
+        avgWeight = Number((weekWeights.reduce((sum, w) => sum + w.weight, 0) / weekWeights.length).toFixed(1));
+      } else if (weekWeights.length === 1) {
+        // 只有一条体重记录时，用该记录作为平均值，变化为0
+        avgWeight = weekWeights[0].weight;
+        weightChange = 0;
+      }
+      
+      // 生成周标签（如"10.28-11.03"）
+      const startMonth = weekStartDate.getMonth() + 1;
+      const startDay = weekStartDate.getDate();
+      const endMonth = weekEndDate.getMonth() + 1;
+      const endDay = weekEndDate.getDate();
+      const weekLabel = `${startMonth}.${String(startDay).padStart(2, '0')}-${endMonth}.${String(endDay).padStart(2, '0')}`;
+      
       weeklyData.push({
         week: week + 1,
+        weekLabel,
         startDate: weekStartDate.toISOString().split('T')[0],
+        endDate: weekEndDate.toISOString().split('T')[0],
         exerciseCount,
         totalDuration,
         weightChange,
-        avgWeight: Number((weekWeights.reduce((sum, w) => sum + w.weight, 0) / weekWeights.length).toFixed(1))
+        avgWeight
       });
     }
   }

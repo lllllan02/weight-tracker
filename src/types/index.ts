@@ -215,11 +215,13 @@ export interface BestTimeSlotAnalysis {
 
 export interface WeeklyFrequencyData {
   week: number;
+  weekLabel?: string; // 周标签，如 "10.28-11.03"
   startDate: string;
+  endDate?: string;
   exerciseCount: number;
   totalDuration: number;
   weightChange: number;
-  avgWeight: number;
+  avgWeight: number | null;
 }
 
 export interface FrequencyImpactAnalysis {

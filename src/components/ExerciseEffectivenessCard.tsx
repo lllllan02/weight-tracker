@@ -63,7 +63,7 @@ export const ExerciseEffectivenessCard: React.FC = () => {
     const periods = analysis.frequencyImpact.periods;
     
     return {
-      labels: periods.map(p => `第${p.week}周`),
+      labels: periods.map(p => p.weekLabel || `第${p.week}周`),
       datasets: [
         {
           type: 'line' as const,
@@ -374,7 +374,12 @@ export const ExerciseEffectivenessCard: React.FC = () => {
                     grid: {
                       drawOnChartArea: false,
                     },
-                    ticks: { font: { size: 11 } }
+                    beginAtZero: true,
+                    suggestedMax: Math.max(...analysis.frequencyImpact.periods.map(p => p.exerciseCount)) + 2,
+                    ticks: { 
+                      font: { size: 11 },
+                      stepSize: 1
+                    }
                   },
                 },
               }}
