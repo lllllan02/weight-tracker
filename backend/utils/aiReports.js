@@ -121,14 +121,15 @@ function analyzeFluctuations(records) {
   };
 }
 
-// 提取运动数据（周报）
-function extractWeeklyExerciseData(exerciseRecords, report) {
+// 提取运动和饮食数据（周报）
+function extractWeeklyExerciseData(exerciseRecords, report, mealRecords = []) {
   const weekStart = new Date(report.period.split(' - ')[0]);
   weekStart.setHours(0, 0, 0, 0);
   
   const weekEnd = new Date(report.period.split(' - ')[1]);
   weekEnd.setHours(23, 59, 59, 999);
   
+  // 运动数据
   const weekExercises = exerciseRecords.filter(e => {
     const exerciseDate = new Date(e.date);
     return exerciseDate >= weekStart && exerciseDate <= weekEnd;
@@ -136,23 +137,48 @@ function extractWeeklyExerciseData(exerciseRecords, report) {
   
   const exerciseDays = weekExercises.length;
   const totalDuration = weekExercises.reduce((sum, e) => sum + e.duration, 0);
+  const totalCaloriesBurned = weekExercises.reduce((sum, e) => sum + (e.caloriesBurned || 0), 0);
   const avgDuration = exerciseDays > 0 ? Math.round(totalDuration / exerciseDays) : 0;
   
-  const detailText = exerciseDays > 0 
-    ? `\n【运动记录详情】\n${weekExercises.map(e => `- ${formatDate(e.date)}：${e.duration}分钟`).join('\n')}`
+  const exerciseDetailText = exerciseDays > 0 
+    ? `\n【运动记录详情】\n${weekExercises.map(e => `- ${formatDate(e.date)}：${e.duration}分钟${e.caloriesBurned ? `，消耗${e.caloriesBurned}千卡` : ''}${e.description ? `，${e.description}` : ''}`).join('\n')}`
     : '- 本周暂无运动记录';
   
-  return {
-    text: `【本周运动数据】
+  const exerciseText = `【本周运动数据】
 - 运动天数：${exerciseDays}天
 - 总运动时长：${totalDuration}分钟
-- 平均每次时长：${avgDuration}分钟${detailText}`,
-    stats: { exerciseDays, totalDuration, avgDuration }
+- 总消耗热量：${totalCaloriesBurned}千卡
+- 平均每次时长：${avgDuration}分钟${exerciseDetailText}`;
+  
+  // 饮食数据
+  const mealData = extractMealData(mealRecords, weekStart, weekEnd);
+  
+  // 热量平衡分析
+  let calorieBalanceText = '';
+  const totalCaloriesIn = mealData.stats.totalCaloriesIn || 0;
+  if (totalCaloriesBurned > 0 && totalCaloriesIn > 0) {
+    const netCalories = totalCaloriesIn - totalCaloriesBurned;
+    calorieBalanceText = `\n\n【热量平衡】
+- 总摄入：${totalCaloriesIn}千卡
+- 总消耗：${totalCaloriesBurned}千卡
+- 净热量：${netCalories > 0 ? '+' : ''}${netCalories}千卡（${netCalories > 0 ? '热量盈余' : '热量亏损'}）`;
+  }
+  
+  return {
+    text: `${exerciseText}\n\n${mealData.text}${calorieBalanceText}`,
+    stats: { 
+      exerciseDays, 
+      totalDuration, 
+      avgDuration, 
+      totalCaloriesBurned,
+      ...mealData.stats,
+      netCalories: totalCaloriesIn - totalCaloriesBurned
+    }
   };
 }
 
 // 提取运动数据（月报）
-function extractMonthlyExerciseData(exerciseRecords, report) {
+function extractMonthlyExerciseData(exerciseRecords, report, mealRecords = []) {
   const monthMatch = report.period.match(/(\d{4})年(\d{1,2})月/);
   const year = parseInt(monthMatch[1]);
   const month = parseInt(monthMatch[2]);
@@ -166,6 +192,7 @@ function extractMonthlyExerciseData(exerciseRecords, report) {
   
   const exerciseDays = monthExercises.length;
   const totalDuration = monthExercises.reduce((sum, e) => sum + e.duration, 0);
+  const totalCaloriesBurned = monthExercises.reduce((sum, e) => sum + (e.caloriesBurned || 0), 0);
   const avgDuration = exerciseDays > 0 ? Math.round(totalDuration / exerciseDays) : 0;
   
   // 按周统计运动
@@ -178,28 +205,56 @@ function extractMonthlyExerciseData(exerciseRecords, report) {
     }
   });
   
-  const detailText = exerciseDays > 0 
+  const exerciseDetailText = exerciseDays > 0 
     ? `\n【运动记录详情】（显示前10条和后10条）\n${monthExercises.slice(0, 10).map(e => 
-        `- ${formatDate(e.date)}：${e.duration}分钟`
+        `- ${formatDate(e.date)}：${e.duration}分钟${e.caloriesBurned ? `，消耗${e.caloriesBurned}千卡` : ''}${e.description ? `，${e.description}` : ''}`
       ).join('\n')}${monthExercises.length > 20 ? `\n... (中间省略 ${monthExercises.length - 20} 条记录) ...` : ''}${
         monthExercises.length > 10 ? '\n' + monthExercises.slice(-10).map(e => 
-          `- ${formatDate(e.date)}：${e.duration}分钟`
+          `- ${formatDate(e.date)}：${e.duration}分钟${e.caloriesBurned ? `，消耗${e.caloriesBurned}千卡` : ''}${e.description ? `，${e.description}` : ''}`
         ).join('\n') : ''
       }`
     : '- 本月暂无运动记录';
   
-  return {
-    text: `【本月运动数据】
+  const exerciseText = `【本月运动数据】
 - 运动天数：${exerciseDays}天
 - 总运动时长：${totalDuration}分钟
+- 总消耗热量：${totalCaloriesBurned}千卡
 - 平均每次时长：${avgDuration}分钟
-- 每周运动天数：${weeklyExercise.map((days, i) => `第${i+1}周: ${days}天`).filter((_, i) => i < 4 || weeklyExercise[i] > 0).join(', ')}${detailText}`,
-    stats: { exerciseDays, totalDuration, avgDuration, weeklyExercise }
+- 每周运动天数：${weeklyExercise.map((days, i) => `第${i+1}周: ${days}天`).filter((_, i) => i < 4 || weeklyExercise[i] > 0).join(', ')}${exerciseDetailText}`;
+  
+  // 饮食数据
+  const mealData = extractMealData(mealRecords, monthStart, monthEnd);
+  
+  // 热量平衡分析
+  let calorieBalanceText = '';
+  const totalCaloriesIn = mealData.stats.totalCaloriesIn || 0;
+  const mealDays = mealData.stats.mealDays || 0;
+  if (totalCaloriesBurned > 0 && totalCaloriesIn > 0) {
+    const netCalories = totalCaloriesIn - totalCaloriesBurned;
+    const avgNetCaloriesPerDay = mealDays > 0 ? Math.round(netCalories / mealDays) : 0;
+    calorieBalanceText = `\n\n【热量平衡】
+- 总摄入：${totalCaloriesIn}千卡
+- 总消耗：${totalCaloriesBurned}千卡
+- 净热量：${netCalories > 0 ? '+' : ''}${netCalories}千卡（${netCalories > 0 ? '热量盈余' : '热量亏损'}）
+- 日均净热量：${avgNetCaloriesPerDay > 0 ? '+' : ''}${avgNetCaloriesPerDay}千卡/天`;
+  }
+  
+  return {
+    text: `${exerciseText}\n\n${mealData.text}${calorieBalanceText}`,
+    stats: { 
+      exerciseDays, 
+      totalDuration, 
+      avgDuration, 
+      totalCaloriesBurned, 
+      weeklyExercise,
+      ...mealData.stats,
+      netCalories: totalCaloriesIn - totalCaloriesBurned
+    }
   };
 }
 
 // 提取运动数据（全时段）
-function extractAllTimeExerciseData(exerciseRecords, report) {
+function extractAllTimeExerciseData(exerciseRecords, report, mealRecords = []) {
   const sortedRecords = report.records.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   const startDate = new Date(sortedRecords[0].date);
   const endDate = new Date(sortedRecords[sortedRecords.length - 1].date);
@@ -218,19 +273,109 @@ function extractAllTimeExerciseData(exerciseRecords, report) {
   
   const totalExerciseDays = new Set(periodExerciseRecords.map(r => r.date.split('T')[0])).size;
   const totalExercises = periodExerciseRecords.length;
+  const totalCaloriesBurned = periodExerciseRecords.reduce((sum, e) => sum + (e.caloriesBurned || 0), 0);
   
   const exerciseTypeCount = {};
   periodExerciseRecords.forEach(record => {
     exerciseTypeCount[record.type] = (exerciseTypeCount[record.type] || 0) + 1;
   });
   
-  return {
-    text: `
-【运动记录】
+  const exerciseText = `【运动记录】
 - 总运动天数: ${totalExerciseDays} 天
 - 总运动次数: ${totalExercises} 次
-- 运动类型分布: ${Object.entries(exerciseTypeCount).map(([type, count]) => `${type} ${count}次`).join(', ')}`,
-    stats: { totalExerciseDays, totalExercises, exerciseTypeCount }
+- 总消耗热量: ${totalCaloriesBurned} 千卡
+- 运动类型分布: ${Object.entries(exerciseTypeCount).map(([type, count]) => `${type} ${count}次`).join(', ')}`;
+  
+  // 饮食数据
+  const mealData = extractMealData(mealRecords, startDate, endDate);
+  
+  // 热量平衡分析
+  let calorieBalanceText = '';
+  const totalCaloriesIn = mealData.stats.totalCaloriesIn || 0;
+  const mealDays = mealData.stats.mealDays || 0;
+  if (totalCaloriesBurned > 0 && totalCaloriesIn > 0) {
+    const netCalories = totalCaloriesIn - totalCaloriesBurned;
+    const avgNetCaloriesPerDay = mealDays > 0 ? Math.round(netCalories / mealDays) : 0;
+    calorieBalanceText = `\n\n【热量平衡（全时段）】
+- 总摄入：${totalCaloriesIn}千卡
+- 总消耗：${totalCaloriesBurned}千卡
+- 净热量：${netCalories > 0 ? '+' : ''}${netCalories}千卡（${netCalories > 0 ? '热量盈余' : '热量亏损'}）
+- 日均净热量：${avgNetCaloriesPerDay > 0 ? '+' : ''}${avgNetCaloriesPerDay}千卡/天`;
+  }
+  
+  return {
+    text: `${exerciseText}\n\n${mealData.text}${calorieBalanceText}`,
+    stats: { 
+      totalExerciseDays, 
+      totalExercises, 
+      totalCaloriesBurned, 
+      exerciseTypeCount,
+      ...mealData.stats,
+      netCalories: totalCaloriesIn - totalCaloriesBurned
+    }
+  };
+}
+
+// 提取饮食数据
+function extractMealData(mealRecords, startDate, endDate) {
+  // 防御性编程：确保mealRecords是数组
+  if (!mealRecords || !Array.isArray(mealRecords)) {
+    return {
+      text: '\n【饮食记录】\n- 该时间段内暂无饮食记录\n',
+      stats: {}
+    };
+  }
+  
+  const periodMeals = mealRecords.filter(meal => {
+    const mealDate = new Date(meal.date);
+    return mealDate >= startDate && mealDate <= endDate;
+  });
+  
+  if (periodMeals.length === 0) {
+    return {
+      text: '\n【饮食记录】\n- 该时间段内暂无饮食记录\n',
+      stats: {}
+    };
+  }
+  
+  const mealDays = new Set(periodMeals.map(m => m.date.split('T')[0])).size;
+  const totalCaloriesIn = periodMeals.reduce((sum, m) => sum + (m.calories || 0), 0);
+  const avgCaloriesPerDay = mealDays > 0 ? Math.round(totalCaloriesIn / mealDays) : 0;
+  
+  // 按餐次统计
+  const mealTypeCount = {};
+  const mealTypeNames = {
+    breakfast: '早餐',
+    lunch: '午餐',
+    dinner: '晚餐',
+    snack: '零食',
+    other: '其他'
+  };
+  
+  periodMeals.forEach(meal => {
+    const typeName = mealTypeNames[meal.mealType] || '其他';
+    mealTypeCount[typeName] = (mealTypeCount[typeName] || 0) + 1;
+  });
+  
+  // 构建详情文本（显示前10条和后10条）
+  const detailText = periodMeals.length > 0 
+    ? `\n【饮食记录详情】（显示前10条和后10条）\n${periodMeals.slice(0, 10).map(m => 
+        `- ${formatDate(m.date)} ${mealTypeNames[m.mealType] || '其他'}：${m.description || '未描述'}${m.calories ? `，${m.calories}千卡` : ''}`
+      ).join('\n')}${periodMeals.length > 20 ? `\n... (中间省略 ${periodMeals.length - 20} 条记录) ...` : ''}${
+        periodMeals.length > 10 ? '\n' + periodMeals.slice(-10).map(m => 
+          `- ${formatDate(m.date)} ${mealTypeNames[m.mealType] || '其他'}：${m.description || '未描述'}${m.calories ? `，${m.calories}千卡` : ''}`
+        ).join('\n') : ''
+      }`
+    : '';
+  
+  return {
+    text: `【饮食记录】
+- 记录天数：${mealDays}天
+- 记录餐次：${periodMeals.length}次
+- 总摄入热量：${totalCaloriesIn}千卡
+- 日均摄入：${avgCaloriesPerDay}千卡
+- 餐次分布：${Object.entries(mealTypeCount).map(([type, count]) => `${type} ${count}次`).join(', ')}${detailText}`,
+    stats: { mealDays, totalMeals: periodMeals.length, totalCaloriesIn, avgCaloriesPerDay, mealTypeCount }
   };
 }
 
@@ -241,7 +386,7 @@ function formatAllWeightRecords(records) {
     new Date(a.date).getTime() - new Date(b.date).getTime()
   );
   return sortedRecords.map(r => 
-    `- ${formatDateTime(r.date)} ${r.weight}斤 (${r.fasting})`
+    `- ${formatDateTime(r.date)} ${r.weight}斤 (${r.fasting})${r.netCalories !== undefined && r.netCalories !== null ? ` [净热量: ${r.netCalories > 0 ? '+' : ''}${r.netCalories}千卡]` : ''}`
   ).join('\n');
 }
 
@@ -343,37 +488,49 @@ ${formatAllWeightRecords(report.records)}`;
   // 构建分析要求
   const analysisPoints = reportType === 'monthly'
     ? `1. ${config.period}体重变化总结（${config.summaryLength}）
-2. 体重与运动关联分析（体重变化与运动量的关系，运动效果评估）
+2. **体重、运动、饮食三者关联分析（核心）**：
+   - 分析体重变化与运动量、饮食摄入的综合关系
+   - 评估热量平衡（摄入vs消耗）对体重变化的影响
+   - 指出运动效果和饮食控制的效果
 3. 趋势分析（分析每周体重变化趋势，是否稳定）
 4. **波动分析（必须包含）**：
-   - 如果有异常波动（单日变化>4斤），明确指出次数、日期和可能原因
+   - 如果有异常波动（单日变化>4斤），明确指出次数、日期和可能原因（结合饮食和运动数据）
    - 如果有周末vs工作日差异，明确指出具体数值和建议
    - 如果有最大增减幅，分析是否正常
-5. 目标进度（如果设置了目标体重，评估完成进度）
-6. 亮点分析（${config.period}做得好的地方，包括体重和运动方面）
-7. 具体建议（${config.suggestions}，结合体重、运动和波动数据，包括饮食、运动强度/频率/类型、作息、心理等方面）`
+5. **热量平衡评估**：
+   - 分析日均摄入和消耗是否合理
+   - 净热量与体重变化的匹配度
+   - 建议的热量调整方向
+6. 目标进度（如果设置了目标体重，评估完成进度）
+7. 亮点分析（${config.period}做得好的地方，包括体重、运动、饮食方面）
+8. 具体建议（${config.suggestions}，**必须包括饮食、运动、作息三个维度**的具体建议，如：应该吃什么、避免什么、运动类型/强度/频率调整等）`
     : reportType === 'all-time'
     ? `1. 总体评价（${config.summaryLength}）
-2. 体重与运动关联分析（长期体重变化与运动的关系）
+2. **体重、运动、饮食三者综合分析（核心）**：
+   - 长期体重变化与运动习惯、饮食习惯的关系
+   - 热量平衡长期趋势
+   - 生活方式对体重的影响评估
 3. 趋势分析（整体变化趋势是否健康、有什么阶段性特点）
 4. **波动分析（必须包含）**：
    - 如果有异常波动，明确指出并分析
    - 如果有周期性规律（如周末体重变化），明确指出并给建议
    - 长期波动幅度是否合理
 5. 目标完成度评价（如果设置了目标体重）
-6. 具体建议（${config.suggestions}，结合体重、运动和波动数据，包括饮食、运动强度/频率、作息等方面）`
+6. 具体建议（${config.suggestions}，**必须包括饮食、运动、作息三个维度**的长期规划建议）`
     : `1. ${config.period}体重变化总结（${config.summaryLength}）
-2. 体重与运动关联分析（体重变化与运动量的关系）
+2. **体重、运动、饮食关联分析（核心）**：
+   - 体重变化与运动量、饮食的关系
+   - 热量平衡对体重的影响
 3. 趋势分析（体重变化是否符合健康标准）
 4. **波动分析（必须包含）**：
-   - 如果有异常波动（>4斤），明确说明
+   - 如果有异常波动（>4斤），明确说明并结合饮食/运动分析原因
    - 如果有周末工作日差异，明确指出并建议
    - 最大增减幅是否需要关注
 5. 目标进度（如果设置了目标体重）
-6. 具体建议（${config.suggestions}，结合体重、运动和波动数据，包括饮食、运动强度/频率、作息等方面）`;
+6. 具体建议（${config.suggestions}，**必须包括饮食和运动两个维度**的具体可操作建议）`;
   
   // 组装完整提示词
-  return `你是一位专业的健康管理顾问，请根据以下体重和运动数据生成一份详细的${config.name}分析。
+  return `你是一位专业的健康管理顾问和营养师，请根据以下体重、运动、饮食数据生成一份详细的${config.name}分析。
 
 ${reportType === 'all-time' ? basicInfo : `${basicInfo}
 
@@ -387,17 +544,22 @@ ${weightRecords}
 ${analysisPoints}
 
 要求：
+- **核心原则**：综合分析体重、运动、饮食三者的相互关系和影响
+- **热量平衡分析**：重点关注热量摄入与消耗，分析是否匹配体重变化趋势
+- **饮食建议具体化**：不要只说"注意饮食"、"控制热量"等空话，要给出具体的饮食建议（如：增加蛋白质摄入、控制碳水化合物、避免高糖食物等）
+- **运动建议具体化**：不要只说"加强运动"，要给出具体的运动类型、强度、频率建议
 - 分析要专业、客观、有数据支撑
-- 建议要具体、可操作
+- 建议要具体、可操作，能直接执行
 - 语气友好、鼓励为主
 - 使用中文
 - **重要**：体重记录详情已按时间顺序排列，请严格按照时间顺序观察体重变化趋势
-- **重要**：只基于【体重记录详情】中的实际数据进行分析，不要推测或编造不存在的趋势
+- **重要**：只基于实际数据进行分析，不要推测或编造不存在的趋势
 - **重要**：如果体重整体呈下降趋势，请分析具体的下降速度和波动特点，不要简单归纳为"前期快后期慢"等模糊结论
-- **重要**：综合体重和运动数据进行${reportType === 'all-time' ? '长期' : ''}分析${reportType === 'monthly' ? '，给出运动效果评估和优化建议' : '，给出运动与体重变化的关联性洞察'}
+- **重要**：综合体重、运动、饮食数据进行${reportType === 'all-time' ? '长期' : ''}深度关联分析，找出三者之间的因果关系
 - **重要**：基于现有数据进行分析，不要批评或提及数据缺失、时间范围不完整、记录频率不够${reportType === 'monthly' ? '、首尾周无数据' : ''}等问题
-- **重要**：如果【体重波动分析】中有异常波动或周期性规律数据，必须在"洞察"中明确提及并分析原因
-- **重要**：如果发现周末体重与工作日体重有差异，必须在"洞察"和"建议"中明确指出并给出针对性建议
+- **重要**：如果【体重波动分析】中有异常波动或周期性规律数据，必须在"洞察"中明确提及并结合饮食/运动数据分析原因
+- **重要**：如果发现周末体重与工作日体重有差异，必须在"洞察"和"建议"中明确指出并给出针对性建议（如周末饮食控制、运动安排等）
+- **重要**：如果有热量平衡数据，必须分析其与体重变化的匹配度，并给出调整建议
 - 专注于已有数据的趋势和建议，而不是数据本身的完整性
 - **必须**以纯JSON格式返回，不要包含任何其他文字说明，只返回JSON对象
 - JSON格式如下：
@@ -409,7 +571,7 @@ ${analysisPoints}
 }
 
 // 通用的系统消息
-const COMMON_SYSTEM_MESSAGE = '你是一位专业的健康管理顾问，擅长综合分析体重和运动数据并提供科学的健康建议。你的回复必须是纯JSON格式，不包含任何其他说明文字。重要：综合体重和运动数据进行深度关联分析，评估运动效果，只基于现有数据进行正面分析，绝不批评数据的完整性、记录频率或时间范围等问题。特别注意：如果数据中包含【体重波动分析】信息（异常波动、周期性规律等），必须在洞察中明确提及并给出具体建议。关键要求：体重记录已按时间顺序排列，请严格按照实际记录的时间顺序分析趋势，不要推测或编造不存在的阶段性特点。';
+const COMMON_SYSTEM_MESSAGE = '你是一位专业的健康管理顾问和营养师，擅长综合分析体重、运动、饮食数据并提供科学的健康建议。你的回复必须是纯JSON格式，不包含任何其他说明文字。核心能力：深度关联分析体重、运动、饮食三者的相互影响，评估热量平衡与体重变化的匹配度，给出具体可操作的饮食和运动建议（不要空话套话）。重要原则：只基于现有数据进行正面分析，绝不批评数据的完整性、记录频率或时间范围等问题。特别注意：如果数据中包含【体重波动分析】、【热量平衡】信息，必须在洞察中明确提及并结合饮食/运动数据分析原因，给出针对性建议。关键要求：体重记录已按时间顺序排列，请严格按照实际记录的时间顺序分析趋势，不要推测或编造不存在的阶段性特点。';
 
 // 报告类型配置（简化版）
 const reportTypeConfigs = {
@@ -425,7 +587,7 @@ const reportTypeConfigs = {
 };
 
 // 通用的 AI 报告生成函数
-async function generateAIReport(reportType, report, profile, exerciseRecords = []) {
+async function generateAIReport(reportType, report, profile, exerciseRecords = [], mealRecords = []) {
   try {
     const { apiKey, baseUrl, model } = getApiConfig();
     const config = reportTypeConfigs[reportType];
@@ -434,8 +596,8 @@ async function generateAIReport(reportType, report, profile, exerciseRecords = [
       throw new Error(`不支持的报告类型: ${reportType}`);
     }
     
-    // 提取运动数据
-    const exerciseData = config.extractExerciseData(exerciseRecords, report);
+    // 提取运动和饮食数据
+    const exerciseData = config.extractExerciseData(exerciseRecords, report, mealRecords);
     
     // 生成提示词（使用通用模板）
     const prompt = generatePromptTemplate(reportType, report, profile, exerciseData);
@@ -492,16 +654,16 @@ async function generateAIReport(reportType, report, profile, exerciseRecords = [
 }
 
 // 向后兼容的包装函数
-async function generateAIWeeklyReport(report, profile, exerciseRecords = []) {
-  return generateAIReport('weekly', report, profile, exerciseRecords);
+async function generateAIWeeklyReport(report, profile, exerciseRecords = [], mealRecords = []) {
+  return generateAIReport('weekly', report, profile, exerciseRecords, mealRecords);
 }
 
-async function generateAIMonthlyReport(report, profile, exerciseRecords = []) {
-  return generateAIReport('monthly', report, profile, exerciseRecords);
+async function generateAIMonthlyReport(report, profile, exerciseRecords = [], mealRecords = []) {
+  return generateAIReport('monthly', report, profile, exerciseRecords, mealRecords);
 }
 
-async function generateAIAllTimeReport(report, profile, exerciseRecords = []) {
-  return generateAIReport('all-time', report, profile, exerciseRecords);
+async function generateAIAllTimeReport(report, profile, exerciseRecords = [], mealRecords = []) {
+  return generateAIReport('all-time', report, profile, exerciseRecords, mealRecords);
 }
 
 module.exports = {

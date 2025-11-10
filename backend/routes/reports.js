@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { readData, writeData, getAllWeightRecords, getAllExerciseRecords } = require('../utils/dataManager');
+const { readData, writeData, getAllWeightRecords, getAllExerciseRecords, getAllMealRecords } = require('../utils/dataManager');
 const { generateWeeklyReport, generateMonthlyReport } = require('../utils/reports');
 const { generateAIWeeklyReport, generateAIMonthlyReport, generateAIAllTimeReport } = require('../utils/aiReports');
 const { generateChartData } = require('../utils/chartData');
@@ -670,6 +670,7 @@ router.post('/weekly/ai', async (req, res) => {
     const data = readData();
     const records = getAllWeightRecords(data);
     const exerciseRecords = getAllExerciseRecords(data);
+    const mealRecords = getAllMealRecords(data);
     
     // 根据日期参数生成报告
     let targetDate = date ? new Date(date) : new Date();
@@ -681,7 +682,7 @@ router.post('/weekly/ai', async (req, res) => {
       return res.json(data.aiReports.weekly[reportKey]);
     }
     
-    const aiAnalysis = await generateAIWeeklyReport(weeklyReport, data.profile, exerciseRecords);
+    const aiAnalysis = await generateAIWeeklyReport(weeklyReport, data.profile, exerciseRecords, mealRecords);
     
     if (aiAnalysis.success) {
       // 保存 AI 分析结果
@@ -714,6 +715,7 @@ router.post('/all-time/ai', async (req, res) => {
     const data = readData();
     const records = getAllWeightRecords(data);
     const exerciseRecords = getAllExerciseRecords(data);
+    const mealRecords = getAllMealRecords(data);
     
     // 检查是否已有分析（如果不是强制重新生成）
     if (!force && data.aiReports.allTime) {
@@ -754,7 +756,7 @@ router.post('/all-time/ai', async (req, res) => {
       }
     };
     
-    const aiAnalysis = await generateAIAllTimeReport(allTimeReport, data.profile, exerciseRecords);
+    const aiAnalysis = await generateAIAllTimeReport(allTimeReport, data.profile, exerciseRecords, mealRecords);
     
     if (aiAnalysis.success) {
       const analysisData = {
@@ -784,6 +786,7 @@ router.post('/monthly/ai', async (req, res) => {
     const data = readData();
     const records = getAllWeightRecords(data);
     const exerciseRecords = getAllExerciseRecords(data);
+    const mealRecords = getAllMealRecords(data);
     
     // 根据年月参数生成报告
     let targetYear = year || new Date().getFullYear();
@@ -796,7 +799,7 @@ router.post('/monthly/ai', async (req, res) => {
       return res.json(data.aiReports.monthly[reportKey]);
     }
     
-    const aiAnalysis = await generateAIMonthlyReport(monthlyReport, data.profile, exerciseRecords);
+    const aiAnalysis = await generateAIMonthlyReport(monthlyReport, data.profile, exerciseRecords, mealRecords);
     
     if (aiAnalysis.success) {
       // 保存 AI 分析结果
