@@ -195,17 +195,13 @@ router.get('/all-time', (req, res) => {
     const completeRecords = getCompleteRecords(data);
     const isComplete = completeRecords && completeRecords.includes(dateStr);
     
-    // 获取当天的饮食记录
-    const dayMeals = allMeals.filter(meal => {
-      return new Date(meal.date).toDateString() === recordDate;
-    });
+    // 获取当天的饮食记录（直接从dailyRecords中获取）
+    const dayMeals = (data.dailyRecords && data.dailyRecords[dateStr] && data.dailyRecords[dateStr].meals) || [];
     const caloriesIn = dayMeals.reduce((sum, meal) => sum + (meal.estimatedCalories || 0), 0);
     
-    // 获取当天的运动记录
-    const dayExercises = allExercises.filter(exercise => {
-      return new Date(exercise.date).toDateString() === recordDate;
-    });
-    const caloriesOut = dayExercises.reduce((sum, ex) => sum + (ex.estimatedCalories || 0), 0);
+    // 获取当天的运动记录（直接从dailyRecords中获取）
+    const dayExercises = (data.dailyRecords && data.dailyRecords[dateStr] && data.dailyRecords[dateStr].exercises) || [];
+    const caloriesOut = dayExercises.reduce((sum, ex) => sum + (ex.caloriesBurned || 0), 0);
     
     // 计算基础代谢（使用当天的平均体重）
     const avgWeight = dayRecords.reduce((sum, r) => sum + r.weight, 0) / dayRecords.length;
@@ -413,17 +409,13 @@ function generateWeeklyReportForDate(records, profile, targetDate, exerciseRecor
     // 检查是否标记为完整记录（从新的数据结构中获取）
     const isComplete = data.dailyRecords && data.dailyRecords[dateStr] && data.dailyRecords[dateStr].isComplete === true;
     
-    // 获取当天的饮食记录
-    const dayMeals = mealRecords.filter(meal => {
-      return new Date(meal.date).toDateString() === recordDate;
-    });
+    // 获取当天的饮食记录（直接从dailyRecords中获取）
+    const dayMeals = (data.dailyRecords && data.dailyRecords[dateStr] && data.dailyRecords[dateStr].meals) || [];
     const caloriesIn = dayMeals.reduce((sum, meal) => sum + (meal.estimatedCalories || 0), 0);
     
-    // 获取当天的运动记录
-    const dayExercises = exerciseRecords.filter(exercise => {
-      return new Date(exercise.date).toDateString() === recordDate;
-    });
-    const caloriesOut = dayExercises.reduce((sum, ex) => sum + (ex.estimatedCalories || 0), 0);
+    // 获取当天的运动记录（直接从dailyRecords中获取）
+    const dayExercises = (data.dailyRecords && data.dailyRecords[dateStr] && data.dailyRecords[dateStr].exercises) || [];
+    const caloriesOut = dayExercises.reduce((sum, ex) => sum + (ex.caloriesBurned || 0), 0);
     
     // 计算基础代谢（使用当天的平均体重）
     const avgWeight = dayRecords.reduce((sum, r) => sum + r.weight, 0) / dayRecords.length;
@@ -601,17 +593,13 @@ function generateMonthlyReportForMonth(records, profile, year, month, exerciseRe
     // 检查是否标记为完整记录（从新的数据结构中获取）
     const isComplete = data.dailyRecords && data.dailyRecords[dateStr] && data.dailyRecords[dateStr].isComplete === true;
     
-    // 获取当天的饮食记录
-    const dayMeals = mealRecords.filter(meal => {
-      return new Date(meal.date).toDateString() === recordDate;
-    });
+    // 获取当天的饮食记录（直接从dailyRecords中获取）
+    const dayMeals = (data.dailyRecords && data.dailyRecords[dateStr] && data.dailyRecords[dateStr].meals) || [];
     const caloriesIn = dayMeals.reduce((sum, meal) => sum + (meal.estimatedCalories || 0), 0);
     
-    // 获取当天的运动记录
-    const dayExercises = exerciseRecords.filter(exercise => {
-      return new Date(exercise.date).toDateString() === recordDate;
-    });
-    const caloriesOut = dayExercises.reduce((sum, ex) => sum + (ex.estimatedCalories || 0), 0);
+    // 获取当天的运动记录（直接从dailyRecords中获取）
+    const dayExercises = (data.dailyRecords && data.dailyRecords[dateStr] && data.dailyRecords[dateStr].exercises) || [];
+    const caloriesOut = dayExercises.reduce((sum, ex) => sum + (ex.caloriesBurned || 0), 0);
     
     // 计算基础代谢（使用当天的平均体重）
     const avgWeight = dayRecords.reduce((sum, r) => sum + r.weight, 0) / dayRecords.length;
