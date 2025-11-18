@@ -340,7 +340,8 @@ function generateWeeklyReportForDate(records, profile, targetDate, exerciseRecor
   }
 
   const sortedWeekRecords = weekRecords.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  const startWeight = sortedWeekRecords[0].weight;
+  // 如果存在上周的记录，使用上周最后一条记录作为起始体重；否则使用本周第一条记录
+  const startWeight = previousRecord ? previousRecord.weight : sortedWeekRecords[0].weight;
   const endWeight = sortedWeekRecords[sortedWeekRecords.length - 1].weight;
   const change = Number((endWeight - startWeight).toFixed(1));
   const weights = weekRecords.map(r => r.weight);
@@ -503,7 +504,8 @@ function generateMonthlyReportForMonth(records, profile, year, month, exerciseRe
   }
 
   const sortedMonthRecords = monthRecords.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  const startWeight = sortedMonthRecords[0].weight;
+  // 如果存在上月的记录，使用上月最后一条记录作为起始体重；否则使用本月第一条记录
+  const startWeight = previousRecord ? previousRecord.weight : sortedMonthRecords[0].weight;
   const endWeight = sortedMonthRecords[sortedMonthRecords.length - 1].weight;
   const change = Number((endWeight - startWeight).toFixed(1));
   const weights = monthRecords.map(r => r.weight);
