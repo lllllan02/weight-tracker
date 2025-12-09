@@ -74,17 +74,11 @@ router.post('/', (req, res, next) => {
   });
 }, async (req, res) => {
   try {
-    console.log('[饮食记录] 收到创建请求');
-    console.log('[饮食记录] Body:', req.body);
-    console.log('[饮食记录] Files:', req.files ? req.files.length : 0);
-    
     const { description, mealType, date, manualCalories, skipAI, aiPredicted } = req.body;
     
     // 获取上传的图片路径
     const imagePaths = req.files ? req.files.map(file => file.path) : [];
     const imageUrls = req.files ? req.files.map(file => `/uploads/meals/${file.filename}`) : [];
-    
-    console.log('[饮食记录] 图片数量:', imageUrls.length);
     
     // 创建饮食记录
     const mealData = {
