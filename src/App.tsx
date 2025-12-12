@@ -287,6 +287,17 @@ function App() {
     }
   };
 
+  const handleResetWeek = () => {
+    setCurrentWeekDate(new Date());
+  };
+
+  const handleResetMonth = () => {
+    setCurrentMonthDate(new Date());
+  };
+
+  const isCurrentWeek = getWeekStartKey(currentWeekDate) === getWeekStartKey(new Date());
+  const isCurrentMonth = getMonthKey(currentMonthDate) === getMonthKey(new Date());
+
   const handleAddRecord = async () => {
     try {
       // 重新加载所有数据，因为后端会自动更新所有计算数据
@@ -451,8 +462,10 @@ function App() {
                               loading={reportsLoading}
                               onPrevious={handlePreviousMonth}
                               onNext={handleNextMonth}
+                              onReset={handleResetMonth}
                               canGoPrevious={canGoPreviousMonth}
                               canGoNext={canGoNextMonth}
+                              isCurrentPeriod={isCurrentMonth}
                               height={profile.height}
                             />
                           ),
@@ -466,8 +479,10 @@ function App() {
                               loading={reportsLoading}
                               onPrevious={handlePreviousWeek}
                               onNext={handleNextWeek}
+                              onReset={handleResetWeek}
                               canGoPrevious={canGoPreviousWeek}
                               canGoNext={canGoNextWeek}
+                              isCurrentPeriod={isCurrentWeek}
                               height={profile.height}
                             />
                           ),

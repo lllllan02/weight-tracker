@@ -57,8 +57,10 @@ interface UnifiedReportPanelProps {
   loading?: boolean;
   onPrevious?: () => void;
   onNext?: () => void;
+  onReset?: () => void;
   canGoPrevious?: boolean;
   canGoNext?: boolean;
+  isCurrentPeriod?: boolean;
   height?: number; // 用户身高，用于计算 BMI
   targetPrediction?: TargetPrediction; // 趋势预测数据
   targetWeight?: number; // 目标体重
@@ -69,8 +71,10 @@ export const UnifiedReportPanel: React.FC<UnifiedReportPanelProps> = ({
   loading = false,
   onPrevious,
   onNext,
+  onReset,
   canGoPrevious = true,
   canGoNext = true,
+  isCurrentPeriod = true,
   height = 170, // 默认身高
   targetPrediction,
   targetWeight,
@@ -320,6 +324,14 @@ export const UnifiedReportPanel: React.FC<UnifiedReportPanelProps> = ({
             title={report.type === "weekly" ? "下一周" : "下一月"}
           >
             {report.type === "weekly" ? "下一周" : "下一月"}
+          </Button>
+        )}
+        
+        {onReset && !isCurrentPeriod && (
+          <Button
+            onClick={onReset}
+          >
+            {report.type === "weekly" ? "回到本周" : "回到本月"}
           </Button>
         )}
       </div>
