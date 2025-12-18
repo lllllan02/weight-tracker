@@ -436,6 +436,34 @@ export async function generateMonthlyAIAnalysis(force = false, year?: number, mo
   }
 }
 
+// 获取每周热量缺口分析
+export async function getWeeklyCalorieDeficitAnalysis() {
+  try {
+    const res = await fetch(`${API_BASE}/api/reports/calorie-deficit-analysis/weekly`);
+    if (!res.ok) {
+      throw new Error(`HTTP error! status: ${res.status}`);
+    }
+    return await res.json();
+  } catch (error) {
+    console.error("获取每周热量缺口分析失败:", error);
+    throw error;
+  }
+}
+
+// 获取每月热量缺口分析
+export async function getMonthlyCalorieDeficitAnalysis() {
+  try {
+    const res = await fetch(`${API_BASE}/api/reports/calorie-deficit-analysis/monthly`);
+    if (!res.ok) {
+      throw new Error(`HTTP error! status: ${res.status}`);
+    }
+    return await res.json();
+  } catch (error) {
+    console.error("获取每月热量缺口分析失败:", error);
+    throw error;
+  }
+}
+
 // ===== 数据备份 API =====
 // 创建备份
 export async function createBackup() {

@@ -26,6 +26,7 @@ import { MilestonesCard } from "./components/MilestonesCard";
 import { ProfileSettingsCard } from "./components/ProfileSettingsCard";
 import { PredictionCard } from "./components/PredictionCard";
 import { ExerciseEffectivenessCard } from "./components/ExerciseEffectivenessCard";
+import { CalorieDeficitAnalysisCard } from "./components/CalorieDeficitAnalysisCard";
 import DailyRecordsBar from "./components/DailyRecordsBar";
 
 const { Header, Content } = Layout;
@@ -485,6 +486,13 @@ function App() {
                               isCurrentPeriod={isCurrentWeek}
                               height={profile.height}
                             />
+                          ),
+                        },
+                        {
+                          key: "calorie-analysis",
+                          label: "🔥 热量缺口分析",
+                          children: (
+                            <CalorieDeficitAnalysisCard type="monthly" />
                           ),
                         },
                       ]}

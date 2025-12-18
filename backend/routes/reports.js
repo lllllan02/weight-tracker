@@ -4,6 +4,11 @@ const { readData, writeData, getAllWeightRecords, getAllExerciseRecords, getAllM
 const { generateWeeklyReport, generateMonthlyReport } = require('../utils/reports');
 const { generateAIWeeklyReport, generateAIMonthlyReport, generateAIAllTimeReport } = require('../utils/aiReports');
 const { generateChartData } = require('../utils/chartData');
+const { 
+  calculateWeeklyDeficitAndWeightChange, 
+  calculateMonthlyDeficitAndWeightChange, 
+  analyzeCorrelation 
+} = require('../utils/calorieDeficitAnalysis');
 
 // 生成报告的唯一键（基于时间段）
 function getReportKey(period, type) {
@@ -812,6 +817,42 @@ router.post('/monthly/ai', async (req, res) => {
     }
   } catch (error) {
     res.status(500).json({ error: '生成 AI 分析失败' });
+  }
+});
+
+// 获取每周热量缺口和体重变化分析
+router.get('/calorie-deficit-analysis/weekly', (req, res) => {
+  try {
+    const data = readData();
+    const weeklyData = calculateWeeklyDeficitAndWeightChange(data);
+    const correlationAnalysis = analyzeCorrelation(weeklyData);
+
+    res.json({
+      type: 'weekly',
+      weeklyData,
+      correlationAnalysis
+    });
+  } catch (error) {
+    console.error('获取每周热量缺口分析失败:', error);
+    res.status(500).json({ error: '获取每周热量缺口分析失败' });
+  }
+});
+
+// 获取每月热量缺口和体重变化分析
+router.get('/calorie-deficit-analysis/monthly', (req, res) => {
+  try {
+    const data = readData();
+    const monthlyData = calculateMonthlyDeficitAndWeightChange(data);
+    const correlationAnalysis = analyzeCorrelation(monthlyData);
+
+    res.json({
+      type: 'monthly',
+      monthlyData,
+      correlationAnalysis
+    });
+  } catch (error) {
+    console.error('获取每月热量缺口分析失败:', error);
+    res.status(500).json({ error: '获取每月热量缺口分析失败' });
   }
 });
 

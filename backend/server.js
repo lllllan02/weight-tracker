@@ -54,6 +54,8 @@ app.listen(PORT, () => {
   console.log('- GET  /api/chart    - 图表面板数据');
   console.log('- GET  /api/reports/weekly  - 周报');
   console.log('- GET  /api/reports/monthly - 月报');
+  console.log('- GET  /api/reports/calorie-deficit-analysis/weekly - 每周热量缺口分析');
+  console.log('- GET  /api/reports/calorie-deficit-analysis/monthly - 每月热量缺口分析');
   console.log('- GET  /api/profile  - 用户资料');
   console.log('- PUT  /api/profile  - 更新用户资料');
   console.log('- GET  /api/records  - 获取所有记录');
