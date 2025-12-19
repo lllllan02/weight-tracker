@@ -14,7 +14,6 @@ const milestonesRoutes = require('./routes/milestones');
 const backupRoutes = require('./routes/backup');
 const healthRoutes = require('./routes/health');
 const aiPredictionRoutes = require('./routes/aiPrediction');
-const exerciseAnalysisRoutes = require('./routes/exerciseAnalysis');
 const mealsRoutes = require('./routes/meals');
 const completeRecordsRoutes = require('./routes/completeRecords');
 
@@ -40,7 +39,6 @@ app.use('/api/milestones', milestonesRoutes);
 app.use('/api/backup', backupRoutes);
 app.use('/api/health', healthRoutes);
 app.use('/api/ai-prediction', aiPredictionRoutes);
-app.use('/api/exercise-analysis', exerciseAnalysisRoutes);
 app.use('/api/meals', mealsRoutes);
 app.use('/api/complete-records', completeRecordsRoutes);
 
