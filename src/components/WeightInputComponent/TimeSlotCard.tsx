@@ -105,6 +105,7 @@ export const TimeSlotCard: React.FC<TimeSlotCardProps> = ({
           <div>
             <div style={{ marginBottom: 12 }}>
               <InputNumber
+                autoFocus
                 value={editWeight || null}
                 onChange={(value) => setEditWeight(value || 0)}
                 placeholder="请输入体重（斤）"

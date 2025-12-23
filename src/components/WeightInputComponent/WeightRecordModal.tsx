@@ -87,6 +87,7 @@ export const WeightRecordModal: React.FC<WeightRecordModalProps> = ({
           style={{ marginBottom: 24 }}
         >
           <InputNumber
+            autoFocus
             placeholder="例如: 131.0"
             style={{
               width: "100%",
